@@ -1,0 +1,14 @@
+input:
+number of people; budget; location(list of cities); period(specific time frame or general time frame + duration) -> short term memory
+flights, accomodations, personal preferences(prompt) and requirements(fields) -> long term memory
+desired modifications after output(prompt)
+
+output:
+list of recommended flights + accomodations with concise descriptions and advantages for each of them
+remaining budget for food, visits and transportation 
+day by day plan for the vacation + estimation for visit prices + travel
+
+
+initial apis:
+https://serpapi.com/google-hotels-api
+https://serpapi.com/google-flights-api
