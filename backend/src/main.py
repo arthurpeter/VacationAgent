@@ -1,15 +1,25 @@
-import src.main
+import os
+import sys
+# Add the src directory to Python path for relative imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from fastapi import FastAPI, HTTPException, Request
 import uvicorn
-#from pydantic import BaseModel
-from src.utils import *
-from agent import Agent
+from routers import auth
+from agents.utils import *
+from agents.agent import Agent
 
-app = FastAPI()
+app = FastAPI(
+    title="Vacation Agent API",
+    description="API for vacation planning agent with authentication",
+    version="1.0.0"
+)
+
+# Include routers
+app.include_router(auth.router)
+
 agent = Agent()
 
-# class InputText(BaseModel):
-#     text: str
 
 @app.post("/payload-template")
 async def payload_template(payload: Request):

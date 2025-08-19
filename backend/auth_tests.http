@@ -1,0 +1,107 @@
+### Vacation Agent API - Authentication Tests
+### Base URL
+@baseUrl = http://localhost:5000
+
+### Variables (will be set from responses)
+@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0dXNlciIsImV4cCI6MTc1NTYwOTE2NH0.M-0pcX3_ht4m12pcdZdcR3zcPhcEXNj82XS3cVRStOE
+@refreshToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0dXNlciIsImV4cCI6MTc1NjIxMjE2NCwidHlwZSI6InJlZnJlc2gifQ.xC9sNLig4POQtldE8w_eTq23PkP6-2AmkRLAdqofBC4
+
+###
+### 1. Health Check
+GET {{baseUrl}}/health
+
+###
+### 2. Register a new user
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "email": "test@example.com",
+  "password": "testpassword123",
+  "first_name": "Test",
+  "last_name": "User"
+}
+
+###
+### 3. Login (get tokens)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/x-www-form-urlencoded
+
+username=testuser&password=testpassword123
+
+###
+### 4. Get current user info (requires authentication)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{accessToken}}
+
+###
+### 5. Refresh access token
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "{{refreshToken}}"
+}
+
+###
+### 6. Test with invalid token
+GET {{baseUrl}}/auth/me
+Authorization: Bearer invalid_token_here
+
+###
+### 7. Register duplicate user (should fail)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "email": "test@example.com",
+  "password": "newpassword123"
+}
+
+###
+### 8. Login with wrong password (should fail)
+POST {{baseUrl}}/auth/login
+Content-Type: application/x-www-form-urlencoded
+
+username=testuser&password=wrongpassword
+
+###
+### 9. Test other endpoints
+GET {{baseUrl}}/health
+
+###
+### 10. Test payload template (if available)
+POST {{baseUrl}}/payload-template
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "test": "data"
+}
+
+###
+### 11. Test no payload template
+GET {{baseUrl}}/no-payload-template
+Authorization: Bearer {{accessToken}}
+
+###
+# Manual token testing - copy tokens from login response above
+### Set tokens manually (copy from login response)
+@manualAccessToken = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+@manualRefreshToken = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+
+### Test with manual tokens
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{manualAccessToken}}
+
+###
+### Refresh with manual token
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "{{manualRefreshToken}}"
+}

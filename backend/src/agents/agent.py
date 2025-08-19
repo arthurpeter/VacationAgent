@@ -1,13 +1,13 @@
 from dotenv import load_dotenv
-from utils import *
+from agents.utils import *
 from langchain_openai import ChatOpenAI
 #from langchain_google_genai import GoogleGenerativeAI
 
 
 load_dotenv()
 
-INPUT_FILE = "io/input.txt"
-OUTPUT_FILE = "io/output.txt"
+INPUT_FILE = "../io/input.txt"
+OUTPUT_FILE = "../io/output.txt"
 
 
 
