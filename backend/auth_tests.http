@@ -1,10 +1,10 @@
-### Vacation Agent API - Authentication Tests
+### Vacation Agent API - FastAPI-Users Authentication Tests
 ### Base URL
 @baseUrl = http://localhost:5000
 
 ### Variables (will be set from responses)
-@accessToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0dXNlciIsImV4cCI6MTc1NTYwOTE2NH0.M-0pcX3_ht4m12pcdZdcR3zcPhcEXNj82XS3cVRStOE
-@refreshToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0dXNlciIsImV4cCI6MTc1NjIxMjE2NCwidHlwZSI6InJlZnJlc2gifQ.xC9sNLig4POQtldE8w_eTq23PkP6-2AmkRLAdqofBC4
+@accessToken = 
+@userId = 
 
 ###
 ### 1. Health Check
@@ -24,34 +24,72 @@ Content-Type: application/json
 }
 
 ###
-### 3. Login (get tokens)
+### 3. Login with JWT (get access token)
 # @name login
-POST {{baseUrl}}/auth/login
+POST {{baseUrl}}/auth/jwt/login
+Content-Type: application/x-www-form-urlencoded
+
+username=test@example.com&password=testpassword123
+
+###
+### 4. Login with username (if supported)
+# Note: FastAPI-Users typically uses email for login
+POST {{baseUrl}}/auth/jwt/login
 Content-Type: application/x-www-form-urlencoded
 
 username=testuser&password=testpassword123
 
 ###
-### 4. Get current user info (requires authentication)
-GET {{baseUrl}}/auth/me
+### 5. Get current user info (protected endpoint)
+GET {{baseUrl}}/protected
 Authorization: Bearer {{accessToken}}
 
 ###
-### 5. Refresh access token
-POST {{baseUrl}}/auth/refresh
+### 6. Get user by ID (protected)
+GET {{baseUrl}}/auth/users/{{userId}}
+Authorization: Bearer {{accessToken}}
+
+###
+### 7. Update current user
+PATCH {{baseUrl}}/auth/users/{{userId}}
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
-  "refresh_token": "{{refreshToken}}"
+  "first_name": "Updated",
+  "last_name": "Name"
 }
 
 ###
-### 6. Test with invalid token
-GET {{baseUrl}}/auth/me
+### 8. Request password reset
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
+}
+
+###
+### 9. Request email verification
+POST {{baseUrl}}/auth/request-verify-token
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
+}
+
+###
+### 10. Test with invalid token
+GET {{baseUrl}}/protected
 Authorization: Bearer invalid_token_here
 
 ###
-### 7. Register duplicate user (should fail)
+### 11. Logout (invalidate token - if implemented)
+POST {{baseUrl}}/auth/jwt/logout
+Authorization: Bearer {{accessToken}}
+
+###
+### 12. Try to register duplicate user (should fail)
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
@@ -62,11 +100,28 @@ Content-Type: application/json
 }
 
 ###
-### 8. Login with wrong password (should fail)
-POST {{baseUrl}}/auth/login
+### 13. Login with wrong password (should fail)
+POST {{baseUrl}}/auth/jwt/login
 Content-Type: application/x-www-form-urlencoded
 
-username=testuser&password=wrongpassword
+username=test@example.com&password=wrongpassword
+
+###
+### 14. Test protected endpoint without auth (should fail)
+GET {{baseUrl}}/protected
+
+### 
+### 15. Get all users (if you're a superuser)
+GET {{baseUrl}}/auth/users
+Authorization: Bearer {{accessToken}}
+
+###
+### Notes:
+### - FastAPI-Users uses email as the primary login identifier
+### - Refresh tokens are handled automatically by the frontend
+### - Password reset and email verification require email setup
+### - User management endpoints are available for admin users
+### - JWT tokens expire based on the configured lifetime
 
 ###
 ### 9. Test other endpoints

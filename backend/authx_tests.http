@@ -1,0 +1,78 @@
+### Vacation Agent API - AuthX Authentication Tests
+
+@baseUrl = http://localhost:5000
+
+### Health Check
+GET {{baseUrl}}/health
+
+### 1. Register a new user
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "username": "johndoe",
+  "password": "securepassword123",
+  "first_name": "John",
+  "last_name": "Doe"
+}
+
+### 2. Login with email and password (AuthX)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "johndoe",
+  "password": "securepassword123"
+}
+
+### Variables (set these manually after login)
+@accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4OTA0NDAwZi01MDkyLTQ1OTktYTRkMS05MGU5YWMzM2ZmNWIiLCJqdGkiOiJkODM5ZmE1Ny1jODk1LTRlODMtYTk4MS05MWM1YjE1MjBlNTgiLCJ0eXBlIjoiYWNjZXNzIiwiZnJlc2giOmZhbHNlLCJjc3JmIjoiIiwiaWF0IjoxNzU1NjEzMjk2LCJleHAiOjE3NTU2MTUwOTYuNzYxMDMzfQ.gqizuUbJaOSJnVfJyaB5TGkdpNaVPf7e3fA9wnlkSuM
+@refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4OTA0NDAwZi01MDkyLTQ1OTktYTRkMS05MGU5YWMzM2ZmNWIiLCJqdGkiOiI2Y2M0Y2UyMi0xMzBiLTRmYWEtYjYyNS00MDg2YWQyM2M0Y2QiLCJ0eXBlIjoicmVmcmVzaCIsImNzcmYiOiIiLCJpYXQiOjE3NTU2MTMyOTYsImV4cCI6MTc1NjIxODA5Ni43NjIwMzR9.Iz2qedv-I8KgyogI_lx9OVyuZ4Zi0VGg1NmqGlPqhIg
+
+### 3. Get current user info
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{accessToken}}
+
+### 4. Access protected endpoint
+GET {{baseUrl}}/protected
+Authorization: Bearer {{accessToken}}
+
+### 5. Verify token
+GET {{baseUrl}}/auth/verify-token
+Authorization: Bearer {{accessToken}}
+
+### 6. Change password
+POST {{baseUrl}}/auth/change-password
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "current_password": "securepassword123",
+  "new_password": "newsecurepassword456"
+}
+
+### 7. Refresh access token
+GET {{baseUrl}}/auth/refresh
+Authorization: Bearer {{refreshToken}}
+
+
+### 8. Test with invalid token
+GET {{baseUrl}}/protected
+Authorization: Bearer invalid_token_here
+
+### 9. Logout (clear cookies)
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{accessToken}}
+
+### 10. Try registering duplicate user (should fail)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "username": "johndoe",
+  "password": "securepassword123",
+  "first_name": "John",
+  "last_name": "Doe"
+}
