@@ -10,7 +10,6 @@ from app.core.database import SessionLocal
 config = AuthXConfig()
 config.JWT_SECRET_KEY = settings.JWT_SECRET_KEY
 config.JWT_ALGORITHM = settings.JWT_ALGORITHM
-config.JWT_TOKEN_LOCATION = ["headers", "json"]
 
 # Create AuthX instance
 auth = AuthX(config=config)

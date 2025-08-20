@@ -1,6 +1,6 @@
 """Authentication router using AuthX."""
 import datetime
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 import jwt
 from pydantic import BaseModel
 from authx import RequestToken
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post("/register", response_model=schemas.User)
-def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+async def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.username == user.username).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
@@ -39,7 +39,7 @@ class LoginForm(BaseModel):
     password: str
 
 @router.post("/login")
-def login(data: LoginForm, db: Session = Depends(get_db)):
+async def login(data: LoginForm, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.username == data.username).first()
     if not user or not utils.security.verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -85,3 +85,45 @@ async def refresh_token(request: Request, db: Session = Depends(get_db)):
         "access_token": new_access,
         "refresh_token": new_refresh
     }
+
+from fastapi import Request, Body
+
+class LogoutForm(BaseModel):
+    refresh_token: str
+
+@router.post("/logout")
+async def logout(
+    request: Request,
+    db: Session = Depends(get_db),
+    access_token: RequestToken = Depends(auth.access_token_required),
+    body: LogoutForm = Body(...)
+):
+    # Extract raw access token from Authorization header
+    auth_header = request.headers.get("authorization")
+    if not auth_header or not auth_header.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    access_token_str = auth_header.split(" ", 1)[1].strip()
+
+    # Decode access token to get expiration
+    try:
+        access_payload = jwt.decode(access_token_str, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        access_expires_at = datetime.datetime.fromtimestamp(access_payload.get("exp"))
+    except jwt.ExpiredSignatureError:
+        pass  # Already expired, no need to blacklist
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="Invalid access token")
+
+    # Blacklist access token
+    utils.security.blacklist_token(db=db, token=access_token_str, expires_at=access_expires_at)
+
+    # Blacklist refresh token
+    try:
+        payload = jwt.decode(body.refresh_token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        expires_at = datetime.datetime.fromtimestamp(payload.get("exp"))
+        utils.security.blacklist_token(db=db, token=body.refresh_token, expires_at=expires_at)
+    except jwt.ExpiredSignatureError:
+        pass  # Already expired, no need to blacklist
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="Invalid refresh token")
+
+    return {"detail": "Successfully logged out"}

@@ -27,8 +27,8 @@ Content-Type: application/json
 }
 
 ### Variables (set these manually after login)
-@accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlZTZkMDMzNS00YzkzLTQ1ZGYtODg4MS04ZTIyNmExM2ViOGEiLCJqdGkiOiJkODUxYmZkMi03NDU2LTQ1M2EtOWQxMS0wOWViY2UzNTNiOTciLCJ0eXBlIjoiYWNjZXNzIiwiZnJlc2giOmZhbHNlLCJjc3JmIjoiIiwiaWF0IjoxNzU1Njg5OTAxLCJleHAiOjE3NTU2OTA4MDEuNzA5MTQ2fQ.mKcNtNjp5a0dgOB1Zy1288AHa466cVUBOoGhK3ZJ0fo
-@refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlZTZkMDMzNS00YzkzLTQ1ZGYtODg4MS04ZTIyNmExM2ViOGEiLCJqdGkiOiI0OWZmZjNjOC1lNzU1LTQ4ZGItYjNjNS00M2VhZTc3MWEwMjAiLCJ0eXBlIjoicmVmcmVzaCIsImNzcmYiOiIiLCJpYXQiOjE3NTU2ODk5MDEsImV4cCI6MTc1NzQxNzkwMS43MTAxNDZ9.6_oI7LquGqDX8HpK4-VeUCqW7uYi_jg4upRJonw38AI
+@accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlZTZkMDMzNS00YzkzLTQ1ZGYtODg4MS04ZTIyNmExM2ViOGEiLCJqdGkiOiI1MmQ0YTA4MS1kNDg1LTQ1MWYtYTc2Ny02Y2E1ZjA1OTYyMmUiLCJ0eXBlIjoiYWNjZXNzIiwiZnJlc2giOmZhbHNlLCJjc3JmIjoiIiwiaWF0IjoxNzU1NjkzNTAyLCJleHAiOjE3NTU2OTQ0MDIuNjMxMzQ0fQ.DNE36Tn7E0xPvVqqylw3PiVznHZXrlsrf1ngbJNt19w
+@refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlZTZkMDMzNS00YzkzLTQ1ZGYtODg4MS04ZTIyNmExM2ViOGEiLCJqdGkiOiJkMWMwYTZlYS1lZTE2LTQ1MzItYWEyNS1iNTFkNWEyYzhlOTIiLCJ0eXBlIjoicmVmcmVzaCIsImNzcmYiOiIiLCJpYXQiOjE3NTU2OTM1MDIsImV4cCI6MTc1NzQyMTUwMi42MzEzNDR9.BOghr8SnMyAC225pKBnMQt1s8lPBy4HpbbHaKiDFzHg
 
 ### 3. Get current user info
 GET {{baseUrl}}/users/me
@@ -38,3 +38,12 @@ Authorization: Bearer {{accessToken}}
 ### 4. Refresh access token
 POST {{baseUrl}}/auth/refresh
 Authorization: Bearer {{refreshToken}}
+
+### 5. Logout
+POST {{baseUrl}}/auth/logout
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "refresh_token": "{{refreshToken}}"
+}
