@@ -204,7 +204,7 @@ def call_flights_api(
     hl: Optional[str] = None,
     currency: Optional[str] = None,
     # Advanced Google Flights Parameters
-    type: Optional[int] = None,
+    type: Optional[int] = 1,
     outbound_date: Optional[str] = None,
     return_date: Optional[str] = None,
     travel_class: Optional[int] = None,
