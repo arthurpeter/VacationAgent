@@ -79,7 +79,7 @@ async def refresh_token(request: Request, db: Session = Depends(get_db)):
     new_refresh = auth.create_refresh_token(uid=uid)
     # Blacklist the old token
     expires_at = datetime.datetime.fromtimestamp(payload.get("exp"))
-    utils.security.blacklist_token(db=next(get_db()), token=token_str, expires_at=expires_at)
+    utils.security.blacklist_token(db=db, token=token_str, expires_at=expires_at)
     print(payload)
     return {
         "access_token": new_access,
@@ -91,11 +91,10 @@ from fastapi import Request, Body
 class LogoutForm(BaseModel):
     refresh_token: str
 
-@router.post("/logout")
+@router.post("/logout", dependencies=[Depends(auth.access_token_required)])
 async def logout(
     request: Request,
     db: Session = Depends(get_db),
-    access_token: RequestToken = Depends(auth.access_token_required),
     body: LogoutForm = Body(...)
 ):
     # Extract raw access token from Authorization header
@@ -111,19 +110,23 @@ async def logout(
     except jwt.ExpiredSignatureError:
         pass  # Already expired, no need to blacklist
     except jwt.InvalidTokenError:
-        raise HTTPException(status_code=400, detail="Invalid access token")
+        raise HTTPException(status_code=401, detail="Invalid access token")
 
     # Blacklist access token
     utils.security.blacklist_token(db=db, token=access_token_str, expires_at=access_expires_at)
-
+    
     # Blacklist refresh token
     try:
         payload = jwt.decode(body.refresh_token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
         expires_at = datetime.datetime.fromtimestamp(payload.get("exp"))
+
+        if utils.security.is_token_revoked(body.refresh_token):
+            raise HTTPException(status_code=401, detail="Token is revoked")
+    
         utils.security.blacklist_token(db=db, token=body.refresh_token, expires_at=expires_at)
     except jwt.ExpiredSignatureError:
         pass  # Already expired, no need to blacklist
     except jwt.InvalidTokenError:
-        raise HTTPException(status_code=400, detail="Invalid refresh token")
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
 
     return {"detail": "Successfully logged out"}

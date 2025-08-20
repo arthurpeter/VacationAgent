@@ -24,7 +24,9 @@ def is_token_revoked(token: str) -> bool:
     finally:
         db.close()
 
-def cleanup_blacklist(db: Session):
+def cleanup_blacklist():
+    db = SessionLocal()
     db.query(BlacklistToken).filter(BlacklistToken.expires_at < datetime.now()).delete()
     db.commit()
+    db.close()
 

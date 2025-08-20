@@ -3,8 +3,7 @@ Authentication configuration and setup using AuthX.
 """
 from authx import AuthX, AuthXConfig
 from app.core.config import settings
-from app.models.blacklist_token import BlacklistToken
-from app.core.database import SessionLocal
+from app.utils.security import is_token_revoked
 
 # Configure AuthX
 config = AuthXConfig()
@@ -15,9 +14,5 @@ config.JWT_ALGORITHM = settings.JWT_ALGORITHM
 auth = AuthX(config=config)
 
 @auth.set_callback_token_blocklist
-def is_token_revoked(token: str) -> bool:
-    db = SessionLocal()
-    try:
-        return db.query(BlacklistToken).filter_by(token=token).first() is not None
-    finally:
-        db.close()
+def token_blocklist_callback(token: str) -> bool:
+    return is_token_revoked(token)
