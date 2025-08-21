@@ -1,6 +1,16 @@
 from langgraph.graph import START, END, StateGraph
-from app.utils.graph import generate_state_from_db
+from langgraph.store.memory import InMemoryStore
+from app.services.agents.memory import GraphMemory, State
+from app.services.agents.agents import information_collector
 
-def generate_graph(uid: str):
-    graph = StateGraph(generate_state_from_db(uid))
+def generate_graph(memory: InMemoryStore):
+    
+    builder = StateGraph(State)
+    builder.add_node(information_collector, "Collect Information")
+
+    builder.add_edge(START, information_collector)
+
+    graph = builder.compile(store=memory)
+
     return graph
+
