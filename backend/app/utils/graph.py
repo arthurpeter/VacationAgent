@@ -7,6 +7,8 @@ from langgraph.store.base import BaseStore
 
 from copy import deepcopy
 
+from backend.app.services.agents import memory
+
 def generate_memory_from_db(uid: str):
     """
     Fetch user and trip info from the database and build a State object.
@@ -49,19 +51,16 @@ def update_memory(uid: str, memory: BaseStore, result: InformationCollectorRespo
         memory (GraphMemory): The current memory state.
         result (InformationCollectorResponse): The response from the information collector.
     """
-    old_memory = memory.get(namespace="user_trip_information", key=uid).value
+    user_memory = memory.get(namespace="user_trip_information", key=uid).value
 
-    new_memory = deepcopy(old_memory)
-    # new_memory = old_memory.copy(deep=True)
+    user_memory.trip_details.description = result.description if result.description else user_memory.trip_details.description
+    user_memory.trip_details.departure_date = result.departure_date if result.departure_date else user_memory.trip_details.departure_date
+    user_memory.trip_details.return_date = result.return_date if result.return_date else user_memory.trip_details.return_date
+    user_memory.trip_details.budget = result.budget if result.budget else user_memory.trip_details.budget
+    user_memory.trip_details.adults = result.adults if result.adults else user_memory.trip_details.adults
+    user_memory.trip_details.children = result.children if result.children else user_memory.trip_details.children
+    user_memory.user_info.user_description = result.user_description if result.user_description else user_memory.user_info.user_description
 
-    new_memory.trip_details.description = result.description if result.description else new_memory.trip_details.description
-    new_memory.trip_details.departure_date = result.departure_date if result.departure_date else new_memory.trip_details.departure_date
-    new_memory.trip_details.return_date = result.return_date if result.return_date else new_memory.trip_details.return_date
-    new_memory.trip_details.budget = result.budget if result.budget else new_memory.trip_details.budget
-    new_memory.trip_details.adults = result.adults if result.adults else new_memory.trip_details.adults
-    new_memory.trip_details.children = result.children if result.children else new_memory.trip_details.children
-    new_memory.user_info.user_description = result.user_description if result.user_description else new_memory.user_info.user_description
+    memory.put(namespace="user_trip_information", key=uid, value=user_memory)
 
-    memory.put(namespace="user_trip_information", key=uid, value=new_memory)
-
-    return new_memory != old_memory
+    return True
