@@ -52,6 +52,7 @@ def update_memory(uid: str, memory: BaseStore, result: InformationCollectorRespo
     old_memory = memory.get(namespace="user_trip_information", key=uid).value
 
     new_memory = deepcopy(old_memory)
+    # new_memory = old_memory.copy(deep=True)
 
     new_memory.trip_details.description = result.description if result.description else new_memory.trip_details.description
     new_memory.trip_details.departure_date = result.departure_date if result.departure_date else new_memory.trip_details.departure_date

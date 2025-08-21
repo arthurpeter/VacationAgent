@@ -7,7 +7,7 @@ from app.services.agents.prompts import *
 from langgraph.store.base import BaseStore
 
 from app.services.agents.responses import InformationCollectorResponse
-from app.utils.graph import generate_memory_from_db
+from app.utils.graph import generate_memory_from_db, update_memory
 
 
 load_dotenv()
@@ -31,10 +31,10 @@ def information_collector(state: State, store: BaseStore) -> State:
 
     response = structured_llm(instructions)
 
+    if update_memory(state.user_id, memory, response):
+        state.need_information = True
+        state.llm_query = response.follow_up_question
 
-
-
-    
     return state
 
 

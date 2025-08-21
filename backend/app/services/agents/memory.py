@@ -32,5 +32,5 @@ class State(TypedDict):
     user_query: str
     user_id: str
     llm_query: str
-    need_information: bool
+    need_information: bool = False
 
