@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 class TripDetails(BaseModel):
     """Details of the trip."""
     location: str = Field(..., description="The current location of the user.")
-    destination: str = Field(..., description="The destination of the trip.")
+    destination: Optional[str] = Field(..., description="The destination of the trip.")
     departure_date: Optional[str] = Field(None, description="The date of departure.")
     return_date: Optional[str] = Field(None, description="The date of return.")
     budget: Optional[float] = Field(None, description="The budget for the trip.")
@@ -31,6 +31,6 @@ class State(TypedDict):
     """State of the agent."""
     user_query: str
     user_id: str
-    llm_query: str
+    llm_query: str = ""
     need_information: bool = False
 
