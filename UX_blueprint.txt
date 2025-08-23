@@ -1,0 +1,178 @@
+1️⃣ Discovery Screen (Chat Interface)
+
+Goal: Understand user preferences in a conversational manner.
+
+Features:
+
+Chat input: User types or selects from suggestions.
+
+AI questions: Dynamically ask about:
+
+Vibe (beach, city, adventure, etc.)
+
+Activities (waterparks, amusement parks, museums)
+
+Budget
+
+Dates or season
+
+Number of travelers
+
+Departure location
+
+Progress summary panel: Shows filled slots and missing info.
+
+Skip/guess options: AI can suggest defaults if user is unsure.
+
+AI logic:
+
+Stores minimal state object with slots:
+
+{
+  "vibe": "beach",
+  "activities": ["waterpark", "amusement park"],
+  "budget": 2000,
+  "dates": {"start": "2025-09-15", "end": "2025-09-22"},
+  "travelers": 2,
+  "departure": "Bucharest"
+}
+
+
+Determines when enough info is collected to move to the next screen.
+
+UX note:
+
+Users should see suggestions inline but retain control.
+
+Visual cue when AI thinks the discovery phase is complete.
+
+Transition:
+
+Once mandatory slots are filled → CTA: “See Your Vacation Options” → moves to Options Screen.
+
+=============================================================================================
+
+2️⃣ Flights & Accommodation Options Screen (Combined)
+
+Goal: Let users review, adjust, and search for flights + hotels in one place.
+
+Screen Layout:
+
+Filters Panel (Top or Side)
+
+Pre-filled with AI-collected info:
+
+Departure location, destination, dates, travelers, budget
+
+Accommodation type, star rating, amenities
+
+Flight options: direct vs connecting, time range
+
+Users can edit or add filters as needed.
+
+Search Button
+
+Once clicked → triggers API search for flights & hotels.
+
+Results Panel (Below Filters)
+
+Top 5–10 flight options
+
+Top 5–10 hotel options
+
+Each card shows:
+
+Flight: airline, times, price, duration, “View Offer” link
+
+Hotel: name, rating, price, amenities, “View Offer” link
+
+Optional “Send to Email” button that summarizes all results.
+
+UX Notes:
+
+Keeping filters and results on the same page avoids extra navigation.
+
+Results could be tabbed (Flights / Hotels) or scrollable list sections.
+
+Include budget summary showing cumulative cost vs user budget.
+
+AI logic:
+
+Uses collected state to pre-fill filters and prioritize recommendations.
+
+Can suggest “best-fit” flights and hotels at the top of the list.
+
+API Integration:
+
+Flights API → fetch top matches
+
+Hotels API → fetch top matches
+
+Optional Email API → send summary
+
+=============================================================================================
+
+3️⃣ Day-by-Day Itinerary Screen
+
+Goal: Provide a ready-made itinerary that users can adjust.
+
+Features:
+
+Day tabs or timeline view
+
+Suggested activities for each day (parks, beaches, meals, tours)
+
+Drag & drop to reorder, swap, or add activities
+
+Links to attractions/tickets
+
+Export/share options: PDF, calendar, email
+
+AI logic:
+
+Generates itinerary based on:
+
+Destination
+
+Hotel location
+
+User activities/preferences
+
+Adjusts suggestions dynamically if users move/swaps activities.
+
+API integration:
+
+Maps / directions (Google Maps, Mapbox)
+
+Activity tickets (Viator, GetYourGuide)
+
+=============================================================================================
+
+4️⃣ Optional Account / Saved Trips Screen
+
+Goal: Allow returning users to revisit trips or preferences.
+
+Features:
+
+List of saved trips with summaries
+
+Quick view of budget, destinations, itinerary
+
+Option to duplicate trip for modification
+
+=============================================================================================
+
+Flow Overview
+[Discovery Chat Screen]
+      ↓
+User fills preferences
+      ↓
+[Flights & Accommodation Options Screen]
+      - Filters editable
+      - Search button triggers API calls
+      - Top 5–10 flights & hotels displayed
+      - Optional Send to Email
+      ↓
+[Day-by-Day Itinerary Screen]
+      - AI proposes daily plan
+      - Users adjust & export
