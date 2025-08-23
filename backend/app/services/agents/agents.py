@@ -1,7 +1,6 @@
 from typing import Literal
 from dotenv import load_dotenv
 #from langchain_openai import ChatOpenAI
-from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.services.agents.memory import State
 from app.services.agents.prompts import *
@@ -10,11 +9,12 @@ from langgraph.graph import END
 
 from app.services.agents.responses import InformationCollectorResponse
 from app.utils.graph import generate_memory_from_db, update_memory
+from app.core.config import settings
 
 
 load_dotenv()
 
-llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0)
+llm = settings.llm
 
 def information_collector(state: State, store: BaseStore) -> State:
     memory = store.get(namespace="user_trip_information", key=state["user_id"])
