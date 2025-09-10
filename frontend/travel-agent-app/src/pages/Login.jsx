@@ -1,37 +1,64 @@
 import React, { useState } from "react";
 import { setTokens } from "../authService";
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function Login() {
   const [form, setForm] = useState({ username: "", password: "" });
+  const auth = useAuth();
+  const navigate = useNavigate();
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async e => {
     e.preventDefault();
-    // Replace with your backend URL
     const res = await fetch("http://localhost:5000/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
-    // Handle response...
+
     if (res.ok) {
-      const response = await res.json();
-      setTokens(response.access_token, response.refresh_token);
-      window.location.href = "/";
+      toast.success("Login successful!");
+      // wait a bit so the toast actually shows
+      setTimeout(async () => {
+        const response = await res.json();
+        auth.login(response.access_token, response.refresh_token); // Update global state
+        navigate('/');
+      }, 1200); // 1.2 seconds
     } else {
-      // Handle login error (e.g., show a message)
-      alert("Login failed. Please check your credentials.");
+      toast.error("Login failed. Please check your credentials.");
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
-        <input className="input mb-4" name="username" type="text" placeholder="Username" onChange={handleChange} required />
-        <input className="input mb-6" name="password" type="password" placeholder="Password" onChange={handleChange} required />
-        <button className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Sign In</button>
+    <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      <Toaster position="top-center" reverseOrder={false} />
+      <form onSubmit={handleSubmit} className="bg-white p-10 rounded-2xl shadow-xl w-full max-w-md">
+        <h2 className="text-3xl font-extrabold mb-8 text-center text-blue-600">Login</h2>
+        <input
+          name="username"
+          type="text"
+          placeholder="Username"
+          onChange={handleChange}
+          required
+          className="w-full px-4 py-3 mb-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
+        />
+        <input
+          name="password"
+          type="password"
+          placeholder="Password"
+          onChange={handleChange}
+          required
+          className="w-full px-4 py-3 mb-6 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
+        />
+        <button className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 shadow-lg transition">
+          Sign In
+        </button>
+        <p className="mt-6 text-center text-gray-500 text-sm">
+          Don't have an account? <a href="/register" className="text-blue-600 hover:underline">Register</a>
+        </p>
       </form>
     </div>
   );
