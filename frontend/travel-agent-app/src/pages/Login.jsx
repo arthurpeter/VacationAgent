@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { setTokens } from "../authService";
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
@@ -24,7 +23,7 @@ export default function Login() {
       // wait a bit so the toast actually shows
       setTimeout(async () => {
         const response = await res.json();
-        auth.login(response.access_token, response.refresh_token); // Update global state
+        auth.login(response.access_token); // Update global state
         navigate('/');
       }, 1200); // 1.2 seconds
     } else {

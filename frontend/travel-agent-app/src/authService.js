@@ -1,22 +1,15 @@
 const ACCESS_TOKEN_KEY = "access_token";
-const REFRESH_TOKEN_KEY = "refresh_token";
 
-export function setTokens(accessToken, refreshToken) {
+export function setTokens(accessToken) {
   localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
 }
 
 export function getAccessToken() {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
 }
 
-export function getRefreshToken() {
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
-}
-
 export function clearTokens() {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
 // Main fetch function
@@ -41,16 +34,15 @@ export async function fetchWithAuth(url, body = {}, method = "POST") {
 
   // If unauthorized, try to refresh
   if (res.status === 401) {
-    const refreshToken = getRefreshToken();
     // Try to refresh
     const refreshRes = await fetch("http://localhost:5000/auth/refresh", {
       method: "POST",
-      headers: { "Authorization": `Bearer ${refreshToken}` },
+      credentials: "include",
     });
 
     if (refreshRes.ok) {
       const tokens = await refreshRes.json();
-      setTokens(tokens.access_token, tokens.refresh_token);
+      setTokens(tokens.access_token);
       // Retry original request with new access token
       accessToken = tokens.access_token;
       res = await fetch(url, {
@@ -80,5 +72,5 @@ export async function fetchWithAuth(url, body = {}, method = "POST") {
     return null;
   }
 
-  return res.json();
+  return res;
 }

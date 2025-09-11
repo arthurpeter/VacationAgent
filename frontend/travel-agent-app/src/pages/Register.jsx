@@ -25,7 +25,7 @@ export default function Register() {
         });
         if (loginRes.ok) {
           const response = await loginRes.json();
-          setTokens(response.access_token, response.refresh_token);
+          setTokens(response.access_token);
           window.location.href = "/";
         } else {
           toast.error("There was an error logging in after registration.");

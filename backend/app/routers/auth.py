@@ -1,13 +1,10 @@
 """Authentication router using AuthX."""
-import datetime
-from fastapi import APIRouter, Body, Depends, HTTPException, Request
-import jwt
-from pydantic import BaseModel
 from authx import RequestToken
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from pydantic import BaseModel
 from app.core.auth import auth
 from app.core.database import get_db
 from app import models, schemas, utils
-from app.core.config import settings
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -39,94 +36,80 @@ class LoginForm(BaseModel):
     password: str
 
 @router.post("/login")
-async def login(data: LoginForm, db: Session = Depends(get_db)):
+async def login(data: LoginForm,response: Response, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.username == data.username).first()
     if not user or not utils.security.verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     access = auth.create_access_token(uid=user.id)
     refresh = auth.create_refresh_token(uid=user.id)
-    return {"access_token": access, "refresh_token": refresh}
+
+    print("access:", access)
+    print("refresh:", refresh)
+
+    auth.set_refresh_cookies(refresh, response)
+
+    return {"access_token": access}
     
 
 @router.post("/refresh")
-async def refresh_token(request: Request, db: Session = Depends(get_db)):
-    # 1) get header
-    auth_header = request.headers.get("authorization")
-    if not auth_header or not auth_header.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="Missing Authorization header")
-    token_str = auth_header.split(" ", 1)[1].strip()
+async def refresh_token(request: Request, response: Response, db: Session = Depends(get_db)):
+    try:    
+        request_token = await auth.get_refresh_token_from_request(request)
+        payload = auth.verify_token(request_token)
 
-    # 2) decode & validate (PyJWT)
-    try:
-        payload = jwt.decode(token_str, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Refresh token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
+        uid = payload.sub
+        # Blacklist refresh token
+        utils.security.blacklist_token(db=db, token=uid, expires_at=payload.exp)
 
-    # 3) ensure it's a refresh token and has subject
-    if payload.get("type") != "refresh":
-        raise HTTPException(status_code=401, detail="Token is not a refresh token")
-    uid = payload.get("sub")
-    if not uid:
-        raise HTTPException(status_code=401, detail="Token missing subject")
-    
-    if utils.security.is_token_revoked(token_str):
-        raise HTTPException(status_code=401, detail="Token is revoked")
+        auth.unset_cookies(response)
 
-    new_access = auth.create_access_token(uid=uid)
-    new_refresh = auth.create_refresh_token(uid=uid)
-    # Blacklist the old token
-    expires_at = datetime.datetime.fromtimestamp(payload.get("exp"))
-    utils.security.blacklist_token(db=db, token=token_str, expires_at=expires_at)
-    print(payload)
-    return {
-        "access_token": new_access,
-        "refresh_token": new_refresh
-    }
+        new_access = auth.create_access_token(uid=uid)
+        new_refresh = auth.create_refresh_token(uid=uid)
 
-from fastapi import Request, Body
+        auth.set_refresh_cookies(new_refresh, response)
+
+        return {
+            "access_token": new_access,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid refresh token") from e
+
+from fastapi import Request
 
 class LogoutForm(BaseModel):
     refresh_token: str
 
-@router.post("/logout", dependencies=[Depends(auth.access_token_required)])
+@router.post("/logout")
 async def logout(
     request: Request,
+    response: Response,
     db: Session = Depends(get_db),
-    body: LogoutForm = Body(...)
 ):
-    # Extract raw access token from Authorization header
-    auth_header = request.headers.get("authorization")
-    if not auth_header or not auth_header.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="Missing Authorization header")
-    access_token_str = auth_header.split(" ", 1)[1].strip()
-
-    # Decode access token to get expiration
     try:
-        access_payload = jwt.decode(access_token_str, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-        access_expires_at = datetime.datetime.fromtimestamp(access_payload.get("exp"))
-    except jwt.ExpiredSignatureError:
-        pass  # Already expired, no need to blacklist
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid access token")
+        auth.unset_cookies(response)
+        print(request.cookies)
+        access_token = await auth.get_access_token_from_request(request)
+        print("Access token:", access_token)
+        request_token = await auth.get_refresh_token_from_request(request)
+        print("Refresh token:", request_token)
+        access_payload = auth.verify_token(access_token)
+        request_payload = auth.verify_token(request_token)
 
-    # Blacklist access token
-    utils.security.blacklist_token(db=db, token=access_token_str, expires_at=access_expires_at)
+        # Blacklist access token
+        utils.security.blacklist_token(db=db, token=access_payload.sub, expires_at=access_payload.exp)
+
+        # Blacklist refresh token
+        utils.security.blacklist_token(db=db, token=request_payload.sub, expires_at=request_payload.exp)
+        
+        auth.unset_cookies(response)
+
+        return {"detail": "Successfully logged out"}
     
-    # Blacklist refresh token
-    try:
-        payload = jwt.decode(body.refresh_token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-        expires_at = datetime.datetime.fromtimestamp(payload.get("exp"))
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=401, detail="Invalid token" ) from e
 
-        if utils.security.is_token_revoked(body.refresh_token):
-            raise HTTPException(status_code=401, detail="Token is revoked")
-    
-        utils.security.blacklist_token(db=db, token=body.refresh_token, expires_at=expires_at)
-    except jwt.ExpiredSignatureError:
-        pass  # Already expired, no need to blacklist
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
-
-    return {"detail": "Successfully logged out"}
+@router.post("/validate", dependencies=[Depends(auth.access_token_required)])
+async def validate_token():
+    return {"message" : "Token is valid"}

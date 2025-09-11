@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { getAccessToken, clearTokens, setTokens } from '../authService';
+import { getAccessToken, clearTokens, setTokens, fetchWithAuth } from '../authService';
 
 const AuthContext = createContext(null);
 
@@ -11,25 +11,36 @@ export const AuthProvider = ({ children }) => {
     const checkAuth = async () => {
       const token = getAccessToken();
       if (token) {
-        // Here you would ideally validate the token with a lightweight backend request
-        // For now, we'll assume if a token exists, the user is authenticated.
-        // The fetchWithAuth service will handle expired tokens automatically.
-        setIsAuthenticated(true);
+        const res = await fetchWithAuth("http://localhost:5000/auth/validate", {}, "POST");
+        if (res.ok) {
+          setIsAuthenticated(true);
+        }
       }
       setIsLoading(false);
     };
     checkAuth();
   }, []);
 
-  const login = (accessToken, refreshToken) => {
-    setTokens(accessToken, refreshToken);
+  const login = (accessToken) => {
+    setTokens(accessToken);
     setIsAuthenticated(true);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const res = await fetch("http://localhost:5000/auth/logout", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${getAccessToken()}`
+      },
+      credentials: "include",
+    });
+    if (!res.ok) {
+      console.error("Failed to logout from server");
+    }
     clearTokens();
     setIsAuthenticated(false);
-    window.location.href = '/login'; // Redirect to login on logout
+    window.location.href = '/login';
+    
   };
 
   // Don't render the app until the initial authentication check is complete
