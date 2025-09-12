@@ -57,7 +57,6 @@ async def refresh_token(
     db: Session = Depends(get_db)
 ):
     try:    
-
         # Blacklist old refresh token
         utils.security.blacklist_token(db=db, token=token.jti, expires_at=token.exp)
 

@@ -45,10 +45,21 @@ export async function fetchWithAuth(url, body = {}, method = "POST") {
   });
 
   // If unauthorized, try to refresh
-  if (res.status === 401) {
+  if (res.status === 401 || res.status === 422) {
     // Try to refresh
+    const csrfToken = getCSRFToken();
+    const refreshHeaders = {
+      "Content-Type": "application/json"
+    };
+    
+    // Add CSRF token header if available
+    if (csrfToken) {
+      refreshHeaders["X-CSRF-TOKEN-Refresh"] = csrfToken;
+    }
+    
     const refreshRes = await fetch("http://localhost:5000/auth/refresh", {
       method: "POST",
+      headers: refreshHeaders,
       credentials: "include",
     });
 

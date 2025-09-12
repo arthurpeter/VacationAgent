@@ -36,8 +36,8 @@ Authorization: Bearer {{accessToken}}
 
 
 ### 4. Refresh access token
-POST {{baseUrl}}/auth/refresh
-Authorization: Bearer {{refreshToken}}
+POST {{baseUrl}}/auth/validate
+Authorization: Bearer {{accessToken}}
 
 ### 5. Logout
 POST {{baseUrl}}/auth/logout
