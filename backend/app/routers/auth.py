@@ -1,7 +1,6 @@
 """Authentication router using AuthX."""
-import secrets
-from authx import RequestToken, TokenPayload
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from authx import TokenPayload
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from app.core.auth import auth
 from app.core.database import get_db
