@@ -1,4 +1,5 @@
 from datetime import datetime
+import jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from app.models.blacklist_token import BlacklistToken
@@ -18,9 +19,19 @@ def blacklist_token(db: Session, token: str, expires_at: datetime):
     db.commit()
 
 def is_token_revoked(token: str) -> bool:
+    """Check if a JWT token is blacklisted"""
     db = SessionLocal()
     try:
-        return db.query(BlacklistToken).filter_by(token=token).first() is not None
+        # Decode the JWT token to get the JTI (without verifying signature)
+        payload = jwt.decode(
+            token, 
+            options={"verify_signature": False, "verify_exp": False}
+        )
+        jti = payload.get("jti")
+        
+        if not jti:
+            return False
+        return db.query(BlacklistToken).filter_by(token=jti).first() is not None
     finally:
         db.close()
 

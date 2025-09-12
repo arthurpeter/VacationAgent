@@ -1,5 +1,6 @@
 """Authentication router using AuthX."""
 import secrets
+from authx import RequestToken, TokenPayload
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 from app.core.auth import auth
@@ -43,9 +44,6 @@ async def login(data: LoginForm, response: Response, db: Session = Depends(get_d
     
     access = auth.create_access_token(uid=user.id)
     refresh = auth.create_refresh_token(uid=user.id)
-    
-    print("access:", access)
-    print("refresh:", refresh)
 
     # Clear any existing cookies
     auth.unset_cookies(response)
@@ -57,20 +55,22 @@ async def login(data: LoginForm, response: Response, db: Session = Depends(get_d
     
 
 @router.post("/refresh")
-async def refresh_token(request: Request, response: Response, db: Session = Depends(get_db)):
+async def refresh_token(
+    response: Response,
+    token: TokenPayload = Depends(auth.refresh_token_required),
+    db: Session = Depends(get_db)
+):
     try:    
-        request_token = await auth.get_refresh_token_from_request(request)
-        payload = auth.verify_token(request_token)
 
         # Blacklist old refresh token
-        utils.security.blacklist_token(db=db, token=payload.jti, expires_at=payload.exp)
+        utils.security.blacklist_token(db=db, token=token.jti, expires_at=token.exp)
 
         # Clear existing cookies
         auth.unset_cookies(response)
 
         # Create new tokens
-        new_access = auth.create_access_token(uid=payload.sub)
-        new_refresh = auth.create_refresh_token(uid=payload.sub)
+        new_access = auth.create_access_token(uid=token.sub)
+        new_refresh = auth.create_refresh_token(uid=token.sub)
 
         # Set new refresh token cookie - this will automatically set CSRF cookie too
         auth.set_refresh_cookies(new_refresh, response)
@@ -81,30 +81,23 @@ async def refresh_token(request: Request, response: Response, db: Session = Depe
     except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid refresh token") from e
 
-from fastapi import Request
-
 class LogoutForm(BaseModel):
     refresh_token: str
 
 @router.post("/logout")
 async def logout(
-    request: Request,
     response: Response,
+    access_token: TokenPayload = Depends(auth.access_token_required),
+    refresh_token: TokenPayload = Depends(auth.refresh_token_required),
     db: Session = Depends(get_db),
 ):
     try:
-        access_token = await auth.get_access_token_from_request(request)
-        request_token = await auth.get_refresh_token_from_request(request)
-    
-        access_payload = auth.verify_token(access_token)
-        request_payload = auth.verify_token(request_token)
-
         # Blacklist access token using the token's jti (unique identifier)
-        utils.security.blacklist_token(db=db, token=access_payload.jti, expires_at=access_payload.exp)
+        utils.security.blacklist_token(db=db, token=access_token.jti, expires_at=access_token.exp)
 
         # Blacklist refresh token using the token's jti (unique identifier)
-        utils.security.blacklist_token(db=db, token=request_payload.jti, expires_at=request_payload.exp)
-        
+        utils.security.blacklist_token(db=db, token=refresh_token.jti, expires_at=refresh_token.exp)
+
         auth.unset_cookies(response)
 
         return {"detail": "Successfully logged out"}
