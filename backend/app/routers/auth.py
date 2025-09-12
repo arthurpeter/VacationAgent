@@ -13,19 +13,15 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post("/register", response_model=schemas.User)
 async def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.username == user.username).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
+    if user.password != user.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
     hashed_password = utils.security.get_password_hash(user.password)
     db_user = models.User(
-        username=user.username,
         email=user.email,
-        hashed_password=hashed_password,
-        first_name=user.first_name,
-        last_name=user.last_name
+        hashed_password=hashed_password
     )
     db.add(db_user)
     db.commit()
@@ -33,12 +29,12 @@ async def register_user(user: schemas.UserCreate, db: Session = Depends(get_db))
     return db_user
 
 class LoginForm(BaseModel):
-    username: str
+    email: str
     password: str
 
 @router.post("/login")
 async def login(data: LoginForm, response: Response, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.username == data.username).first()
+    user = db.query(models.User).filter(models.User.email == data.email).first()
     if not user or not utils.security.verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     

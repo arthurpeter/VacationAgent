@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 
 export default function Login() {
-  const [form, setForm] = useState({ username: "", password: "" });
+  const [form, setForm] = useState({ email: "", password: "" });
   const auth = useAuth();
   const navigate = useNavigate();
 
@@ -38,9 +38,9 @@ export default function Login() {
       <form onSubmit={handleSubmit} className="bg-white p-10 rounded-2xl shadow-xl w-full max-w-md">
         <h2 className="text-3xl font-extrabold mb-8 text-center text-blue-600">Login</h2>
         <input
-          name="username"
-          type="text"
-          placeholder="Username"
+          name="email"
+          type="email"
+          placeholder="Email"
           onChange={handleChange}
           required
           className="w-full px-4 py-3 mb-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"

@@ -3,12 +3,19 @@ import { setTokens } from "../authService";
 import toast, { Toaster } from 'react-hot-toast';
 
 export default function Register() {
-  const [form, setForm] = useState({ email: "", username: "", password: "", first_name: "", last_name: "" });
+  const [form, setForm] = useState({ email: "", password: "", confirm_password: "" });
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async e => {
     e.preventDefault();
+    
+    // Frontend password validation
+    if (form.password !== form.confirm_password) {
+      toast.error("Passwords do not match!");
+      return;
+    }
+    
     const res = await fetch("http://localhost:5000/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -21,7 +28,8 @@ export default function Register() {
         const loginRes = await fetch("http://localhost:5000/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: form.username, password: form.password }),
+          credentials: "include", // Add this for cookie support
+          body: JSON.stringify({ email: form.email, password: form.password }),
         });
         if (loginRes.ok) {
           const response = await loginRes.json();
@@ -53,33 +61,17 @@ export default function Register() {
           className="w-full px-4 py-3 mb-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
         />
         <input
-          name="username"
-          type="text"
-          placeholder="Username"
-          onChange={handleChange}
-          required
-          className="w-full px-4 py-3 mb-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
-        />
-        <input
-          name="first_name"
-          type="text"
-          placeholder="First Name"
-          onChange={handleChange}
-          required
-          className="w-full px-4 py-3 mb-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
-        />
-        <input
-          name="last_name"
-          type="text"
-          placeholder="Last Name"
-          onChange={handleChange}
-          required
-          className="w-full px-4 py-3 mb-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
-        />
-        <input
           name="password"
           type="password"
           placeholder="Password"
+          onChange={handleChange}
+          required
+          className="w-full px-4 py-3 mb-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
+        />
+        <input
+          name="confirm_password"
+          type="password"
+          placeholder="Confirm Password"
           onChange={handleChange}
           required
           className="w-full px-4 py-3 mb-6 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
