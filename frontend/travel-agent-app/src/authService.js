@@ -1,5 +1,17 @@
 const ACCESS_TOKEN_KEY = "access_token";
 
+// Helper function to get cookie value by name
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+// Get CSRF token from cookies
+export function getCSRFToken() {
+  return getCookie('csrf_refresh_token');
+}
+
 export function setTokens(accessToken) {
   localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
 }

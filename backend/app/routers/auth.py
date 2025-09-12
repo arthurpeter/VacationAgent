@@ -1,5 +1,5 @@
 """Authentication router using AuthX."""
-from authx import RequestToken
+import secrets
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 from app.core.auth import auth
@@ -36,18 +36,22 @@ class LoginForm(BaseModel):
     password: str
 
 @router.post("/login")
-async def login(data: LoginForm,response: Response, db: Session = Depends(get_db)):
+async def login(data: LoginForm, response: Response, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.username == data.username).first()
     if not user or not utils.security.verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     access = auth.create_access_token(uid=user.id)
     refresh = auth.create_refresh_token(uid=user.id)
-
+    
     print("access:", access)
     print("refresh:", refresh)
 
-    auth.set_refresh_cookies(refresh, response)
+    # Clear any existing cookies
+    auth.unset_cookies(response)
+
+    # Set refresh token cookie using AuthX method - this will automatically set CSRF cookie too
+    auth.set_refresh_cookies(refresh, response, max_age=60 * 60 * 24 * 30)
 
     return {"access_token": access}
     
@@ -58,15 +62,17 @@ async def refresh_token(request: Request, response: Response, db: Session = Depe
         request_token = await auth.get_refresh_token_from_request(request)
         payload = auth.verify_token(request_token)
 
-        uid = payload.sub
-        # Blacklist refresh token
-        utils.security.blacklist_token(db=db, token=uid, expires_at=payload.exp)
+        # Blacklist old refresh token
+        utils.security.blacklist_token(db=db, token=payload.jti, expires_at=payload.exp)
 
+        # Clear existing cookies
         auth.unset_cookies(response)
 
-        new_access = auth.create_access_token(uid=uid)
-        new_refresh = auth.create_refresh_token(uid=uid)
+        # Create new tokens
+        new_access = auth.create_access_token(uid=payload.sub)
+        new_refresh = auth.create_refresh_token(uid=payload.sub)
 
+        # Set new refresh token cookie - this will automatically set CSRF cookie too
         auth.set_refresh_cookies(new_refresh, response)
 
         return {
@@ -87,20 +93,17 @@ async def logout(
     db: Session = Depends(get_db),
 ):
     try:
-        auth.unset_cookies(response)
-        print(request.cookies)
         access_token = await auth.get_access_token_from_request(request)
-        print("Access token:", access_token)
         request_token = await auth.get_refresh_token_from_request(request)
-        print("Refresh token:", request_token)
+    
         access_payload = auth.verify_token(access_token)
         request_payload = auth.verify_token(request_token)
 
-        # Blacklist access token
-        utils.security.blacklist_token(db=db, token=access_payload.sub, expires_at=access_payload.exp)
+        # Blacklist access token using the token's jti (unique identifier)
+        utils.security.blacklist_token(db=db, token=access_payload.jti, expires_at=access_payload.exp)
 
-        # Blacklist refresh token
-        utils.security.blacklist_token(db=db, token=request_payload.sub, expires_at=request_payload.exp)
+        # Blacklist refresh token using the token's jti (unique identifier)
+        utils.security.blacklist_token(db=db, token=request_payload.jti, expires_at=request_payload.exp)
         
         auth.unset_cookies(response)
 
@@ -108,7 +111,7 @@ async def logout(
     
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=401, detail="Invalid token" ) from e
+        raise HTTPException(status_code=401, detail="Invalid token") from e
 
 @router.post("/validate", dependencies=[Depends(auth.access_token_required)])
 async def validate_token():

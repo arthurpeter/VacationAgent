@@ -19,11 +19,11 @@ config = AuthXConfig(
     # Cookie settings
     JWT_REFRESH_COOKIE_NAME="refresh_token_cookie",
     JWT_COOKIE_SECURE=False,  # Set to True in production with HTTPS
-    JWT_COOKIE_CSRF_PROTECT=False,  # Disable CSRF protection for testing
-    JWT_COOKIE_SAMESITE="lax",  # Add this line
-    JWT_COOKIE_DOMAIN=None,  # Add this line
+    JWT_COOKIE_CSRF_PROTECT=True,  # Enable CSRF protection
+    JWT_COOKIE_SAMESITE="lax",
+    JWT_COOKIE_DOMAIN=None,
+    # CSRF settings 
     JWT_REFRESH_CSRF_COOKIE_NAME="csrf_refresh_token",
-    JWT_ACCESS_CSRF_HEADER_NAME="X-CSRF-TOKEN-Access",
     JWT_REFRESH_CSRF_HEADER_NAME="X-CSRF-TOKEN-Refresh",
 )
 

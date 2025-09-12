@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { getAccessToken, clearTokens, setTokens, fetchWithAuth } from '../authService';
+import { getAccessToken, clearTokens, setTokens, fetchWithAuth, getCSRFToken } from '../authService';
 
 const AuthContext = createContext(null);
 
@@ -27,20 +27,35 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    const csrfToken = getCSRFToken();
+    console.log("CSRF Token from cookie:", csrfToken);
+    
+    const headers = {
+      "Authorization": `Bearer ${getAccessToken()}`,
+      "Content-Type": "application/json"
+    };
+    
+    // Add CSRF token header if available
+    if (csrfToken) {
+      headers["X-CSRF-TOKEN-Refresh"] = csrfToken;
+      console.log("Adding CSRF token to header:", csrfToken);
+    }
+    
+    console.log("Logout headers:", headers);
+    
     const res = await fetch("http://localhost:5000/auth/logout", {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${getAccessToken()}`
-      },
+      headers,
       credentials: "include",
     });
+    
     if (!res.ok) {
       console.error("Failed to logout from server");
     }
+    
     clearTokens();
     setIsAuthenticated(false);
     window.location.href = '/login';
-    
   };
 
   // Don't render the app until the initial authentication check is complete
