@@ -1,0 +1,37 @@
+Exemplu interactiune utilizator – asistent AI
+
+Utilizator:
+Vreau o vacanta relaxanta la mare, undeva in septembrie, cu un buget de aproximativ 2000 de euro, plecand din Bucuresti.
+
+Asistent AI:
+In regula. Cate persoane vor calatori si cat ai vrea sa dureze vacanta?
+
+Utilizator:
+Eu si partenera mea, pentru o saptamana.
+
+Asistent AI:
+Perfect. Preferi o destinatie din Europa sau te intereseaza si variante mai indepartate?
+Si vrei mai mult un loc linistit sau ceva mai activ, cu multe lucruri de vizitat?
+
+Utilizator:
+Mai degraba Europa, dar sa nu fie un loc prea aglomerat. Sa fie liniste, plaja si eventual ceva de explorat prin apropiere.
+
+Asistent AI:
+Am inteles. Pe baza preferintelor tale — septembrie, 7 zile, 2 adulti, buget in jur de 2000 € — iata cateva variante potrivite:
+
+Tenerife, Spania – destinatie excelenta pentru final de vara, temperaturi placute si peisaje vulcanice spectaculoase. Plajele sunt mai linistite in septembrie, iar insula are multe locuri de explorat cu masina. Buget estimat: 1700–2000 €.
+
+Creta, Grecia – combinatie intre plaje frumoase, sate traditionale si mancare locala foarte buna. Septembrie este ideal, vreme calda, dar fara aglomeratia din august. Buget estimat: 1500–1800 €.
+
+Sardinia, Italia – insula cu ape turcoaz si zone naturale spectaculoase. Atmosfera mai eleganta, potrivita pentru o vacanta relaxata. Buget estimat: 1800–2100 €.
+
+Algarve, Portugalia – regiune de coasta cu plaje spectaculoase si orasele linistite. Ideala pentru plimbari, golf sau relaxare la ocean. Buget estimat: 1600–1900 €.
+
+Care dintre aceste variante te atrage mai mult?
+
+Utilizator:
+Cred ca Tenerife suna cel mai bine.
+
+Asistent AI:
+Perfect. Am adunat toate informatiile necesare pentru cautarea vacantei tale.
+In cateva secunde vei fi redirectionat catre ecranul de cautare a zborurilor si cazarilor, unde vei putea vedea ofertele disponibile pentru Tenerife in perioada aleasa.
