@@ -9,14 +9,24 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = getAccessToken();
-      if (token) {
-        const res = await fetchWithAuth("http://localhost:5000/auth/validate", {}, "POST");
-        if (res.ok) {
-          setIsAuthenticated(true);
+      try {
+        const token = getAccessToken();
+        if (token) {
+          const res = await fetchWithAuth("http://localhost:5000/auth/validate", {}, "POST");
+          if (res && res.ok) {
+            setIsAuthenticated(true);
+          } else {
+            clearTokens();
+            setIsAuthenticated(false);
+          }
         }
+      } catch (err) {
+        console.error("Auth check error:", err);
+        clearTokens();
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
     checkAuth();
   }, []);
@@ -65,7 +75,7 @@ export const AuthProvider = ({ children }) => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <h2 className="text-lg font-medium text-gray-900 mb-2">Loading Application</h2>
-          <p className="text-sm text-gray-600">Initializing authentication...</p>
+          <p className="text-sm text-gray-600">Checking Credentials...</p>
         </div>
       </div>
     );
