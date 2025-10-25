@@ -1,0 +1,4 @@
+another flights api to search more freely: https://developers.amadeus.com/self-service/category/flights/api-doc/flight-cheapest-date-search
+
+Note: use the flights api from above to find the best dates for the lowest prices also for searching the accomodations
+as flight and accomodation prices are strongly correlated

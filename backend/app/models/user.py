@@ -2,6 +2,7 @@
 import uuid
 from sqlalchemy import Column, String, DateTime, Boolean
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 
@@ -20,3 +21,19 @@ class User(Base):
     date_of_birth = Column(DateTime(timezone=True), nullable=True)
     location = Column(String, nullable=True)
     user_description = Column(String, nullable=True)
+
+    # finalized vacations
+    vacations = relationship(
+        "Vacation",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    )
+
+    # active/in-progress sessions for resuming AI-driven interactions
+    sessions = relationship(
+        "VacationSession",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    )

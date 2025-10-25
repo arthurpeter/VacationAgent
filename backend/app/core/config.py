@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str = "sqlite:///./mydatabase.db"
+    SESSION_EXPIRY_DAYS: int = 30
     
     JWT_SECRET_KEY: str = "your_secret_key"
     JWT_ALGORITHM: str = "HS256"
