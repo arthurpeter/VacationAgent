@@ -8,11 +8,15 @@ from app.core.config import settings
 from app.core.database import Base, engine
 from app.core.auth import auth
 from app.core.jobs import start_jobs
+from app.core.logger import configure_logging
 from app.routers.auth import router as auth_router
 from app.routers.users import router as users_router
 
 # Create database tables using sync engine
 Base.metadata.create_all(bind=engine)
+
+# Configure logging early (console-only logger)
+configure_logging()
 
 # Start background jobs
 start_jobs()
