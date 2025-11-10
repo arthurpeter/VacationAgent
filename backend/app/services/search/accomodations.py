@@ -67,7 +67,6 @@ def call_accomodation_api(
         Dict[str, Any]: API response containing hotel data
     
     Raises:
-        ValueError: If required parameters are missing
         Exception: If API request fails or returns an error
     """
     
@@ -155,20 +154,69 @@ def call_accomodation_api(
 # Example of how you might call this function:
 if __name__ == "__main__":
     try:
+        # Using dates in the near future
+        search_query = "Hotels in Paris, France"
+        # Using a date that is likely to have prices
+        ci_date = "2026-02-10" 
+        co_date = "2026-02-17"
+        
+        # --- (SIMPLIFIED) STEP 1: Get all data in one call ---
+        print("--- STEP 1: Searching for hotels and links... ---")
         hotel_results = call_accomodation_api(
-            query="Hotels in Paris, France",
-            check_in_date="2025-12-10",
-            check_out_date="2025-12-17",
+            query=search_query,
+            check_in_date=ci_date,
+            check_out_date=co_date,
             gl="us",
             hl="en",
             currency="USD",
-            rating="8"  # 4.0+ stars
+            rating="8",  # 4.0+ stars
+            sort_by="3" # 3 = Lowest price
         )
         
+        # --- OPTION 1: Get link from the first "Sponsored" (Ad) result ---
+        # These are very reliable and almost always have a direct provider link
+        print("\n--- ✅ Found Sponsored Provider Link ---")
+        ads = hotel_results.get("ads")
+        if ads:
+            first_ad = ads[0]
+            print(f"Provider: {first_ad.get('source')}")
+            print(f"Name: {first_ad.get('name')}")
+            print(f"Price: {first_ad.get('price')}")
+            print(f"Link: {first_ad.get('link')}")
+        else:
+            print("No sponsored (ad) results found.")
+
+        # --- OPTION 2: Get link from the first "Organic" (Property) result ---
+        # This is what we were doing before, but now we get the correct link.
+        print("\n--- ✅ Found Top Organic Property Link ---")
         if "properties" in hotel_results and hotel_results["properties"]:
-            print(f"Found {len(hotel_results['properties'])} hotels.")
-            print(f"Top result: {hotel_results['properties'][0].get('name')}")
-            print(f"Price: {hotel_results['properties'][0].get('price')}")
+            properties = hotel_results["properties"]
+            
+            # Find the first hotel that ACTUALLY has a price
+            top_hotel = None
+            for hotel in properties:
+                if hotel.get('total_rate') and hotel.get('total_rate').get('lowest'):
+                    top_hotel = hotel
+                    break  # We found a hotel with a price!
+            
+            if top_hotel is None:
+                print("Warning: No hotels in the list had a 'total_rate'. Falling back to first result.")
+                top_hotel = properties[0]
+                
+            hotel_price = top_hotel.get('total_rate', {}).get('lowest')
+            if not hotel_price:
+                 hotel_price = top_hotel.get('price') # Fallback
+
+            print(f"Name: {top_hotel.get('name')}")
+            print(f"Total Price: {hotel_price}")
+            
+            # This is the link you saw in the JSON example (e.g., to Tiket.com)
+            property_link = top_hotel.get("link")
+            if property_link:
+                print(f"Link: {property_link}")
+            else:
+                print("Link: (This property has no direct provider link, only a 'property_token')")
+                
         else:
             print("No properties found for this search.")
 
