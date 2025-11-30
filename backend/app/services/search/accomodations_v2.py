@@ -16,7 +16,6 @@ if not RAPIDAPI_KEY:
     print("Error: RAPIDAPI_KEY not found. Please create a .env file with your key.")
     exit()
 
-# --- (FIXED) API Function 1: Get Destination ID ---
 def get_destination_id(location_name: str) -> dict:
     """
     Calls the /api/v1/hotels/searchDestination endpoint.
@@ -53,7 +52,6 @@ def get_destination_id(location_name: str) -> dict:
             print(f"Response body: {response.text}")
         return None
 
-# --- (FIXED) API Function 2: Search for Hotels ---
 def search_hotels(dest_id: str, search_type: str, checkin_date: str, checkout_date: str) -> dict:
     """
     Calls the /api/v1/hotels/searchHotels endpoint.
@@ -87,7 +85,6 @@ def search_hotels(dest_id: str, search_type: str, checkin_date: str, checkout_da
     }
 
     try:
-        # It's a GET request, not POST
         response = requests.get(url, headers=headers, params=querystring, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()  # Raises an HTTPError for bad responses
         return response.json()
@@ -97,7 +94,6 @@ def search_hotels(dest_id: str, search_type: str, checkin_date: str, checkout_da
             print(f"Response body: {response.text}")
         return {}
 
-# --- API Function 3: Get Hotel Details ---
 def get_hotel_details(hotel_id: str, checkin_date: str, checkout_date: str) -> dict:
     """
     Calls the /api/v1/hotels/getHotelDetails endpoint.
