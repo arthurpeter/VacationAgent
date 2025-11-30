@@ -10,7 +10,7 @@ load_dotenv()
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
 RAPIDAPI_HOST = "booking-com15.p.rapidapi.com"
 
-REQUEST_TIMEOUT = 10 # seconds
+REQUEST_TIMEOUT = 30 # seconds
 
 if not RAPIDAPI_KEY:
     print("Error: RAPIDAPI_KEY not found. Please create a .env file with your key.")
@@ -242,7 +242,7 @@ def main():
         return
         
     # --- 6. Print the Link ---
-    booking_link = details_response.get("data", {}).get("hotelUrl")
+    booking_link = details_response.get("data", {}).get("url")
     
     if booking_link:
         print("\n--- ✅ SUCCESS! ---")
