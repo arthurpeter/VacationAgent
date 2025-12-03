@@ -1,4 +1,0 @@
-another flights api to search more freely: https://serpapi.com/google-travel-explore-api
-
-Note: use the flights api from above to find the best dates for the lowest prices also for searching the accomodations
-as flight and accomodation prices are strongly correlated

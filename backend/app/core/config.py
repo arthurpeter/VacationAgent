@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     GOOGLE_API_KEY: Optional[str] = None
     SERPAPI_API_KEY: Optional[str] = None
+    RAPIDAPI_KEY: Optional[str] = None
     
     # LLM Configuration
     LLM_MODEL: str = "gemini-2.0-flash"

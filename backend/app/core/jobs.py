@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from app.core.database import SessionLocal
 from app.models.vacation_session import VacationSession
 from app.models.blacklist_token import BlacklistToken
-from logger import get_logger
+from app.core.logger import get_logger
 
 log = get_logger(__name__)
 
