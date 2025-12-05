@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom'; // 1. Import useNavigate
 import VacationCard from '../components/VacationCard';
 
 const MOCK_HISTORY = [
@@ -10,6 +10,15 @@ const MOCK_HISTORY = [
 
 export default function Dashboard() {
   const [vacations, setVacations] = useState(MOCK_HISTORY);
+  const navigate = useNavigate(); // 2. Initialize hook
+
+  // 3. Create a handler for new trips
+  const handleCreateNew = async () => {
+    // TODO: In the future, this will be: const res = await api.createSession();
+    // For now, generate a random ID to simulate a new session
+    const newId = Date.now().toString();
+    navigate(`/plan/${newId}`);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 px-8 py-12">
@@ -21,37 +30,44 @@ export default function Dashboard() {
             <h1 className="text-3xl font-extrabold text-gray-900">Your Trips</h1>
             <p className="text-gray-500 mt-1">Manage your ongoing plans and past adventures.</p>
           </div>
-          <Link to="/chat/new">
-            <button className="mt-4 md:mt-0 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg transition transform hover:-translate-y-0.5">
-              + Create New Vacation
-            </button>
-          </Link>
+          {/* 4. Update Button to use handler instead of Link */}
+          <button 
+            onClick={handleCreateNew}
+            className="mt-4 md:mt-0 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg transition transform hover:-translate-y-0.5"
+          >
+            + Create New Vacation
+          </button>
         </div>
 
         {vacations.length === 0 && (
           <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-3xl p-10 text-white text-center shadow-xl mb-12">
             <h2 className="text-3xl font-bold mb-4">Ready for your next adventure?</h2>
             <p className="text-blue-100 mb-8 max-w-xl mx-auto">Start a conversation with our AI agent to build your perfect itinerary from scratch.</p>
-            <Link to="/chat/new">
-              <button className="px-8 py-3 bg-white text-blue-600 font-bold rounded-xl shadow hover:bg-gray-100 transition">
-                Start Planning Now
-              </button>
-            </Link>
+            {/* 5. Update Call to Action */}
+            <button 
+              onClick={handleCreateNew}
+              className="px-8 py-3 bg-white text-blue-600 font-bold rounded-xl shadow hover:bg-gray-100 transition"
+            >
+              Start Planning Now
+            </button>
           </div>
         )}
 
         {/* History Grid */}
         {vacations.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Link to="/chat/new" className="group border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:border-blue-500 hover:bg-blue-50 transition min-h-[200px]">
+            {/* 6. Update "Plan a New Trip" Card */}
+            <div 
+              onClick={handleCreateNew}
+              className="group border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:border-blue-500 hover:bg-blue-50 transition min-h-[200px] cursor-pointer"
+            >
               <div className="h-12 w-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition">
                 <span className="text-2xl font-bold">+</span>
               </div>
               <h3 className="text-lg font-bold text-gray-700 group-hover:text-blue-700">Plan a New Trip</h3>
               <p className="text-sm text-gray-400 mt-2">Start from scratch</p>
-            </Link>
+            </div>
 
-            {/* Map through history */}
             {vacations.map(vacation => (
               <VacationCard key={vacation.id} vacation={vacation} />
             ))}

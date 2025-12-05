@@ -36,7 +36,7 @@ export default function VacationCard({ vacation }) {
         <div className="flex items-center justify-between mt-auto">
           <span className="text-xs text-gray-400">Last updated: {vacation.date}</span>
           <Link 
-            to={isCompleted ? `/summary/${vacation.id}` : `/chat/${vacation.id}`}
+            to={`/plan/${vacation.id}`}
             className="px-4 py-2 bg-gray-50 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition text-sm"
           >
             {isCompleted ? "View Summary" : "Continue Planning →"}
