@@ -25,8 +25,8 @@ class FlightBookingResponse(BaseModel):
 class FlightsRequest(BaseModel):
     """Schema for flight search request."""
     token: Optional[str] = None
-    departure_id: str
-    arrival_id: str
+    departure: str
+    arrival: str
     outbound_date: str
     return_date: Optional[str] = None
     adults: int

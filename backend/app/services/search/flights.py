@@ -8,21 +8,57 @@ import sys
 
 load_dotenv()
 
-def get_google_flight_params(iata_code: str):
+def get_location_data(area_input: str, country_filter: str = None):
+    """
+    Takes an area (City Name OR Airport Code) and returns all necessary
+    search parameters in one go.
+    
+    Args:
+        area_input: "Paris", "London", "OTP", or "LON"
+        country_filter: Optional "FR", "GB" (useful if searching 'Paris, US' vs 'Paris, FR')
+        
+    Returns:
+        dict: {
+            "airport_list": "CDG,ORY,LBG",  # The code(s) for the search
+            "gl": "fr",                     # Country parameter
+            "hl": "en",                     # Language parameter
+            "currency": "EUR"               # Currency parameter
+        }
+    """
     airports = airportsdata.load('IATA')
-    
-    iata_code = iata_code.upper()
-    airport_info = airports.get(iata_code)
-    
-    if not airport_info:
-        return {"error": f"Airport code '{iata_code}' not found."}
+    area_clean = area_input.strip()
 
-    country_code = airport_info['country'] 
+    found_airports = []
     
-    currency = numbers.get_territory_currencies(country_code)
-    currency_code = currency[0] if currency else "USD"
+    target_city = area_clean.lower()
+    target_code = area_clean.upper()
+    target_country = country_filter.upper() if country_filter else None
+
+    for code, data in airports.items():
+        is_city_match = (data.get('city', '').lower() == target_city)
+        is_code_match = (code == target_code)
+        
+        if is_city_match or is_code_match:
+            print(f"Matched airport: {code} in {data.get('city')}, {data.get('country')}")
+            if target_country and data.get('country') != target_country:
+                continue
+                
+            if len(code) == 3:
+                found_airports.append(data)
+
+    if not found_airports:
+        return {"error": f"No airports found for '{area_input}'"}
+
+    first_match = found_airports[0]
+    country_code = first_match['country']
+    
+    currency_list = numbers.get_territory_currencies(country_code)
+    currency_code = currency_list[0] if currency_list else "USD"
+    
+    codes_str = ",".join(list(set([a['iata'] for a in found_airports])))
 
     return {
+        "departure_id": codes_str,
         "gl": country_code.lower(),
         "hl": "en",
         "currency": currency_code.upper()
@@ -197,8 +233,8 @@ def call_flights_api(
 
 # Example of how you might call this function:
 if __name__ == "__main__":
-    print(f"OTP: {get_google_flight_params('OTP')}")
-    # sys.exit()
+    print(get_location_data("Paris", "FR"))
+    sys.exit()
     try:
         # --- STEP 1: Search for Outbound Flights ---
         print("--- STEP 1: Searching for outbound flights... ---")

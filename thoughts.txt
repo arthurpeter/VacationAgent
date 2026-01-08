@@ -1,0 +1,4 @@
+The search will be don e by specifying a city and country code so the exploration api will only be used
+for dates and the regular search will try all airports from a city. After making the explore endpoint i will 
+change the frontend so you can call them from there, then make the accomodation part and integrate it and only after that
+I make the database integration for the session.

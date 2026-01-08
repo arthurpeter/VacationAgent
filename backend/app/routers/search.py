@@ -7,18 +7,31 @@ log = get_logger(__name__)
 
 router = APIRouter(prefix="/search", tags=["Search"])
 
+@router.post("/exploreDestinations", response_model=list[schemas.ExploreDestination])
+async def explore_destinations(data: schemas.ExploreRequest):
+    pass
+
 @router.post("/getOutboundFlights", response_model=list[schemas.FlightsResponse])
 async def search_outbound_flights(data: schemas.FlightsRequest):
-    log.info(f"Searching flights: {data.departure_id} -> {data.arrival_id}")
+    log.info(f"Searching flights: {data.departure} -> {data.arrival}")
     try:
-        results = flights.get_google_flight_params(data.departure_id)
+        departure = data.departure.split(",")
+        city = departure[0].strip()
+        country = departure[1].strip() if len(departure) > 1 else None
+        results = flights.get_location_data(city, country)
+
+        arrival = data.arrival.split(",")
+        city = arrival[0].strip()
+        country = arrival[1].strip() if len(arrival) > 1 else None
+        arrival_id = flights.get_location_data(city, country).get("departure_id")
+
     except Exception as e:
         log.error(f"Error getting flight parameters: {e}")
 
     log.info("Searching for outbound flights...")
     flight_results = flights.search_flights(
-        departure_id=data.departure_id,
-        arrival_id=data.arrival_id,
+        departure_id=results.get("departure_id"),
+        arrival_id=arrival_id,
         outbound_date=data.outbound_date,
         return_date=data.return_date,
         adults=data.adults,
@@ -71,15 +84,23 @@ async def search_outbound_flights(data: schemas.FlightsRequest):
 async def search_inbound_flights(data: schemas.FlightsRequest):
     log.info(f"Searching flight: {data.departure_id} -> {data.arrival_id}")
     try:
-        results = flights.get_google_flight_params(data.departure_id)
+        departure = data.departure.split(",")
+        city = departure[0].strip()
+        country = departure[1].strip() if len(departure) > 1 else None
+        results = flights.get_location_data(city, country)
+
+        arrival = data.arrival.split(",")
+        city = arrival[0].strip()
+        country = arrival[1].strip() if len(arrival) > 1 else None
+        arrival_id = flights.get_location_data(city, country).get("departure_id")
     except Exception as e:
         log.error(f"Error getting flight parameters: {e}")
 
     log.info("Searching for inbound flights...")
     flight_results = flights.search_flights(
         departure_token=data.token,
-        departure_id=data.departure_id,
-        arrival_id=data.arrival_id,
+        departure_id=results.get("departure_id"),
+        arrival_id=arrival_id,
         outbound_date=data.outbound_date,
         return_date=data.return_date,
         adults=data.adults,
@@ -132,15 +153,23 @@ async def search_inbound_flights(data: schemas.FlightsRequest):
 async def book_flight(data: schemas.FlightsRequest):
     log.info(f"Searching flight: {data.departure_id} -> {data.arrival_id}")
     try:
-        results = flights.get_google_flight_params(data.departure_id)
+        departure = data.departure.split(",")
+        city = departure[0].strip()
+        country = departure[1].strip() if len(departure) > 1 else None
+        results = flights.get_location_data(city, country)
+
+        arrival = data.arrival.split(",")
+        city = arrival[0].strip()
+        country = arrival[1].strip() if len(arrival) > 1 else None
+        arrival_id = flights.get_location_data(city, country).get("departure_id")
     except Exception as e:
         log.error(f"Error getting flight parameters: {e}")
 
     log.info("Searching for inbound flights...")
     booking_results = flights.search_flights(
         departure_token=data.token,
-        departure_id=data.departure_id,
-        arrival_id=data.arrival_id,
+        departure_id=results.get("departure_id"),
+        arrival_id=arrival_id,
         outbound_date=data.outbound_date,
         return_date=data.return_date,
         adults=data.adults,
