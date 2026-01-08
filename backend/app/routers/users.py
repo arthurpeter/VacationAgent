@@ -5,7 +5,7 @@ from app import models, schemas
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 
-router = APIRouter(prefix="/users", tags=["users"])
+router = APIRouter(prefix="/users", tags=["Users"])
 
 @router.get("/me", response_model=schemas.User)
 async def read_current_user(

@@ -2,11 +2,32 @@ import os
 from serpapi import GoogleSearch  # Import the official library
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
+import airportsdata
+from babel import numbers, core
+import sys
 
 load_dotenv()
 
-# Set your API key globally from the .env file
-# The GoogleSearch class will automatically use this.
+def get_google_flight_params(iata_code: str):
+    airports = airportsdata.load('IATA')
+    
+    iata_code = iata_code.upper()
+    airport_info = airports.get(iata_code)
+    
+    if not airport_info:
+        return {"error": f"Airport code '{iata_code}' not found."}
+
+    country_code = airport_info['country'] 
+    
+    currency = numbers.get_territory_currencies(country_code)
+    currency_code = currency[0] if currency else "USD"
+
+    return {
+        "gl": country_code.lower(),
+        "hl": "en",
+        "currency": currency_code.upper()
+    }
+
 GoogleSearch.SERP_API_KEY = os.getenv('SERPAPI_API_KEY')
 if not GoogleSearch.SERP_API_KEY:
     raise ValueError("SERPAPI_API_KEY environment variable is required")
@@ -176,14 +197,16 @@ def call_flights_api(
 
 # Example of how you might call this function:
 if __name__ == "__main__":
+    print(f"OTP: {get_google_flight_params('OTP')}")
+    # sys.exit()
     try:
         # --- STEP 1: Search for Outbound Flights ---
         print("--- STEP 1: Searching for outbound flights... ---")
         flight_results = call_flights_api(
             departure_id="JFK",
             arrival_id="CDG",
-            outbound_date="2025-12-01",  # Changed to a nearer date
-            return_date="2025-12-08",  # Changed to a nearer date
+            outbound_date="2026-08-01",  # Changed to a nearer date
+            return_date="2026-08-08",  # Changed to a nearer date
             gl="us",
             hl="en",
             currency="USD",
@@ -218,8 +241,8 @@ if __name__ == "__main__":
                 departure_token=departure_token,
                 departure_id="JFK",
                 arrival_id="CDG",
-                outbound_date="2025-12-01",  # Changed to a nearer date
-                return_date="2025-12-08",  # Changed to a nearer date
+                outbound_date="2026-08-01",  # Changed to a nearer date
+                return_date="2026-08-08",  # Changed to a nearer date
                 gl="us",
                 hl="en",
                 currency="USD",
@@ -258,8 +281,8 @@ if __name__ == "__main__":
                     booking_token=booking_token,
                     departure_id="JFK",
                     arrival_id="CDG",
-                    outbound_date="2025-12-01",  # Changed to a nearer date
-                    return_date="2025-12-08",  # Changed to a nearer date
+                    outbound_date="2026-08-01",  # Changed to a nearer date
+                    return_date="2026-08-08",  # Changed to a nearer date
                     gl="us",
                     hl="en",
                     currency="USD",
