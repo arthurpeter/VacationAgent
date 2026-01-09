@@ -7,9 +7,51 @@ log = get_logger(__name__)
 
 router = APIRouter(prefix="/search", tags=["Search"])
 
-@router.post("/exploreDestinations", response_model=list[schemas.ExploreDestination])
+@router.post("/exploreDestinations", response_model=schemas.ExploreResponse)
 async def explore_destinations(data: schemas.ExploreRequest):
-    pass
+    log.info(f"Exploring dates from {data.departure} to {data.arrival}")
+    try:
+        departure = data.departure.split(",")
+        city = departure[0].strip()
+        country = departure[1].strip() if len(departure) > 1 else None
+        results = flights.get_location_data(city, country)
+
+        arrival = data.arrival.split(",")
+        city = arrival[0].strip()
+        country = arrival[1].strip() if len(arrival) > 1 else None
+        arrival_id = flights.get_location_data(city, country).get("departure_id")
+    except Exception as e:
+        log.error(f"Error getting flight parameters: {e}")
+
+    log.info("Searching for explore destinations...")
+    explore_results = explore.call_explore_api(
+        departure_id=results.get("departure_id"),
+        arrival_id=arrival_id,
+        travel_duration=data.duration_type,
+        month=data.month,
+        adults=data.adults,
+        children=data.children,
+        infants_in_seat=data.infants_in_seat,
+        infants_on_lap=data.infants_on_lap,
+        stops=data.stops,
+        gl=results.get("gl"),
+        hl=results.get("hl"),
+        currency=results.get("currency")
+    )
+
+    if not explore_results:
+        log.warning("No explore destinations found for the given criteria.")
+        raise HTTPException(status_code=404, detail="No explore destinations found")
+    
+    response = schemas.ExploreResponse(
+        start_date=explore_results.get("start_date"),
+        end_date=explore_results.get("end_date")
+    )
+
+    if not response.start_date or not response.end_date:
+        log.error("Error constructing explore response: Incomplete data received.")
+        raise HTTPException(status_code=500, detail="Error processing explore data")
+    return response
 
 @router.post("/getOutboundFlights", response_model=list[schemas.FlightsResponse])
 async def search_outbound_flights(data: schemas.FlightsRequest):
@@ -37,7 +79,7 @@ async def search_outbound_flights(data: schemas.FlightsRequest):
         adults=data.adults,
         children=data.children,
         infants_in_seat=data.infants_in_seat,
-        infants_in_lap=data.infants_in_lap,
+        infants_on_lap=data.infants_on_lap,
         sort_by=data.sort_by,
         stops=data.stops,
         gl=results.get("gl"),
@@ -106,7 +148,7 @@ async def search_inbound_flights(data: schemas.FlightsRequest):
         adults=data.adults,
         children=data.children,
         infants_in_seat=data.infants_in_seat,
-        infants_in_lap=data.infants_in_lap,
+        infants_on_lap=data.infants_on_lap,
         sort_by=data.sort_by,
         stops=data.stops,
         gl=results.get("gl"),
@@ -175,7 +217,7 @@ async def book_flight(data: schemas.FlightsRequest):
         adults=data.adults,
         children=data.children,
         infants_in_seat=data.infants_in_seat,
-        infants_in_lap=data.infants_in_lap,
+        infants_on_lap=data.infants_on_lap,
         sort_by=data.sort_by,
         stops=data.stops,
         gl=results.get("gl"),

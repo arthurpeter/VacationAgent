@@ -32,6 +32,23 @@ class FlightsRequest(BaseModel):
     adults: int
     children: Optional[int] = 0
     infants_in_seat: Optional[int] = 0
-    infants_in_lap: Optional[int] = 0
+    infants_on_lap: Optional[int] = 0
     sort_by: Optional[int] = 2
+    stops: Optional[int] = 0
+
+class ExploreResponse(BaseModel):
+    """Schema for explore flight search response."""
+    start_date: str
+    end_date: str
+
+class ExploreRequest(BaseModel):
+    """Schema for explore flight search request."""
+    departure: str
+    arrival: str
+    duration_type: int
+    month: int
+    adults: int
+    children: Optional[int] = 0
+    infants_in_seat: Optional[int] = 0
+    infants_on_lap: Optional[int] = 0
     stops: Optional[int] = 0
