@@ -2,3 +2,6 @@ The search will be don e by specifying a city and country code so the exploratio
 for dates and the regular search will try all airports from a city. After making the explore endpoint i will 
 change the frontend so you can call them from there, then make the accomodation part and integrate it and only after that
 I make the database integration for the session.
+
+Decision: keep the explore service as a tool for the agent to make better recommendations to simplify the user
+experience for the search and make better asessments fr the recommended period.

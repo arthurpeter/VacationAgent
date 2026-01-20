@@ -191,7 +191,7 @@ async def search_inbound_flights(data: schemas.FlightsRequest):
         
     return response
 
-@router.post("/BookFlight", response_model=schemas.FlightBookingResponse)
+@router.post("/bookFlight", response_model=schemas.FlightBookingResponse)
 async def book_flight(data: schemas.FlightsRequest):
     log.info(f"Searching flight: {data.departure_id} -> {data.arrival_id}")
     try:
@@ -233,3 +233,7 @@ async def book_flight(data: schemas.FlightsRequest):
     return schemas.FlightBookingResponse(
         booking_url=url
     )
+
+@router.post("/getAccomodations", response_model=schemas.AccomodationsResponse)
+async def get_accomodations(data: schemas.AccomodationsRequest):
+    pass

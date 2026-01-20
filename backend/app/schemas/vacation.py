@@ -52,3 +52,32 @@ class ExploreRequest(BaseModel):
     infants_in_seat: Optional[int] = 0
     infants_on_lap: Optional[int] = 0
     stops: Optional[int] = 0
+
+class AccomodationsRequest(BaseModel):
+    """Schema for accomodations search request."""
+    loc_id: Optional[str]
+    location: str
+    search_type: str # e.g., "CITY"
+    arrival_date: str
+    departure_date: str
+    adults: Optional[int]
+    children: Optional[str]
+    room_qty: Optional[int]
+    price_min: Optional[int]
+    price_max: Optional[int]
+
+class AccomodationsResponse(BaseModel):
+    """Schema for accomodations search response."""
+    hotel_id: str
+    hotel_name: str
+    address: str
+    price: float
+    currency: str
+    photo_urls: list[str]
+    accessibilityLabel: Optional[str]
+    checkin_time_range: Optional[str]
+    checkout_time_range: Optional[str]
+
+class AccomodationBookingResponse(BaseModel):
+    """Schema for accomodation booking response."""
+    booking_url: str

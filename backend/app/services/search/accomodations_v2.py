@@ -1,3 +1,4 @@
+from typing import Optional
 import requests
 import os
 from dotenv import load_dotenv
@@ -52,7 +53,18 @@ def get_destination_id(location_name: str) -> dict:
             print(f"Response body: {response.text}")
         return None
 
-def search_hotels(dest_id: str, search_type: str, checkin_date: str, checkout_date: str) -> dict:
+def search_hotels(
+        dest_id: str,
+        search_type: str,
+        arrival_date: str,
+        departure_date: str,
+        currency_code: str,
+        adults: Optional[int]=None,
+        children: Optional[str]=None,
+        room_qty: Optional[int]=None,
+        price_min: Optional[int]=None,
+        price_max: Optional[int]=None,
+        ) -> dict:
     """
     Calls the /api/v1/hotels/searchHotels endpoint.
     This is a GET request, not POST.
@@ -60,8 +72,8 @@ def search_hotels(dest_id: str, search_type: str, checkin_date: str, checkout_da
     Args:
         dest_id (str): The destination ID from get_destination_id.
         search_type (str): The search type from get_destination_id (e.g., "CITY").
-        checkin_date (str): YYYY-MM-DD
-        checkout_date (str): YYYY-MM-DD
+        arrival_date (str): YYYY-MM-DD
+        departure_date (str): YYYY-MM-DD
     
     Returns:
         dict: The JSON response from the API.
@@ -71,14 +83,28 @@ def search_hotels(dest_id: str, search_type: str, checkin_date: str, checkout_da
     # These are query parameters for a GET request
     querystring = {
         "dest_id": dest_id,
-        "search_type": search_type.upper(), 
-        "arrival_date": checkin_date,
-        "departure_date": checkout_date,
+        "search_type": search_type.upper(),
+        "arrival_date": arrival_date,
+        "departure_date": departure_date,
         "languagecode": "en-us",
-        "currency_code": "USD",
-        "adults": 2  
+        currency_code: currency_code.upper()
     }
-    
+
+    if adults is not None:
+        querystring["adults"] = adults
+
+    if children is not None:
+        querystring["children"] = children
+
+    if room_qty is not None:
+        querystring["room_qty"] = room_qty
+
+    if price_min is not None:
+        querystring["price_min"] = price_min
+
+    if price_max is not None:
+        querystring["price_max"] = price_max
+
     headers = {
         "x-rapidapi-key": RAPIDAPI_KEY,
         "x-rapidapi-host": RAPIDAPI_HOST
@@ -94,14 +120,22 @@ def search_hotels(dest_id: str, search_type: str, checkin_date: str, checkout_da
             print(f"Response body: {response.text}")
         return {}
 
-def get_hotel_details(hotel_id: str, checkin_date: str, checkout_date: str) -> dict:
+def get_hotel_details(
+        hotel_id: str,
+        arrival_date: str,
+        departure_date: str,
+        currency_code: str,
+        adults: Optional[int]=None,
+        children: Optional[str]=None,
+        room_qty: Optional[int]=None
+        ) -> dict:
     """
     Calls the /api/v1/hotels/getHotelDetails endpoint.
     
     Args:
         hotel_id (str): The ID of the hotel.
-        checkin_date (str): The check-in date (YYYY-MM-DD).
-        checkout_date (str): The check-out date (YYYY-MM-DD).
+        arrival_date (str): The arrival date (YYYY-MM-DD).
+        departure_date (str): The departure date (YYYY-MM-DD).
     
     Returns:
         dict: The JSON response from the API.
@@ -110,10 +144,20 @@ def get_hotel_details(hotel_id: str, checkin_date: str, checkout_date: str) -> d
     
     querystring = {
         "hotel_id": hotel_id,
-        "arrival_date": checkin_date,
-        "departure_date": checkout_date,
-        "languagecode": "en-us"
+        "arrival_date": arrival_date,
+        "departure_date": departure_date,
+        "languagecode": "en-us",
+        "currency_code": currency_code.upper()
     }
+
+    if adults is not None:
+        querystring["adults"] = adults
+
+    if children is not None:
+        querystring["children"] = children
+
+    if room_qty is not None:
+        querystring["room_qty"] = room_qty
     
     headers = {
         "x-rapidapi-key": RAPIDAPI_KEY,
