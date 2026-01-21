@@ -5,3 +5,5 @@ I make the database integration for the session.
 
 Decision: keep the explore service as a tool for the agent to make better recommendations to simplify the user
 experience for the search and make better asessments fr the recommended period.
+
+Remember the currency used in the database either session wide or user wide

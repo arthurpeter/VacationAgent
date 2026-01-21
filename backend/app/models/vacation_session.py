@@ -19,6 +19,7 @@ class VacationSession(Base):
     user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     data = Column(JSON, nullable=True, default={})
+    currency = Column(String, nullable=True, default="EUR")
     current_step = Column(String, nullable=True)
     last_question = Column(Text, nullable=True)
     messages = Column(JSON, nullable=True)

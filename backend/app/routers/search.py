@@ -1,7 +1,10 @@
 from app.services.search import flights, accomodations_v2, explore
+from app.core.database import get_db
 from fastapi import APIRouter, Depends, HTTPException
-from app import schemas
+from app import schemas, models
 from app.core.logger import get_logger
+from sqlalchemy.orm import Session
+
 
 log = get_logger(__name__)
 
@@ -54,7 +57,7 @@ async def explore_destinations(data: schemas.ExploreRequest):
     return response
 
 @router.post("/getOutboundFlights", response_model=list[schemas.FlightsResponse])
-async def search_outbound_flights(data: schemas.FlightsRequest):
+async def search_outbound_flights(data: schemas.FlightsRequest, db: Session = Depends(get_db)):
     log.info(f"Searching flights: {data.departure} -> {data.arrival}")
     try:
         departure = data.departure.split(",")
@@ -69,6 +72,17 @@ async def search_outbound_flights(data: schemas.FlightsRequest):
 
     except Exception as e:
         log.error(f"Error getting flight parameters: {e}")
+
+    if results.get("currency"):
+        try:
+            db.query(models.VacationSession).filter(models.VacationSession.id == data.session_id).update(
+                {"currency": results.get("currency")}
+            )
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            log.error(f"Error updating session currency: {e}")
+
 
     log.info("Searching for outbound flights...")
     flight_results = flights.search_flights(
@@ -234,6 +248,60 @@ async def book_flight(data: schemas.FlightsRequest):
         booking_url=url
     )
 
-@router.post("/getAccomodations", response_model=schemas.AccomodationsResponse)
-async def get_accomodations(data: schemas.AccomodationsRequest):
-    pass
+@router.post("/getAccomodations", response_model=list[schemas.AccomodationsResponse])
+async def get_accomodations(data: schemas.AccomodationsRequest, db: Session = Depends(get_db)):
+    log.info(f"Searching accomodations in {data.location}")
+    try:
+        destination = accomodations_v2.get_destination_id(
+            location_name=data.location
+        )
+    except Exception as e:
+        log.error(f"Error searching accomodations: {e}")
+        raise HTTPException(status_code=500, detail="Error searching accomodations")
+
+    if not destination or "dest_id" not in destination or "search_type" not in destination:
+        log.warning("No accomodations found for the given criteria.")
+        raise HTTPException(status_code=404, detail="No accomodations found")
+    
+    currency_code = db.query(models.VacationSession).filter(models.VacationSession.id == data.session_id).first().currency or "EUR"
+    
+    try:
+        results = accomodations_v2.search_hotels(
+            dest_id=destination.get("dest_id"),
+            search_type=destination.get("search_type"),
+            arrival_date=data.arrival_date,
+            departure_date=data.departure_date,
+            currency_code=currency_code,
+            adults=data.adults,
+            children=data.children,
+            room_qty=data.room_qty,
+            price_min=data.price_min,
+            price_max=data.price_max,
+        )
+    except Exception as e:
+        log.error(f"Error searching accomodations: {e}")
+        raise HTTPException(status_code=500, detail="Error searching accomodations")
+    
+    hotels_list = results.get("data", {}).get("hotels")
+
+    #sort hotels by price and return the first 5
+    sorted_hotels = sorted(hotels_list, key=lambda x: x.get("property", {}).get("priceBreakdown", {}).get("grossPrice", {}).get("value", float('inf')))[:5]
+
+    response = []
+    for hotel in sorted_hotels:
+        hotel_info = hotel.get("property", {})
+        price_info = hotel_info.get("priceBreakdown", {}).get("grossPrice", {}).get("value", float('inf'))
+        # TODO: finish filling this schema
+        response.append(schemas.AccomodationsResponse(
+            hotel_id=hotel.get("hotel_id"),
+            hotel_name=hotel_info.get("name", ""),
+            address="",
+            price=price_info,
+            currency=currency_code,
+            photo_urls=[],
+            accessibilityLabel=None,
+            checkin_time_range=None,
+            checkout_time_range=None
+        ))
+
+    return response

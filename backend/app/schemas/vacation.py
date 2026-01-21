@@ -24,6 +24,7 @@ class FlightBookingResponse(BaseModel):
 
 class FlightsRequest(BaseModel):
     """Schema for flight search request."""
+    session_id: str
     token: Optional[str] = None
     departure: str
     arrival: str
@@ -55,6 +56,7 @@ class ExploreRequest(BaseModel):
 
 class AccomodationsRequest(BaseModel):
     """Schema for accomodations search request."""
+    session_id: str
     loc_id: Optional[str]
     location: str
     search_type: str # e.g., "CITY"

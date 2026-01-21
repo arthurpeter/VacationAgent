@@ -21,6 +21,7 @@ class User(Base):
     date_of_birth = Column(DateTime(timezone=True), nullable=True)
     location = Column(String, nullable=True)
     user_description = Column(String, nullable=True)
+    currency_preference = Column(String, nullable=True, default="EUR")
 
     # finalized vacations
     vacations = relationship(
