@@ -11,6 +11,8 @@ from app.core.jobs import start_jobs
 from app.core.logger import configure_logging
 from app.routers.auth import router as auth_router
 from app.routers.users import router as users_router
+from app.routers.sessions import router as sessions_router
+from app.routers.search import router as search_router
 
 # Create database tables using sync engine
 Base.metadata.create_all(bind=engine)
@@ -40,6 +42,8 @@ app.add_middleware(
 # Include routers
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(sessions_router)
+app.include_router(search_router)
 
 # Configure AuthX error handling
 auth.handle_errors(app)

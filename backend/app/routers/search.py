@@ -65,6 +65,7 @@ async def search_outbound_flights(
     db: Session = Depends(get_db),
     access_token: TokenPayload = Depends(auth.access_token_required)
     ):
+    log.info(f"Request data: {data}")
     log.info(f"Searching flights: {data.departure} -> {data.arrival}")
     try:
         departure = data.departure.split(",")
@@ -158,6 +159,7 @@ async def search_inbound_flights(
     db: Session = Depends(get_db),
     access_token: TokenPayload = Depends(auth.access_token_required)
     ):
+    log.info(f"Request data: {data}")
     log.info(f"Searching flight: {data.departure_id} -> {data.arrival_id}")
     try:
         departure = data.departure.split(",")
@@ -232,6 +234,7 @@ async def book_flight(
     db: Session = Depends(get_db),
     access_token: TokenPayload = Depends(auth.access_token_required)
     ):
+    log.info(f"Request data: {data}")
     log.info(f"Searching flight: {data.departure_id} -> {data.arrival_id}")
     try:
         departure = data.departure.split(",")
@@ -291,6 +294,7 @@ async def get_accomodations(
     db: Session = Depends(get_db),
     access_token: TokenPayload = Depends(auth.access_token_required)
     ):
+    log.info(f"Request data: {data}")
     log.info(f"Searching accomodations in {data.location}")
     try:
         destination = accomodations_v2.get_destination_id(
@@ -360,6 +364,7 @@ async def book_accomodation(
     db: Session = Depends(get_db),
     access_token: TokenPayload = Depends(auth.access_token_required)
     ):
+    log.info(f"Request data: {data}")
     log.info(f"Booking accomodation: {data.hotel_id} in {data.location}")
     
     currency_code = db.query(models.VacationSession).filter(

@@ -1,245 +1,710 @@
-import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
-// import { fetchWithAuth } from '../../authService'; // Uncomment when ready
+import React, { useState, useEffect, useRef } from 'react';
+import { useOutletContext, useNavigate } from 'react-router-dom';
+import { fetchWithAuth } from '../../authService';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 
+// --- Leaflet Icon Fix ---
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
+
+// --- Helper Hook: useDebounce ---
+function useDebounce(value, delay) {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+    return debouncedValue;
+}
+
+// --- Helper: Location Autocomplete Component ---
+function LocationAutocomplete({ label, value, onChange, placeholder }) {
+    const [suggestions, setSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    
+    const wrapperRef = useRef(null);
+    const cache = useRef({});
+    const isSelectionEvent = useRef(false);
+    
+    const debouncedValue = useDebounce(value, 300);
+
+    useEffect(() => {
+        const controller = new AbortController();
+
+        const fetchSuggestions = async () => {
+            const query = debouncedValue?.trim();
+            
+            if (isSelectionEvent.current) {
+                isSelectionEvent.current = false;
+                return;
+            }
+
+            if (!query) {
+                setSuggestions([]);
+                setShowSuggestions(false);
+                return;
+            }
+
+            if (cache.current[query]) {
+                setSuggestions(cache.current[query]);
+                setShowSuggestions(true);
+                return;
+            }
+
+            setIsLoading(true);
+            
+            try {
+                const res = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${query}&addressdetails=1&limit=5`,
+                    { signal: controller.signal }
+                );
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    cache.current[query] = data;
+                    setSuggestions(data);
+                    setShowSuggestions(true);
+                }
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error("Autocomplete fetch error", err);
+                }
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchSuggestions();
+
+        return () => controller.abort();
+    }, [debouncedValue]);
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                setShowSuggestions(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [wrapperRef]);
+
+    const handleInput = (e) => {
+        isSelectionEvent.current = false; 
+        onChange(e.target.value);
+    };
+
+    const selectSuggestion = (item) => {
+        const city = item.address.city || item.address.town || item.address.village || item.name;
+        const country = item.address.country_code ? item.address.country_code.toUpperCase() : "";
+        const formatted = city && country ? `${city}, ${country}` : item.display_name;
+        
+        isSelectionEvent.current = true;
+        
+        onChange(formatted);
+        setShowSuggestions(false);
+    };
+
+    return (
+        <div className="flex flex-col gap-1 w-48 relative" ref={wrapperRef}>
+            <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">{label}</label>
+            <div className="relative">
+                <input 
+                    value={value}
+                    onChange={handleInput}
+                    placeholder={placeholder}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full pr-8"
+                />
+                
+                {isLoading && (
+                    <div className="absolute right-2 top-2.5">
+                        <svg className="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                )}
+            </div>
+
+            {showSuggestions && suggestions.length > 0 && (
+                <ul className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-xl mt-1 z-50 max-h-60 overflow-y-auto">
+                    {suggestions.map((item, idx) => (
+                        <li 
+                            key={idx} 
+                            onClick={() => selectSuggestion(item)}
+                            className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-700 truncate border-b border-gray-50 last:border-0"
+                        >
+                            <span className="font-bold text-gray-800">{item.address.city || item.name}</span>
+                            <span className="text-gray-400 text-xs ml-2">{item.address.country}</span>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    );
+}
+
+// --- Helper: Travelers Popover Component ---
+function TravelersInput({ counts, setCounts, childAges, setChildAges }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const wrapperRef = useRef(null);
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [wrapperRef]);
+
+    const totalTravelers = counts.adults + counts.children + counts.infantsSeat + counts.infantsLap;
+
+    const updateCount = (type, delta) => {
+        const currentVal = counts[type];
+        const newVal = Math.max(0, currentVal + delta);
+        
+        if (type === 'adults' && newVal < 1) return;
+        
+        if (type === 'children' || type === 'infantsSeat' || type === 'infantsLap') {
+            const currentTotalKids = counts.children + counts.infantsSeat + counts.infantsLap;
+            const newTotalKids = currentTotalKids + (newVal - currentVal);
+            
+            if (newTotalKids > currentTotalKids) {
+                setChildAges(prev => [...prev, "5"]);
+            } else if (newTotalKids < currentTotalKids) {
+                setChildAges(prev => prev.slice(0, -1));
+            }
+        }
+
+        setCounts(prev => ({ ...prev, [type]: newVal }));
+    };
+
+    const updateAge = (index, val) => {
+        const newAges = [...childAges];
+        newAges[index] = val;
+        setChildAges(newAges);
+    };
+
+    return (
+        <div className="flex flex-col gap-1 w-40 relative" ref={wrapperRef}>
+            <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Travelers</label>
+            <button 
+                onClick={() => setIsOpen(!isOpen)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 text-left bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+                {totalTravelers} Traveler{totalTravelers !== 1 ? 's' : ''}
+            </button>
+            
+            {isOpen && (
+                <div className="absolute top-full left-0 w-72 bg-white border border-gray-200 rounded-xl shadow-2xl mt-2 z-50 p-4">
+                    <div className="space-y-4 mb-4">
+                        {[
+                            { id: 'adults', label: 'Adults', sub: 'Age 12+' },
+                            { id: 'children', label: 'Children', sub: 'Age 2-11' },
+                            { id: 'infantsSeat', label: 'Infants', sub: 'In seat' },
+                            { id: 'infantsLap', label: 'Infants', sub: 'On lap' },
+                        ].map((type) => (
+                            <div key={type.id} className="flex justify-between items-center">
+                                <div>
+                                    <div className="font-bold text-gray-800 text-sm">{type.label}</div>
+                                    <div className="text-xs text-gray-400">{type.sub}</div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <button onClick={() => updateCount(type.id, -1)} className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200">-</button>
+                                    <span className="w-4 text-center font-bold text-sm">{counts[type.id]}</span>
+                                    <button onClick={() => updateCount(type.id, 1)} className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100">+</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {childAges.length > 0 && (
+                        <div className="border-t border-gray-100 pt-3">
+                            <div className="text-xs font-bold text-gray-500 mb-2">Child Ages (Required for Hotels)</div>
+                            <div className="grid grid-cols-4 gap-2">
+                                {childAges.map((age, i) => (
+                                    <input 
+                                        key={i}
+                                        type="number"
+                                        min="0"
+                                        max="17"
+                                        value={age}
+                                        onChange={(e) => updateAge(i, e.target.value)}
+                                        className="border border-gray-300 rounded p-1 text-center text-sm"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// --- Main Component ---
 export default function OptionsStage() {
-  const { sessionData, refreshContext } = useOutletContext();
+  const { sessionData } = useOutletContext();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  
-  // --- 1. Local State for Filters (Editable) ---
-  // We initialize these from the session/DB, but allow manual edits
-  const memory = sessionData?.data || {};
-  
-  const [filters, setFilters] = useState({
-    destination: "",
-    startDate: "",
-    endDate: "",
-    adults: 1,
-    budget: ""
-  });
+  const [error, setError] = useState(null);
+  const [step, setStep] = useState('SEARCH'); 
 
-  // Sync with DB data when it loads (only if user hasn't typed yet or on first load)
+  // --- Filter State ---
+  const [origin, setOrigin] = useState("New York, US");
+  const [destination, setDestination] = useState("");
+  const [dates, setDates] = useState({ start: "", end: "" });
+  
+  const [travelerCounts, setTravelerCounts] = useState({
+      adults: 1,
+      children: 0,
+      infantsSeat: 0,
+      infantsLap: 0
+  });
+  const [childAges, setChildAges] = useState([]);
+  
+  // NEW: Room Quantity State
+  const [roomQty, setRoomQty] = useState(1);
+
+  // Sync from DB
   useEffect(() => {
     if (sessionData?.data) {
-      setFilters(prev => ({
-        destination: prev.destination || sessionData.data.destination || "",
-        startDate: prev.startDate || sessionData.data.departure_date || "",
-        endDate: prev.endDate || sessionData.data.return_date || "",
-        adults: prev.adults || sessionData.data.adults || 1,
-        budget: prev.budget || sessionData.data.budget || ""
-      }));
+        setDestination(sessionData.data.destination || "");
+        setDates({
+            start: sessionData.data.from_date || "",
+            end: sessionData.data.to_date || ""
+        });
+        setTravelerCounts(prev => ({ ...prev, adults: sessionData.data.adults || 1 }));
     }
   }, [sessionData]);
 
-  // Local state for search results
-  const [flights, setFlights] = useState([]);
+  // Ensure room qty doesn't exceed adults if adults count drops
+  useEffect(() => {
+      if (roomQty > travelerCounts.adults) {
+          setRoomQty(travelerCounts.adults);
+      }
+  }, [travelerCounts.adults, roomQty]);
+
+  // --- Result State ---
+  const [outboundFlights, setOutboundFlights] = useState([]);
+  const [inboundFlights, setInboundFlights] = useState([]);
   const [hotels, setHotels] = useState([]);
+  
+  const [selectedOutbound, setSelectedOutbound] = useState(null);
+  const [selectedInbound, setSelectedInbound] = useState(null);
+  const [selectedHotel, setSelectedHotel] = useState(null);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
-  };
-
+  // 1. Initial Search
   const handleSearch = async () => {
     setLoading(true);
-    console.log("Searching with manual/AI filters:", filters);
+    setError(null);
+    setStep('SEARCH');
+    setOutboundFlights([]);
+    setHotels([]);
+    setSelectedOutbound(null);
+    setSelectedInbound(null);
 
-    // TODO: Call your backend Search API here using 'filters' object
-    // await fetchWithAuth(`http://localhost:5000/vacations/${id}/search`, { body: filters }, "POST");
+    const flightsBody = {
+      session_id: parseInt(sessionData?.id) || 0,
+      departure: origin,
+      arrival: destination,
+      outbound_date: dates.start,
+      return_date: dates.end,
+      adults: travelerCounts.adults,
+      children: travelerCounts.children,
+      infants_in_seat: travelerCounts.infantsSeat,
+      infants_on_lap: travelerCounts.infantsLap,
+      stops: 0,
+      sort_by: 2
+    };
 
-    // Mock Response Delay
-    setTimeout(() => {
-      setFlights(MOCK_FLIGHTS);
-      setHotels(MOCK_HOTELS);
+    const childrenString = childAges.length > 0 ? childAges.join(",") : null;
+
+    const hotelsBody = {
+        session_id: parseInt(sessionData?.id) || 0,
+        location: destination,
+        search_type: "CITY",
+        arrival_date: dates.start,
+        departure_date: dates.end,
+        adults: travelerCounts.adults,
+        children: childrenString,
+        room_qty: roomQty, // NEW: Passed here
+        price_min: null,
+        price_max: null
+    };
+
+    try {
+      const [flightRes, hotelRes] = await Promise.all([
+        fetchWithAuth("http://localhost:5000/search/getOutboundFlights", flightsBody, "POST"),
+        fetchWithAuth("http://localhost:5000/search/getAccomodations", hotelsBody, "POST")
+      ]);
+
+      if (flightRes.ok) {
+        const flights = await flightRes.json();
+        setOutboundFlights(flights);
+      } else {
+        console.error("Flight search failed");
+      }
+
+      if (hotelRes.ok) {
+        const hotelsData = await hotelRes.json();
+        setHotels(hotelsData);
+      } else {
+        console.error("Hotel search failed");
+      }
+
+    } catch (err) {
+      console.error(err);
+      setError("Failed to fetch search results. Please try again.");
+    } finally {
       setLoading(false);
-      // In real implementation: refreshContext() to save these new manual inputs to the DB
-    }, 1500);
+    }
+  };
+
+  // 2. Select Outbound -> Fetch Inbound
+  const handleSelectOutbound = async (flight) => {
+    setSelectedOutbound(flight);
+    setLoading(true);
+
+    const flightsBody = {
+        session_id: parseInt(sessionData?.id) || 0,
+        token: flight.token,
+        departure: origin,
+        arrival: destination,
+        outbound_date: dates.start,
+        return_date: dates.end,
+        adults: travelerCounts.adults,
+        children: travelerCounts.children,
+        infants_in_seat: travelerCounts.infantsSeat,
+        infants_on_lap: travelerCounts.infantsLap,
+    };
+
+    try {
+      const res = await fetchWithAuth("http://localhost:5000/search/getInboundFlights", flightsBody, "POST");
+      if (res.ok) {
+        const inboundData = await res.json();
+        setInboundFlights(inboundData);
+        setStep('SELECT_INBOUND');
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Failed to find return flights.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectInbound = (flight) => {
+    setSelectedInbound(flight);
+    setStep('CONFIRM');
+  };
+
+  const handleBookTrip = async () => {
+    setLoading(true);
+    try {
+        const bookingPromises = [];
+
+        if (selectedInbound) {
+            bookingPromises.push(
+                fetchWithAuth("http://localhost:5000/search/bookFlight", {
+                    session_id: parseInt(sessionData?.id) || 0,
+                    token: selectedInbound.token,
+                    departure: origin,
+                    arrival: destination,
+                    outbound_date: dates.start,
+                    adults: travelerCounts.adults,
+                }, "POST")
+            );
+        }
+
+        if (selectedHotel) {
+            const childrenString = childAges.length > 0 ? childAges.join(",") : null;
+            bookingPromises.push(
+                fetchWithAuth("http://localhost:5000/search/bookAccomodation", {
+                    session_id: parseInt(sessionData?.id) || 0,
+                    loc_id: selectedHotel.hotel_id,
+                    location: destination,
+                    search_type: "CITY",
+                    arrival_date: dates.start,
+                    departure_date: dates.end,
+                    adults: travelerCounts.adults,
+                    children: childrenString,
+                    room_qty: roomQty // NEW: Passed here as well
+                }, "POST")
+            );
+        }
+
+        const responses = await Promise.all(bookingPromises);
+        
+        if (responses.every(r => r.ok)) {
+            const data = await Promise.all(responses.map(r => r.json()));
+            console.log("Booking URLs:", data);
+            alert("Booking links generated! Check console for URLs.");
+            navigate(`/plan/${sessionData.id}/itinerary`); 
+        } else {
+            setError("Some bookings failed to generate.");
+        }
+
+    } catch (err) {
+        setError("Error during booking process.");
+        console.error(err);
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  const resetSelection = () => {
+    setStep('SEARCH');
+    setSelectedOutbound(null);
+    setSelectedInbound(null);
+    setInboundFlights([]);
   };
 
   return (
     <div className="flex flex-col w-full h-full bg-gray-50 overflow-hidden">
-      {/* --- Editable Control Bar --- */}
-      <div className="bg-white border-b border-gray-200 p-4 shadow-sm shrink-0 flex flex-wrap gap-4 items-end">
+      {/* --- Filter Bar --- */}
+      <div className="bg-white border-b border-gray-200 p-4 shadow-sm shrink-0 flex flex-wrap gap-4 items-end z-20">
         
-        {/* Destination Input */}
-        <div className="flex flex-col gap-1 w-48">
-            <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Destination</label>
-            <input 
-                name="destination"
-                value={filters.destination}
-                onChange={handleInputChange}
-                placeholder="Where to?"
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-        </div>
+        <LocationAutocomplete 
+            label="Origin"
+            value={origin} 
+            onChange={setOrigin} 
+            placeholder="City, Country"
+        />
 
-        {/* Dates Inputs */}
+        <LocationAutocomplete 
+            label="Destination"
+            value={destination} 
+            onChange={setDestination} 
+            placeholder="City, Country"
+        />
+
         <div className="flex flex-col gap-1">
             <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Dates</label>
             <div className="flex items-center gap-2">
                 <input 
-                    name="startDate"
-                    type="date"
-                    value={filters.startDate}
-                    onChange={handleInputChange}
-                    className="border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-700 focus:ring-blue-500"
+                    type="date" 
+                    value={dates.start} 
+                    onChange={(e) => setDates(p => ({...p, start: e.target.value}))} 
+                    className="border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-700"
                 />
-                <span className="text-gray-400">-</span>
                 <input 
-                    name="endDate"
-                    type="date"
-                    value={filters.endDate}
-                    onChange={handleInputChange}
-                    className="border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-700 focus:ring-blue-500"
+                    type="date" 
+                    value={dates.end} 
+                    onChange={(e) => setDates(p => ({...p, end: e.target.value}))} 
+                    className="border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-700"
                 />
             </div>
         </div>
 
-        {/* Travelers & Budget */}
-        <div className="flex flex-col gap-1 w-24">
-             <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Adults</label>
-             <input 
-                name="adults"
-                type="number"
-                min="1"
-                value={filters.adults}
-                onChange={handleInputChange}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-800"
-            />
+        <TravelersInput 
+            counts={travelerCounts} 
+            setCounts={setTravelerCounts} 
+            childAges={childAges} 
+            setChildAges={setChildAges} 
+        />
+
+        {/* NEW: Room Quantity Dropdown */}
+        <div className="flex flex-col gap-1 w-20">
+            <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Rooms</label>
+            <select 
+                value={roomQty}
+                onChange={(e) => setRoomQty(parseInt(e.target.value))}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+                {/* Dynamically create options 1...N where N = number of adults */}
+                {Array.from({ length: travelerCounts.adults }, (_, i) => i + 1).map(num => (
+                    <option key={num} value={num}>{num}</option>
+                ))}
+            </select>
         </div>
 
-        <div className="flex flex-col gap-1 w-32">
-             <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Budget ($)</label>
-             <input 
-                name="budget"
-                type="number"
-                placeholder="2000"
-                value={filters.budget}
-                onChange={handleInputChange}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-800"
-            />
-        </div>
-        
-        <div className="flex-grow"></div>
-        
-        {/* Search Button */}
         <button 
           onClick={handleSearch}
-          disabled={loading || !filters.destination}
-          className={`h-10 px-6 rounded-lg font-semibold text-white transition shadow-md ${
-            loading || !filters.destination 
-                ? 'bg-gray-300 cursor-not-allowed' 
-                : 'bg-blue-600 hover:bg-blue-700'
-          }`}
+          disabled={loading || !destination}
+          className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed ml-auto"
         >
-          {loading ? "Searching..." : "Find Options"}
+          {loading ? "Searching..." : "Search"}
         </button>
       </div>
 
-      {/* Results Area */}
-      <div className="flex-grow overflow-y-auto p-8">
-        <div className="max-w-6xl mx-auto space-y-10">
-          
-          {/* Flights Section */}
-          <section>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              ✈️ Flights
-            </h2>
-            {flights.length === 0 ? (
-               <EmptyState text="Enter a destination and dates above to find flights." />
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {flights.map((flight) => (
-                  <FlightCard key={flight.id} flight={flight} />
-                ))}
-              </div>
-            )}
-          </section>
+      {/* --- Main Content --- */}
+      <div className="flex-grow overflow-y-auto p-8 z-10">
+        <div className="max-w-6xl mx-auto space-y-8">
+          {error && <div className="bg-red-100 text-red-700 p-4 rounded-lg">{error}</div>}
 
-          {/* Hotels Section */}
-          <section>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              🏨 Accommodations
-            </h2>
-             {hotels.length === 0 ? (
-               <EmptyState text="We'll find hotels that match your budget." />
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* CONFIRMATION STEP */}
+          {step === 'CONFIRM' && selectedOutbound && selectedInbound && (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
+                <h2 className="text-3xl font-bold text-green-800 mb-4">Ready to Book?</h2>
+                <div className="flex justify-center gap-8 text-left mb-8">
+                    <div className="bg-white p-4 rounded shadow-sm">
+                        <h3 className="font-bold text-gray-500 text-xs uppercase">Outbound</h3>
+                        <div className="font-bold text-lg">{selectedOutbound.flights[0].airline}</div>
+                        <div>{selectedOutbound.flights[0].departure_time} - {selectedOutbound.flights[0].arrival_time}</div>
+                    </div>
+                    <div className="bg-white p-4 rounded shadow-sm">
+                        <h3 className="font-bold text-gray-500 text-xs uppercase">Return</h3>
+                        <div className="font-bold text-lg">{selectedInbound.flights[0].airline}</div>
+                        <div>{selectedInbound.flights[0].departure_time} - {selectedInbound.flights[0].arrival_time}</div>
+                    </div>
+                    {selectedHotel && (
+                        <div className="bg-white p-4 rounded shadow-sm">
+                            <h3 className="font-bold text-gray-500 text-xs uppercase">Accommodation</h3>
+                            <div className="font-bold text-lg">{selectedHotel.hotel_name}</div>
+                            <div className="text-sm text-gray-600">
+                                {roomQty} Room{roomQty > 1 ? 's' : ''}, {travelerCounts.adults} Adult{travelerCounts.adults > 1 ? 's' : ''}
+                            </div>
+                            <div className="text-green-600 font-bold mt-1">{selectedHotel.price} {selectedHotel.currency}</div>
+                        </div>
+                    )}
+                </div>
+                <div className="flex justify-center gap-4">
+                    <button onClick={resetSelection} className="px-6 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-lg">Start Over</button>
+                    <button onClick={handleBookTrip} disabled={loading} className="px-8 py-3 bg-green-600 text-white font-bold rounded-lg shadow-lg hover:bg-green-700 transform transition hover:-translate-y-1">
+                        {loading ? "Processing..." : "Confirm & Book Now"}
+                    </button>
+                </div>
+            </div>
+          )}
+
+          {/* FLIGHTS SECTION */}
+          {(step === 'SEARCH' || step === 'SELECT_INBOUND') && (
+            <section>
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-bold text-gray-800">
+                        {step === 'SEARCH' ? '1. Select Outbound Flight' : '2. Select Return Flight'}
+                    </h2>
+                    {step === 'SELECT_INBOUND' && (
+                        <button onClick={resetSelection} className="text-sm text-red-500 font-bold hover:underline">Change Outbound</button>
+                    )}
+                </div>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {(step === 'SEARCH' ? outboundFlights : inboundFlights).map((flight, idx) => (
+                        <FlightCard 
+                            key={idx} 
+                            flight={flight} 
+                            onSelect={() => step === 'SEARCH' ? handleSelectOutbound(flight) : handleSelectInbound(flight)}
+                            btnText={step === 'SEARCH' ? "Select Outbound" : "Select Return"}
+                        />
+                    ))}
+                    {(step === 'SEARCH' ? outboundFlights : inboundFlights).length === 0 && !loading && (
+                        <div className="col-span-2 text-center py-10 text-gray-400 border-2 border-dashed rounded-xl">No flights found for these dates.</div>
+                    )}
+                </div>
+            </section>
+          )}
+
+          {/* HOTELS SECTION */}
+          <section className="mt-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Accommodations</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {hotels.map((hotel) => (
-                  <HotelCard key={hotel.id} hotel={hotel} />
+                    <HotelCard 
+                        key={hotel.hotel_id} 
+                        hotel={hotel} 
+                        isSelected={selectedHotel?.hotel_id === hotel.hotel_id}
+                        onSelect={() => setSelectedHotel(hotel)}
+                    />
                 ))}
-              </div>
-            )}
+                {hotels.length === 0 && !loading && (
+                    <div className="col-span-full text-center py-10 text-gray-400 border-2 border-dashed rounded-xl">No hotels found.</div>
+                )}
+            </div>
           </section>
+
         </div>
       </div>
     </div>
   );
 }
 
-// --- Sub-components (Same as before) ---
-
-function EmptyState({ text }) {
+// --- Sub-components ---
+function FlightCard({ flight, onSelect, btnText }) {
+    const leg = flight.flights[0]; 
     return (
-        <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center text-gray-400 bg-gray-50/50">
-            {text}
+      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-3">
+             {leg.airline_logo && <img src={leg.airline_logo} alt={leg.airline} className="h-8 w-8 object-contain" />}
+             <span className="font-bold text-lg text-gray-800">{leg.airline}</span>
+          </div>
+          <div className="text-blue-600 font-bold text-xl">{flight.price} €</div>
         </div>
-    )
+        <div className="flex justify-between items-center text-sm text-gray-600 mb-4 bg-gray-50 p-3 rounded-lg">
+          <div>
+              <div className="font-bold text-gray-900">{leg.departure_time}</div>
+              <div className="text-gray-400">{leg.departure}</div>
+          </div>
+          <div className="flex flex-col items-center">
+             <span className="text-xs text-gray-400">{leg.duration}</span>
+             <span className="text-gray-300">──────✈──────</span>
+          </div>
+          <div className="text-right">
+              <div className="font-bold text-gray-900">{leg.arrival_time}</div>
+              <div className="text-gray-400">{leg.arrival}</div>
+          </div>
+        </div>
+        <button onClick={onSelect} className="w-full py-2 rounded-lg border border-blue-100 text-blue-600 hover:bg-blue-50 font-semibold text-sm transition">
+          {btnText}
+        </button>
+      </div>
+    );
 }
-
-function FlightCard({ flight }) {
-  return (
-    <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition">
-      <div className="flex justify-between items-start mb-4">
-        <div className="font-bold text-lg text-gray-800">{flight.airline}</div>
-        <div className="text-blue-600 font-bold text-xl">${flight.price}</div>
-      </div>
-      <div className="flex justify-between items-center text-sm text-gray-600 mb-4">
-        <div>
-            <div className="font-semibold">{flight.departure_time}</div>
-            <div className="text-gray-400">{flight.origin}</div>
+  
+function HotelCard({ hotel, onSelect, isSelected }) {
+    return (
+      <div 
+        className={`bg-white rounded-xl border-2 shadow-sm transition overflow-hidden flex flex-col h-[400px] cursor-pointer ${isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-transparent hover:shadow-lg'}`}
+        onClick={onSelect}
+      >
+        <div className="h-48 w-full relative z-0">
+             {hotel.latitude && hotel.longitude ? (
+                 <MapContainer center={[hotel.latitude, hotel.longitude]} zoom={13} scrollWheelZoom={false} style={{ height: "100%", width: "100%" }} zoomControl={false} dragging={false}>
+                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <Marker position={[hotel.latitude, hotel.longitude]} />
+                 </MapContainer>
+             ) : (
+                <div className="h-full w-full bg-gray-200 flex items-center justify-center text-gray-400">No Map Available</div>
+             )}
+             {hotel.photo_urls?.[0] && (
+                 <div className="absolute bottom-2 right-2 h-16 w-16 rounded border-2 border-white shadow-lg overflow-hidden z-[1000]">
+                     <img src={hotel.photo_urls[0]} alt="Hotel" className="h-full w-full object-cover" />
+                 </div>
+             )}
         </div>
-        <div className="text-xs text-gray-300">────────✈────────</div>
-        <div className="text-right">
-            <div className="font-semibold">{flight.arrival_time}</div>
-            <div className="text-gray-400">{flight.destination}</div>
+        <div className="p-4 flex flex-col flex-grow relative bg-white">
+          <h3 className="font-bold text-gray-800 mb-1 line-clamp-1 text-lg">{hotel.hotel_name}</h3>
+          <div className="flex-grow mt-2">
+            {isSelected ? (
+                <div className="text-blue-600 text-sm font-bold flex items-center gap-2">✓ Selected</div>
+            ) : (
+                <p className="text-xs text-gray-400">Click to select</p>
+            )}
+          </div>
+          <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-end">
+              <span className="text-sm text-gray-400">Total Price</span>
+              <span className="text-xl font-bold text-gray-900">{hotel.price} {hotel.currency}</span>
+          </div>
         </div>
       </div>
-      <button className="w-full py-2 rounded-lg border border-blue-100 text-blue-600 hover:bg-blue-50 font-semibold text-sm transition">
-        Select Offer
-      </button>
-    </div>
-  );
+    );
 }
-
-function HotelCard({ hotel }) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition overflow-hidden flex flex-col h-full">
-      <div className="h-40 bg-gray-200 relative">
-        <div className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded text-xs font-bold shadow-sm">
-            ⭐ {hotel.rating}
-        </div>
-      </div>
-      <div className="p-4 flex flex-col flex-grow">
-        <h3 className="font-bold text-gray-800 mb-1 line-clamp-1">{hotel.name}</h3>
-        <p className="text-xs text-gray-500 mb-3 line-clamp-2">{hotel.description}</p>
-        <div className="mt-auto flex justify-between items-end">
-            <span className="text-sm text-gray-400">per night</span>
-            <span className="text-lg font-bold text-gray-900">${hotel.price}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// --- Mock Data ---
-const MOCK_FLIGHTS = [
-    { id: 1, airline: "Lufthansa", price: 450, origin: "OTP", destination: "CDG", departure_time: "06:00", arrival_time: "08:30" },
-    { id: 2, airline: "Air France", price: 520, origin: "OTP", destination: "CDG", departure_time: "14:00", arrival_time: "16:40" },
-];
-
-const MOCK_HOTELS = [
-    { id: 1, name: "Hotel Le A", rating: 4.8, price: 220, description: "Boutique hotel near Champs-Elysées with modern art decor." },
-    { id: 2, name: "Grand Hotel", rating: 4.5, price: 180, description: "Classic luxury in the heart of the city." },
-    { id: 3, name: "City Flat", rating: 4.2, price: 120, description: "Cozy apartment perfect for couples." },
-];
