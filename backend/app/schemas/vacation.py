@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class Flight(BaseModel):
     """Schema for individual flight details."""
     airline: str
+    airline_logo: Optional[str]
     departure: str
     departure_time: str
     arrival: str
@@ -24,7 +25,7 @@ class FlightBookingResponse(BaseModel):
 
 class FlightsRequest(BaseModel):
     """Schema for flight search request."""
-    session_id: str
+    session_id: int
     token: Optional[str] = None
     departure: str
     arrival: str
@@ -37,26 +38,9 @@ class FlightsRequest(BaseModel):
     sort_by: Optional[int] = 2
     stops: Optional[int] = 0
 
-class ExploreResponse(BaseModel):
-    """Schema for explore flight search response."""
-    start_date: str
-    end_date: str
-
-class ExploreRequest(BaseModel):
-    """Schema for explore flight search request."""
-    departure: str
-    arrival: str
-    duration_type: int
-    month: int
-    adults: int
-    children: Optional[int] = 0
-    infants_in_seat: Optional[int] = 0
-    infants_on_lap: Optional[int] = 0
-    stops: Optional[int] = 0
-
 class AccomodationsRequest(BaseModel):
     """Schema for accomodations search request."""
-    session_id: str
+    session_id: int
     loc_id: Optional[str]
     location: str
     search_type: str # e.g., "CITY"
@@ -72,7 +56,8 @@ class AccomodationsResponse(BaseModel):
     """Schema for accomodations search response."""
     hotel_id: str
     hotel_name: str
-    address: str
+    latitude: Optional[float]
+    longitude: Optional[float]
     price: float
     currency: str
     photo_urls: list[str]
@@ -83,3 +68,21 @@ class AccomodationsResponse(BaseModel):
 class AccomodationBookingResponse(BaseModel):
     """Schema for accomodation booking response."""
     booking_url: str
+
+
+# class ExploreResponse(BaseModel):
+#     """Schema for explore flight search response."""
+#     start_date: str
+#     end_date: str
+
+# class ExploreRequest(BaseModel):
+#     """Schema for explore flight search request."""
+#     departure: str
+#     arrival: str
+#     duration_type: int
+#     month: int
+#     adults: int
+#     children: Optional[int] = 0
+#     infants_in_seat: Optional[int] = 0
+#     infants_on_lap: Optional[int] = 0
+#     stops: Optional[int] = 0

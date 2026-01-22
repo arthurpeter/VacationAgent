@@ -4,60 +4,67 @@ from fastapi import APIRouter, Depends, HTTPException
 from app import schemas, models
 from app.core.logger import get_logger
 from sqlalchemy.orm import Session
+from authx import TokenPayload
+from app.core.auth import auth
 
 
 log = get_logger(__name__)
 
 router = APIRouter(prefix="/search", tags=["Search"])
 
-@router.post("/exploreDestinations", response_model=schemas.ExploreResponse)
-async def explore_destinations(data: schemas.ExploreRequest):
-    log.info(f"Exploring dates from {data.departure} to {data.arrival}")
-    try:
-        departure = data.departure.split(",")
-        city = departure[0].strip()
-        country = departure[1].strip() if len(departure) > 1 else None
-        results = flights.get_location_data(city, country)
+# example usage of the explore api - currently disabled
+# @router.post("/exploreDestinations", response_model=schemas.ExploreResponse)
+# async def explore_destinations(data: schemas.ExploreRequest):
+#     log.info(f"Exploring dates from {data.departure} to {data.arrival}")
+#     try:
+#         departure = data.departure.split(",")
+#         city = departure[0].strip()
+#         country = departure[1].strip() if len(departure) > 1 else None
+#         results = flights.get_location_data(city, country)
 
-        arrival = data.arrival.split(",")
-        city = arrival[0].strip()
-        country = arrival[1].strip() if len(arrival) > 1 else None
-        arrival_id = flights.get_location_data(city, country).get("departure_id")
-    except Exception as e:
-        log.error(f"Error getting flight parameters: {e}")
+#         arrival = data.arrival.split(",")
+#         city = arrival[0].strip()
+#         country = arrival[1].strip() if len(arrival) > 1 else None
+#         arrival_id = flights.get_location_data(city, country).get("departure_id")
+#     except Exception as e:
+#         log.error(f"Error getting flight parameters: {e}")
 
-    log.info("Searching for explore destinations...")
-    explore_results = explore.call_explore_api(
-        departure_id=results.get("departure_id"),
-        arrival_id=arrival_id,
-        travel_duration=data.duration_type,
-        month=data.month,
-        adults=data.adults,
-        children=data.children,
-        infants_in_seat=data.infants_in_seat,
-        infants_on_lap=data.infants_on_lap,
-        stops=data.stops,
-        gl=results.get("gl"),
-        hl=results.get("hl"),
-        currency=results.get("currency")
-    )
+#     log.info("Searching for explore destinations...")
+#     explore_results = explore.call_explore_api(
+#         departure_id=results.get("departure_id"),
+#         arrival_id=arrival_id,
+#         travel_duration=data.duration_type,
+#         month=data.month,
+#         adults=data.adults,
+#         children=data.children,
+#         infants_in_seat=data.infants_in_seat,
+#         infants_on_lap=data.infants_on_lap,
+#         stops=data.stops,
+#         gl=results.get("gl"),
+#         hl=results.get("hl"),
+#         currency=results.get("currency")
+#     )
 
-    if not explore_results:
-        log.warning("No explore destinations found for the given criteria.")
-        raise HTTPException(status_code=404, detail="No explore destinations found")
+#     if not explore_results:
+#         log.warning("No explore destinations found for the given criteria.")
+#         raise HTTPException(status_code=404, detail="No explore destinations found")
     
-    response = schemas.ExploreResponse(
-        start_date=explore_results.get("start_date"),
-        end_date=explore_results.get("end_date")
-    )
+#     response = schemas.ExploreResponse(
+#         start_date=explore_results.get("start_date"),
+#         end_date=explore_results.get("end_date")
+#     )
 
-    if not response.start_date or not response.end_date:
-        log.error("Error constructing explore response: Incomplete data received.")
-        raise HTTPException(status_code=500, detail="Error processing explore data")
-    return response
+#     if not response.start_date or not response.end_date:
+#         log.error("Error constructing explore response: Incomplete data received.")
+#         raise HTTPException(status_code=500, detail="Error processing explore data")
+#     return response
 
 @router.post("/getOutboundFlights", response_model=list[schemas.FlightsResponse])
-async def search_outbound_flights(data: schemas.FlightsRequest, db: Session = Depends(get_db)):
+async def search_outbound_flights(
+    data: schemas.FlightsRequest,
+    db: Session = Depends(get_db),
+    access_token: TokenPayload = Depends(auth.access_token_required)
+    ):
     log.info(f"Searching flights: {data.departure} -> {data.arrival}")
     try:
         departure = data.departure.split(",")
@@ -73,15 +80,23 @@ async def search_outbound_flights(data: schemas.FlightsRequest, db: Session = De
     except Exception as e:
         log.error(f"Error getting flight parameters: {e}")
 
-    if results.get("currency"):
-        try:
-            db.query(models.VacationSession).filter(models.VacationSession.id == data.session_id).update(
-                {"currency": results.get("currency")}
-            )
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            log.error(f"Error updating session currency: {e}")
+    # UPDATE session currency preference, DATES, DESTINATION
+    try:
+        db.query(models.VacationSession).filter(
+            models.VacationSession.id == data.session_id,
+            models.VacationSession.user_id == access_token.sub
+        ).update(
+            {
+            "currency": results.get("currency"),
+            "from_date": data.outbound_date,
+            "to_date": data.return_date,
+            "destination": data.arrival
+            }
+        )
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        log.error(f"Error updating session currency: {e}")
 
 
     log.info("Searching for outbound flights...")
@@ -122,6 +137,7 @@ async def search_outbound_flights(data: schemas.FlightsRequest, db: Session = De
             for detail in flight.get('flights', []):
                 flight_detail = schemas.Flight(
                     airline=detail.get('airline', ''),
+                    airline_logo=detail.get('airline_logo'),
                     departure=detail.get('departure_airport').get('name'),
                     departure_time=detail.get('departure_airport').get('time'),
                     arrival=detail.get('arrival_airport').get('name'),
@@ -137,7 +153,11 @@ async def search_outbound_flights(data: schemas.FlightsRequest, db: Session = De
     return response
 
 @router.post("/getInboundFlights", response_model=list[schemas.FlightsResponse])
-async def search_inbound_flights(data: schemas.FlightsRequest):
+async def search_inbound_flights(
+    data: schemas.FlightsRequest,
+    db: Session = Depends(get_db),
+    access_token: TokenPayload = Depends(auth.access_token_required)
+    ):
     log.info(f"Searching flight: {data.departure_id} -> {data.arrival_id}")
     try:
         departure = data.departure.split(",")
@@ -191,6 +211,7 @@ async def search_inbound_flights(data: schemas.FlightsRequest):
             for detail in flight.get('flights', []):
                 flight_detail = schemas.Flight(
                     airline=detail.get('airline', ''),
+                    airline_logo=detail.get('airline_logo'),
                     departure=detail.get('departure_airport').get('name'),
                     departure_time=detail.get('departure_airport').get('time'),
                     arrival=detail.get('arrival_airport').get('name'),
@@ -206,7 +227,11 @@ async def search_inbound_flights(data: schemas.FlightsRequest):
     return response
 
 @router.post("/bookFlight", response_model=schemas.FlightBookingResponse)
-async def book_flight(data: schemas.FlightsRequest):
+async def book_flight(
+    data: schemas.FlightsRequest,
+    db: Session = Depends(get_db),
+    access_token: TokenPayload = Depends(auth.access_token_required)
+    ):
     log.info(f"Searching flight: {data.departure_id} -> {data.arrival_id}")
     try:
         departure = data.departure.split(",")
@@ -243,13 +268,29 @@ async def book_flight(data: schemas.FlightsRequest):
     if not url:
         log.error("Booking failed: Incomplete booking information received.")
         raise HTTPException(status_code=500, detail="Booking failed")
+    
+    try:
+        db.query(models.VacationSession).filter(
+            models.VacationSession.id == data.session_id,
+            models.VacationSession.user_id == access_token.sub
+        ).update(
+            {"flights_url": url}
+        )
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        log.error(f"Error updating session with flight booking URL: {e}")
 
     return schemas.FlightBookingResponse(
         booking_url=url
     )
 
 @router.post("/getAccomodations", response_model=list[schemas.AccomodationsResponse])
-async def get_accomodations(data: schemas.AccomodationsRequest, db: Session = Depends(get_db)):
+async def get_accomodations(
+    data: schemas.AccomodationsRequest,
+    db: Session = Depends(get_db),
+    access_token: TokenPayload = Depends(auth.access_token_required)
+    ):
     log.info(f"Searching accomodations in {data.location}")
     try:
         destination = accomodations_v2.get_destination_id(
@@ -263,7 +304,10 @@ async def get_accomodations(data: schemas.AccomodationsRequest, db: Session = De
         log.warning("No accomodations found for the given criteria.")
         raise HTTPException(status_code=404, detail="No accomodations found")
     
-    currency_code = db.query(models.VacationSession).filter(models.VacationSession.id == data.session_id).first().currency or "EUR"
+    currency_code = db.query(models.VacationSession).filter(
+        models.VacationSession.id == data.session_id,
+        models.VacationSession.user_id == access_token.sub
+    ).first().currency or "EUR"
     
     try:
         results = accomodations_v2.search_hotels(
@@ -278,6 +322,10 @@ async def get_accomodations(data: schemas.AccomodationsRequest, db: Session = De
             price_min=data.price_min,
             price_max=data.price_max,
         )
+
+        if not results or results.get("message").lower() != "success":
+            log.warning("No accomodations found for the given criteria.")
+            raise HTTPException(status_code=404, detail="No accomodations found")
     except Exception as e:
         log.error(f"Error searching accomodations: {e}")
         raise HTTPException(status_code=500, detail="Error searching accomodations")
@@ -291,17 +339,71 @@ async def get_accomodations(data: schemas.AccomodationsRequest, db: Session = De
     for hotel in sorted_hotels:
         hotel_info = hotel.get("property", {})
         price_info = hotel_info.get("priceBreakdown", {}).get("grossPrice", {}).get("value", float('inf'))
-        # TODO: finish filling this schema
         response.append(schemas.AccomodationsResponse(
-            hotel_id=hotel.get("hotel_id"),
+            hotel_id=hotel.get("hotel_id", ""),
             hotel_name=hotel_info.get("name", ""),
-            address="",
+            latitude=hotel_info.get("latitude"),
+            longitude=hotel_info.get("longitude"),
             price=price_info,
             currency=currency_code,
-            photo_urls=[],
-            accessibilityLabel=None,
-            checkin_time_range=None,
-            checkout_time_range=None
+            photo_urls=hotel_info.get("photoUrls", []),
+            accessibilityLabel=hotel.get("accessibilityLabel"),
+            checkin_time_range=hotel_info.get("checkin", {}).get("fromTime") + ' - ' + hotel_info.get("checkin", {}).get("untilTime") if hotel_info.get("checkin") else None,
+            checkout_time_range=hotel_info.get("checkout", {}).get("fromTime") + ' - ' + hotel_info.get("checkout", {}).get("untilTime") if hotel_info.get("checkout") else None,
         ))
 
     return response
+
+@router.post("/bookAccomodation", response_model=schemas.AccomodationBookingResponse)
+async def book_accomodation(
+    data: schemas.AccomodationsRequest,
+    db: Session = Depends(get_db),
+    access_token: TokenPayload = Depends(auth.access_token_required)
+    ):
+    log.info(f"Booking accomodation: {data.hotel_id} in {data.location}")
+    
+    currency_code = db.query(models.VacationSession).filter(
+        models.VacationSession.id == data.session_id,
+        models.VacationSession.user_id == access_token.sub
+    ).first().currency or "EUR"
+
+    try:
+        results = accomodations_v2.get_hotel_details(
+            hotel_id=data.get("loc_id"),
+            search_type=data.get("search_type"),
+            arrival_date=data.arrival_date,
+            departure_date=data.departure_date,
+            currency_code=currency_code,
+            adults=data.adults,
+            children=data.children,
+            room_qty=data.room_qty,
+        )
+
+        if not results or results.get("message").lower() != "success":
+            log.warning("No accomodations found for the given criteria.")
+            raise HTTPException(status_code=404, detail="No accomodations found")
+    except Exception as e:
+        log.error(f"Error searching accomodations: {e}")
+        raise HTTPException(status_code=500, detail="Error searching accomodations")
+    
+    booking_url = results.get("data", {}).get("url")
+
+    if not booking_url:
+        log.error("Booking failed: Incomplete booking information received.")
+        raise HTTPException(status_code=500, detail="Booking failed")
+    
+    try:
+        db.query(models.VacationSession).filter(
+            models.VacationSession.id == data.session_id,
+            models.VacationSession.user_id == access_token.sub
+        ).update(
+            {"accomodation_url": booking_url}
+        )
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        log.error(f"Error updating session with accomodation booking URL: {e}")
+
+    return schemas.AccomodationBookingResponse(
+        booking_url=booking_url
+    )
