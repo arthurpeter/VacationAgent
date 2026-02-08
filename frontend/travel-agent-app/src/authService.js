@@ -35,14 +35,19 @@ export async function fetchWithAuth(url, body = {}, method = "POST") {
   }
 
   // Try request with access token
-  let res = await fetch(url, {
+  const options = {
     method,
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${accessToken}`,
     },
-    body: JSON.stringify(body),
-  });
+  };
+
+  if (method !== "GET" && method !== "HEAD") {
+    options.body = JSON.stringify(body);
+  }
+
+  let res = await fetch(url, options);
 
   // If unauthorized, try to refresh
   if (res.status === 401 || res.status === 422) {

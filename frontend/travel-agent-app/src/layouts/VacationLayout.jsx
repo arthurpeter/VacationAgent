@@ -11,7 +11,7 @@ export default function VacationLayout() {
   // This function allows child components to refresh the shared state
   const refreshContext = async () => {
     try {
-      const res = await fetchWithAuth(`http://localhost:5000/vacations/session/${id}`, {}, "GET");
+      const res = await fetchWithAuth(`http://localhost:5000/session/${id}`, {}, "GET");
       if (res.ok) {
         const data = await res.json();
         setSessionData(data);

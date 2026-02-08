@@ -45,6 +45,19 @@ async def delete_vacation_session(
         raise HTTPException(status_code=500, detail="Error deleting vacation session")
     return {"detail": "Vacation session deleted successfully"}
 
+@router.get("/getSessions")
+async def get_sessions(
+    db: Session = Depends(get_db),
+    access_token: TokenPayload = Depends(auth.access_token_required)
+    ):
+    """Retrieve all vacation sessions for the authenticated user."""
+    log.info(f"Retrieving all vacation sessions for user: {access_token.sub}")
+    sessions = db.query(models.VacationSession).filter_by(
+        user_id=access_token.sub
+        ).all()
+    ids = [session.id for session in sessions]
+    return {"session_ids": ids}
+
 @router.get("/{session_id}")
 async def get_vacation_session(
     session_id: str,
@@ -60,17 +73,4 @@ async def get_vacation_session(
         log.warning(f"Vacation session {session_id} not found for user: {access_token.sub}")
         raise HTTPException(status_code=404, detail="Vacation session not found")
     return session
-
-@router.get("/getSessions")
-async def get_sessions(
-    db: Session = Depends(get_db),
-    access_token: TokenPayload = Depends(auth.access_token_required)
-    ):
-    """Retrieve all vacation sessions for the authenticated user."""
-    log.info(f"Retrieving all vacation sessions for user: {access_token.sub}")
-    sessions = db.query(models.VacationSession).filter_by(
-        user_id=access_token.sub
-        ).all()
-    ids = [session.id for session in sessions]
-    return {"session_ids": ids}
 

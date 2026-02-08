@@ -41,7 +41,7 @@ class FlightsRequest(BaseModel):
 class AccomodationsRequest(BaseModel):
     """Schema for accomodations search request."""
     session_id: int
-    loc_id: Optional[str]
+    loc_id: Optional[str] = None
     location: str
     search_type: str # e.g., "CITY"
     arrival_date: str

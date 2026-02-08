@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; // 1. Import useNavigate
 import VacationCard from '../components/VacationCard';
 import { fetchWithAuth } from '../authService';
@@ -10,19 +10,48 @@ const MOCK_HISTORY = [
 ];
 
 export default function Dashboard() {
-  const [vacations, setVacations] = useState(MOCK_HISTORY);
-  const navigate = useNavigate(); // 2. Initialize hook
+  const [vacations, setVacations] = useState([]); // Start empty, remove MOCK_HISTORY
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const loadSessions = async () => {
+        try {
+            const res = await fetchWithAuth("http://localhost:5000/session/getSessions", {}, "GET");
+            if (res.ok) {
+                const data = await res.json();
+                const ids = data.session_ids || [];
+
+                const sessionPromises = ids.map(id => 
+                    fetchWithAuth(`http://localhost:5000/session/${id}`, {}, "GET")
+                        .then(r => r.json())
+                );
+                
+                const sessionsDetails = await Promise.all(sessionPromises);
+                
+                const formattedSessions = sessionsDetails.map(s => ({
+                    id: s.id, 
+                    destination: s.destination || "New Trip",
+                    step: 1,
+                    description: `Created on ${new Date(s.created_at).toLocaleDateString()}`,
+                    date: new Date(s.updated_at || s.created_at).toLocaleDateString()
+                }));
+
+                setVacations(formattedSessions);
+            }
+        } catch (err) {
+            console.error("Failed to load sessions", err);
+        }
+    };
+    loadSessions();
+  }, []);
 
   // 3. Create a handler for new trips
   const handleCreateNew = async () => {
     try {
-      // Sending a POST request to create the session
-      // Note: Endpoint is /session/create based on session_manager.py
       const res = await fetchWithAuth("http://localhost:5000/session/create", {}, "POST");
       
       if (res && res.ok) {
         const data = await res.json();
-        // The API returns { "session_id": <id> }
         navigate(`/plan/${data.session_id}`);
       } else {
         console.error("Failed to create session");

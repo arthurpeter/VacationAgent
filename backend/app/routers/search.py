@@ -6,6 +6,7 @@ from app.core.logger import get_logger
 from sqlalchemy.orm import Session
 from authx import TokenPayload
 from app.core.auth import auth
+from datetime import datetime
 
 
 log = get_logger(__name__)
@@ -78,10 +79,26 @@ async def search_outbound_flights(
         country = arrival[1].strip() if len(arrival) > 1 else None
         arrival_id = flights.get_location_data(city, country).get("departure_id")
 
+        if not results.get("departure_id"):
+             raise HTTPException(status_code=400, detail=f"Could not find airports for origin: {data.departure}")
+        
+        if not arrival_id:
+             raise HTTPException(status_code=400, detail=f"Could not find airports for destination: {data.arrival}. Please try a specific city name.")
+
     except Exception as e:
         log.error(f"Error getting flight parameters: {e}")
 
     # UPDATE session currency preference, DATES, DESTINATION
+    try:
+        fmt = "%Y-%m-%d"
+        dt_outbound = datetime.strptime(data.outbound_date, fmt)
+        dt_return = datetime.strptime(data.return_date, fmt) if data.return_date else None
+    except ValueError:
+        log.error("Date format error")
+        # Handle error or keep as None
+        dt_outbound = None
+        dt_return = None
+
     try:
         db.query(models.VacationSession).filter(
             models.VacationSession.id == data.session_id,
@@ -89,8 +106,8 @@ async def search_outbound_flights(
         ).update(
             {
             "currency": results.get("currency"),
-            "from_date": data.outbound_date,
-            "to_date": data.return_date,
+            "from_date": dt_outbound,
+            "to_date": dt_return,
             "destination": data.arrival
             }
         )
@@ -101,7 +118,7 @@ async def search_outbound_flights(
 
 
     log.info("Searching for outbound flights...")
-    flight_results = flights.search_flights(
+    flight_results = flights.call_flights_api(
         departure_id=results.get("departure_id"),
         arrival_id=arrival_id,
         outbound_date=data.outbound_date,
@@ -175,7 +192,7 @@ async def search_inbound_flights(
         log.error(f"Error getting flight parameters: {e}")
 
     log.info("Searching for inbound flights...")
-    flight_results = flights.search_flights(
+    flight_results = flights.call_flights_api(
         departure_token=data.token,
         departure_id=results.get("departure_id"),
         arrival_id=arrival_id,
@@ -250,7 +267,7 @@ async def book_flight(
         log.error(f"Error getting flight parameters: {e}")
 
     log.info("Searching for inbound flights...")
-    booking_results = flights.search_flights(
+    booking_results = flights.call_flights_api(
         departure_token=data.token,
         departure_id=results.get("departure_id"),
         arrival_id=arrival_id,
