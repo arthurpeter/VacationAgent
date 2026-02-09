@@ -106,8 +106,8 @@ async def search_outbound_flights(
         ).update(
             {
             "currency": results.get("currency"),
-            "from_date": dt_outbound,
-            "to_date": dt_return,
+            "from_date": dt_outbound.isoformat() if dt_outbound else None,
+            "to_date": dt_return.isoformat() if dt_return else None,
             "destination": data.arrival
             }
         )
@@ -146,7 +146,7 @@ async def search_outbound_flights(
     try:
         response = []
         for flight in all_flights[:5]:
-            log.info(f"Flight: Price {flight.price}")
+            log.info(f"Flight: Price {flight.get('price')}")
             flight_schema = schemas.FlightsResponse(
                 token=flight.get('departure_token'),
                 price=flight.get('price'),
