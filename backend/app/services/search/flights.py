@@ -32,7 +32,7 @@ def get_location_data(area_input: str, country_filter: str = None):
     
     target_city = area_clean.lower()
     target_code = area_clean.upper()
-    target_country = country_filter.upper() if country_filter else None
+    target_country = country_filter.strip().upper() if country_filter else None
 
     for code, data in airports.items():
         is_city_match = (data.get('city', '').lower() == target_city)
@@ -233,7 +233,7 @@ def call_flights_api(
 
 # Example of how you might call this function:
 if __name__ == "__main__":
-    print(get_location_data("Paris", "FR"))
+    print(get_location_data("Rome", "IT"))
     sys.exit()
     try:
         # --- STEP 1: Search for Outbound Flights ---

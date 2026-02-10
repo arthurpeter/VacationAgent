@@ -72,11 +72,13 @@ async def search_outbound_flights(
         departure = data.departure.split(",")
         city = departure[0].strip()
         country = departure[1].strip() if len(departure) > 1 else None
+        log.info(f"Parsed departure: city='{city}', country='{country}'")
         results = flights.get_location_data(city, country)
 
         arrival = data.arrival.split(",")
         city = arrival[0].strip()
         country = arrival[1].strip() if len(arrival) > 1 else None
+        log.info(f"Parsed arrival: city='{city}', country='{country}'")
         arrival_id = flights.get_location_data(city, country).get("departure_id")
 
         if not results.get("departure_id"):
@@ -108,6 +110,7 @@ async def search_outbound_flights(
             "currency": results.get("currency"),
             "from_date": dt_outbound,
             "to_date": dt_return,
+            "departure": data.departure,
             "destination": data.arrival
             }
         )
@@ -149,6 +152,7 @@ async def search_outbound_flights(
             flight_schema = schemas.FlightsResponse(
                 token=flight.get('departure_token'),
                 price=flight.get('price'),
+                currency=results.get("currency", "EUR"),
                 flights=[]
             )
             for detail in flight.get('flights', []):
@@ -205,7 +209,7 @@ async def search_inbound_flights(
         stops=data.stops,
         gl=results.get("gl"),
         hl=results.get("hl"),
-        currency=results.get("currency")
+        currency=results.get("currency", "EUR")
     )
 
     best_flights = flight_results.get("best_flights")
@@ -224,6 +228,7 @@ async def search_inbound_flights(
             flight_schema = schemas.FlightsResponse(
                 token=flight.get('booking_token'),
                 price=flight.get('price'),
+                currency=results.get("currency"),
                 flights=[]
             )
             for detail in flight.get('flights', []):
@@ -234,7 +239,7 @@ async def search_inbound_flights(
                     departure_time=detail.get('departure_airport').get('time'),
                     arrival=detail.get('arrival_airport').get('name'),
                     arrival_time=detail.get('arrival_airport').get('time'),
-                    duration=detail.get('duration', ''),
+                    duration=str(detail.get('duration', '')),
                 )
                 flight_schema.flights.append(flight_detail)
             response.append(flight_schema)

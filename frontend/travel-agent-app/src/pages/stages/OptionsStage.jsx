@@ -639,30 +639,75 @@ export default function OptionsStage() {
 
 // --- Sub-components ---
 function FlightCard({ flight, onSelect, btnText }) {
-    const leg = flight.flights[0]; 
+    // 1. Get First and Last Leg
+    const firstLeg = flight.flights[0];
+    const lastLeg = flight.flights[flight.flights.length - 1];
+
+    // 2. Calculate Stops
+    const stopsCount = flight.flights.length - 1;
+
+    // 3. Get Stopover Cities
+    const stopoverCities = flight.flights
+        .slice(0, -1)
+        .map(leg => leg.arrival.split(',')[0])
+        .join(", ");
+
+    // 4. Calculate Duration
+    const start = new Date(firstLeg.departure_time.replace(" ", "T"));
+    const end = new Date(lastLeg.arrival_time.replace(" ", "T"));
+    
+    let durationString = "N/A";
+    if (!isNaN(start) && !isNaN(end)) {
+        const diffMs = end - start;
+        const diffMins = Math.floor(diffMs / 60000);
+        const hours = Math.floor(diffMins / 60);
+        const mins = diffMins % 60;
+        durationString = `${hours}h ${mins}m`;
+    }
+
     return (
       <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-3">
-             {leg.airline_logo && <img src={leg.airline_logo} alt={leg.airline} className="h-8 w-8 object-contain" />}
-             <span className="font-bold text-lg text-gray-800">{leg.airline}</span>
+             {firstLeg.airline_logo && <img src={firstLeg.airline_logo} alt={firstLeg.airline} className="h-8 w-8 object-contain" />}
+             <span className="font-bold text-lg text-gray-800">{firstLeg.airline}</span>
           </div>
-          <div className="text-blue-600 font-bold text-xl">{flight.price} €</div>
+          {/* DISPLAY DYNAMIC CURRENCY */}
+          <div className="text-blue-600 font-bold text-xl">{flight.price} {flight.currency}</div>
         </div>
+        
         <div className="flex justify-between items-center text-sm text-gray-600 mb-4 bg-gray-50 p-3 rounded-lg">
+          {/* DEPARTURE: First Leg */}
           <div>
-              <div className="font-bold text-gray-900">{leg.departure_time}</div>
-              <div className="text-gray-400">{leg.departure}</div>
+              <div className="font-bold text-gray-900">{firstLeg.departure_time.split(" ")[1]}</div>
+              <div className="text-gray-400 max-w-[100px] truncate" title={firstLeg.departure}>{firstLeg.departure}</div>
           </div>
-          <div className="flex flex-col items-center">
-             <span className="text-xs text-gray-400">{leg.duration}</span>
+
+          {/* DURATION & STOPS CENTER */}
+          <div className="flex flex-col items-center px-4 w-1/3">
+             <span className="text-xs text-gray-500 font-medium">{durationString}</span>
              <span className="text-gray-300">──────✈──────</span>
+             
+             {/* Dynamic Stops Label */}
+             <span className={`text-[10px] font-bold mt-1 ${stopsCount > 0 ? 'text-orange-500' : 'text-green-600'}`}>
+                {stopsCount === 0 ? "Direct" : `${stopsCount} Stop${stopsCount > 1 ? 's' : ''}`}
+             </span>
+             
+             {/* Show Stopover City if applicable */}
+             {stopsCount > 0 && (
+                <span className="text-[9px] text-gray-400 w-full truncate text-center" title={stopoverCities}>
+                    Via {stopoverCities}
+                </span>
+             )}
           </div>
+
+          {/* ARRIVAL: Last Leg */}
           <div className="text-right">
-              <div className="font-bold text-gray-900">{leg.arrival_time}</div>
-              <div className="text-gray-400">{leg.arrival}</div>
+              <div className="font-bold text-gray-900">{lastLeg.arrival_time.split(" ")[1]}</div>
+              <div className="text-gray-400 max-w-[100px] truncate ml-auto" title={lastLeg.arrival}>{lastLeg.arrival}</div>
           </div>
         </div>
+
         <button onClick={onSelect} className="w-full py-2 rounded-lg border border-blue-100 text-blue-600 hover:bg-blue-50 font-semibold text-sm transition">
           {btnText}
         </button>

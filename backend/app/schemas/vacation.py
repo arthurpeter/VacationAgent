@@ -17,6 +17,7 @@ class FlightsResponse(BaseModel):
     """Schema for flight search response."""
     token: str
     price: float
+    currency: str
     flights: list[Flight]
 
 class FlightBookingResponse(BaseModel):

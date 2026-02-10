@@ -25,6 +25,7 @@ class VacationSession(Base):
     currency = Column(String, nullable=True, default="EUR")
     from_date = Column(DateTime, nullable=True)
     to_date = Column(DateTime, nullable=True)
+    departure = Column(String, nullable=True)
     destination = Column(String, nullable=True)
     flights_url = Column(Text, nullable=True)
     accomodation_url = Column(Text, nullable=True)
