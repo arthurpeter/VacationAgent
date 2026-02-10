@@ -106,8 +106,8 @@ async def search_outbound_flights(
         ).update(
             {
             "currency": results.get("currency"),
-            "from_date": dt_outbound.isoformat() if dt_outbound else None,
-            "to_date": dt_return.isoformat() if dt_return else None,
+            "from_date": dt_outbound,
+            "to_date": dt_return,
             "destination": data.arrival
             }
         )
@@ -115,7 +115,6 @@ async def search_outbound_flights(
     except Exception as e:
         db.rollback()
         log.error(f"Error updating session currency: {e}")
-
 
     log.info("Searching for outbound flights...")
     flight_results = flights.call_flights_api(
@@ -160,7 +159,7 @@ async def search_outbound_flights(
                     departure_time=detail.get('departure_airport').get('time'),
                     arrival=detail.get('arrival_airport').get('name'),
                     arrival_time=detail.get('arrival_airport').get('time'),
-                    duration=detail.get('duration', ''),
+                    duration=str(detail.get('duration', '')),
                 )
                 flight_schema.flights.append(flight_detail)
             response.append(flight_schema)
@@ -361,7 +360,7 @@ async def get_accomodations(
         hotel_info = hotel.get("property", {})
         price_info = hotel_info.get("priceBreakdown", {}).get("grossPrice", {}).get("value", float('inf'))
         response.append(schemas.AccomodationsResponse(
-            hotel_id=hotel.get("hotel_id", ""),
+            hotel_id=str(hotel.get("hotel_id", "")),
             hotel_name=hotel_info.get("name", ""),
             latitude=hotel_info.get("latitude"),
             longitude=hotel_info.get("longitude"),

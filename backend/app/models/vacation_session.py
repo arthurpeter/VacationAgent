@@ -12,6 +12,10 @@ from app.core.database import Base
 from app.core.config import settings
 
 
+def get_expiry_date():
+    """Helper to calculate the expiry date 30 days from now."""
+    return datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=settings.SESSION_EXPIRY_DAYS)
+
 class VacationSession(Base):
     __tablename__ = "vacation_sessions"
 
@@ -19,18 +23,28 @@ class VacationSession(Base):
     user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     currency = Column(String, nullable=True, default="EUR")
-    from_date = Column(DateTime(timezone=True), nullable=True)
-    to_date = Column(DateTime(timezone=True), nullable=True)
+    from_date = Column(DateTime, nullable=True)
+    to_date = Column(DateTime, nullable=True)
     destination = Column(String, nullable=True)
     flights_url = Column(Text, nullable=True)
     accomodation_url = Column(Text, nullable=True)
 
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
-    expires_at = Column(DateTime(timezone=True), onupdate=func.now() + timedelta(days=settings.SESSION_EXPIRY_DAYS), nullable=True)
+    
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    
+    updated_at = Column(DateTime, onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=True)
+    
+    expires_at = Column(
+        DateTime, 
+        default=get_expiry_date,
+        onupdate=get_expiry_date, 
+        nullable=True
+    )
 
     user = relationship("User", back_populates="sessions", lazy="joined")
     
     def __repr__(self):
-        return f"<VacationSession id={self.id} user_id={self.user_id} current_step={self.current_step!r}>"
+        # Note: current_step was in your repr but not in the model columns provided
+        return f"<VacationSession id={self.id} user_id={self.user_id}>"
+    
