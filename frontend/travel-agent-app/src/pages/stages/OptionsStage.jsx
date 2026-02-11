@@ -268,7 +268,7 @@ export default function OptionsStage() {
   const [step, setStep] = useState('SEARCH'); 
 
   // --- Filter State ---
-  const [origin, setOrigin] = useState("New York, US");
+  const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [dates, setDates] = useState({ start: "", end: "" });
   
@@ -279,21 +279,50 @@ export default function OptionsStage() {
       infantsLap: 0
   });
   const [childAges, setChildAges] = useState([]);
-  
-  // NEW: Room Quantity State
+
   const [roomQty, setRoomQty] = useState(1);
+
+  const [booked, setBooked] = useState({ flights: false, hotel: false });
 
   // Sync from DB
   useEffect(() => {
-    if (sessionData?.data) {
-        setDestination(sessionData.data.destination || "");
-        setDates({
-            start: sessionData.data.from_date || "",
-            end: sessionData.data.to_date || ""
-        });
-        setTravelerCounts(prev => ({ ...prev, adults: sessionData.data.adults || 1 }));
-    }
-  }, [sessionData]);
+    const fetchSessionDetails = async () => {
+        if (!sessionData?.id) return;
+
+        try {
+            const res = await fetchWithAuth(`http://localhost:5000/session/${sessionData.id}`, {}, "GET");
+            
+            if (res.ok) {
+                const data = await res.json();
+                console.log("Loaded Session Data:", data);
+
+                // 1. Set Origin (Departure)
+                if (data.departure) {
+                    setOrigin(data.departure);
+                }
+
+                // 2. Set Destination
+                if (data.destination) {
+                    setDestination(data.destination);
+                }
+
+                // 3. Set Dates (Format ISO to YYYY-MM-DD for input fields)
+                const formatForInput = (isoString) => {
+                    if (!isoString) return "";
+                    return isoString.split("T")[0];
+                };
+
+                setDates({
+                    start: formatForInput(data.from_date),
+                    end: formatForInput(data.to_date)
+                });
+            }
+        } catch (err) {
+            console.error("Failed to load session details:", err);
+        }
+    };
+    fetchSessionDetails();
+  }, [sessionData?.id]);
 
   // Ensure room qty doesn't exceed adults if adults count drops
   useEffect(() => {
@@ -419,11 +448,26 @@ export default function OptionsStage() {
   };
 
   const handleBookTrip = async () => {
+    // 1. Check if there is anything NEW to book
+    const needsFlight = selectedInbound && !booked.flights;
+    const needsHotel = selectedHotel && !booked.hotel;
+
+    if (!needsFlight && !needsHotel) {
+        if (!selectedHotel) {
+             setError("Please select an accommodation to continue.");
+        }
+        return;
+    }
+
     setLoading(true);
+    setError(null);
+
     try {
         const bookingPromises = [];
+        const bookingTypes = []; // Track what we are trying to book
 
-        if (selectedInbound) {
+        // Book Flight (only if not already booked)
+        if (needsFlight) {
             bookingPromises.push(
                 fetchWithAuth("http://localhost:5000/search/bookFlight", {
                     session_id: parseInt(sessionData?.id) || 0,
@@ -433,11 +477,12 @@ export default function OptionsStage() {
                     outbound_date: dates.start,
                     return_date: dates.end,
                     adults: travelerCounts.adults,
-                }, "POST")
+                }, "POST").then(res => ({ type: 'flights', res }))
             );
         }
 
-        if (selectedHotel) {
+        // Book Hotel (only if not already booked)
+        if (needsHotel) {
             const childrenString = childAges.length > 0 ? childAges.join(",") : null;
             bookingPromises.push(
                 fetchWithAuth("http://localhost:5000/search/bookAccomodation", {
@@ -449,20 +494,41 @@ export default function OptionsStage() {
                     departure_date: dates.end,
                     adults: travelerCounts.adults,
                     children: childrenString,
-                    room_qty: roomQty // NEW: Passed here as well
-                }, "POST")
+                    room_qty: roomQty 
+                }, "POST").then(res => ({ type: 'hotel', res }))
             );
         }
 
-        const responses = await Promise.all(bookingPromises);
+        const results = await Promise.all(bookingPromises);
         
-        if (responses.every(r => r.ok)) {
-            const data = await Promise.all(responses.map(r => r.json()));
-            console.log("Booking URLs:", data);
-            alert("Booking links generated! Check console for URLs.");
-            navigate(`/plan/${sessionData.id}/itinerary`); 
-        } else {
-            setError("Some bookings failed to generate.");
+        // Process results
+        let newBookedState = { ...booked };
+        let successCount = 0;
+
+        for (const item of results) {
+            if (item.res.ok) {
+                newBookedState[item.type] = true;
+                successCount++;
+                const data = await item.res.json();
+                console.log(`${item.type} booking URL:`, data);
+            } else {
+                setError(`Failed to book ${item.type}. Please try again.`);
+            }
+        }
+
+        setBooked(newBookedState);
+
+        // --- NAVIGATION LOGIC ---
+        // Only navigate if BOTH are now booked (either previously or just now)
+        if (newBookedState.flights && newBookedState.hotel) {
+            alert("Success! Flights and Accommodation booked. Proceeding to Itinerary.");
+            navigate(`/plan/${sessionData.id}/itinerary`);
+        } else if (newBookedState.flights && !newBookedState.hotel) {
+            // Flights done, Hotel missing
+            alert("Flights booked successfully! \n\nPlease select and book a Hotel to complete your package.");
+        } else if (!newBookedState.flights && newBookedState.hotel) {
+            // Hotel done, Flights missing
+            alert("Accommodation booked successfully! \n\nPlease select and book your Flights to proceed.");
         }
 
     } catch (err) {
@@ -478,6 +544,7 @@ export default function OptionsStage() {
     setSelectedOutbound(null);
     setSelectedInbound(null);
     setInboundFlights([]);
+    setBooked({ flights: false, hotel: false });
   };
 
   return (
@@ -557,32 +624,76 @@ export default function OptionsStage() {
           {step === 'CONFIRM' && selectedOutbound && selectedInbound && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
                 <h2 className="text-3xl font-bold text-green-800 mb-4">Ready to Book?</h2>
+                
                 <div className="flex justify-center gap-8 text-left mb-8">
-                    <div className="bg-white p-4 rounded shadow-sm">
-                        <h3 className="font-bold text-gray-500 text-xs uppercase">Outbound</h3>
+                    {/* Outbound Card */}
+                    <div className={`bg-white p-4 rounded shadow-sm w-64 border-l-4 ${booked.flights ? 'border-gray-400 opacity-75' : 'border-blue-500'}`}>
+                        <div className="flex justify-between">
+                            <h3 className="font-bold text-gray-500 text-xs uppercase">Outbound</h3>
+                            {booked.flights && <span className="text-xs font-bold text-green-600 bg-green-100 px-2 rounded-full">BOOKED</span>}
+                        </div>
                         <div className="font-bold text-lg">{selectedOutbound.flights[0].airline}</div>
                         <div>{selectedOutbound.flights[0].departure_time} - {selectedOutbound.flights[0].arrival_time}</div>
                     </div>
-                    <div className="bg-white p-4 rounded shadow-sm">
-                        <h3 className="font-bold text-gray-500 text-xs uppercase">Return</h3>
+                    
+                    {/* Return Card */}
+                    <div className={`bg-white p-4 rounded shadow-sm w-64 border-l-4 ${booked.flights ? 'border-gray-400 opacity-75' : 'border-blue-500'}`}>
+                         <div className="flex justify-between">
+                            <h3 className="font-bold text-gray-500 text-xs uppercase">Return</h3>
+                            {booked.flights && <span className="text-xs font-bold text-green-600 bg-green-100 px-2 rounded-full">BOOKED</span>}
+                        </div>
                         <div className="font-bold text-lg">{selectedInbound.flights[0].airline}</div>
                         <div>{selectedInbound.flights[0].departure_time} - {selectedInbound.flights[0].arrival_time}</div>
                     </div>
-                    {selectedHotel && (
-                        <div className="bg-white p-4 rounded shadow-sm">
-                            <h3 className="font-bold text-gray-500 text-xs uppercase">Accommodation</h3>
-                            <div className="font-bold text-lg">{selectedHotel.hotel_name}</div>
+                    
+                    {/* Hotel Card OR Warning Placeholder */}
+                    {selectedHotel ? (
+                        <div className={`bg-white p-4 rounded shadow-sm w-64 border-l-4 ${booked.hotel ? 'border-gray-400 opacity-75' : 'border-green-500'}`}>
+                            <div className="flex justify-between">
+                                <h3 className="font-bold text-gray-500 text-xs uppercase">Accommodation</h3>
+                                {booked.hotel && <span className="text-xs font-bold text-green-600 bg-green-100 px-2 rounded-full">BOOKED</span>}
+                            </div>
+                            <div className="font-bold text-lg truncate" title={selectedHotel.hotel_name}>{selectedHotel.hotel_name}</div>
                             <div className="text-sm text-gray-600">
                                 {roomQty} Room{roomQty > 1 ? 's' : ''}, {travelerCounts.adults} Adult{travelerCounts.adults > 1 ? 's' : ''}
                             </div>
                             <div className="text-green-600 font-bold mt-1">{selectedHotel.price} {selectedHotel.currency}</div>
                         </div>
+                    ) : (
+                        <div className="bg-orange-50 border-2 border-dashed border-orange-300 p-4 rounded shadow-sm flex flex-col justify-center items-center w-64">
+                            <span className="text-orange-600 font-bold text-lg mb-1">No Hotel Yet</span>
+                            <p className="text-xs text-orange-500 text-center">
+                                {booked.flights ? "Please select a hotel below to finish." : "You can book flights now, but must select a hotel to finish."}
+                            </p>
+                        </div>
                     )}
                 </div>
+                
                 <div className="flex justify-center gap-4">
-                    <button onClick={resetSelection} className="px-6 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-lg">Start Over</button>
-                    <button onClick={handleBookTrip} disabled={loading} className="px-8 py-3 bg-green-600 text-white font-bold rounded-lg shadow-lg hover:bg-green-700 transform transition hover:-translate-y-1">
-                        {loading ? "Processing..." : "Confirm & Book Now"}
+                    <button onClick={resetSelection} className="px-6 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-lg">
+                        Start Over
+                    </button>
+                    
+                    {/* Button Logic:
+                        1. Loading? -> Processing
+                        2. Flights booked & No Hotel? -> "Flights Booked - Select Hotel" (Disabled)
+                        3. Flights booked & Hotel Selected & Hotel not booked? -> "Book Accommodation"
+                        4. Nothing booked? -> "Confirm & Book [All/Flights]" 
+                    */}
+                    <button 
+                        onClick={handleBookTrip} 
+                        disabled={loading || (booked.flights && !selectedHotel)} 
+                        className={`px-8 py-3 font-bold rounded-lg shadow-lg transform transition ${
+                            loading || (booked.flights && !selectedHotel)
+                            ? "bg-gray-400 cursor-not-allowed text-gray-100" 
+                            : "bg-green-600 text-white hover:bg-green-700 hover:-translate-y-1"
+                        }`}
+                    >
+                        {loading ? "Processing..." : 
+                          (booked.flights && !selectedHotel ? "Flights Booked - Select Hotel" :
+                           booked.flights && !booked.hotel ? "Book Accommodation" :
+                           !selectedHotel ? "Book Flights & Continue" : "Confirm & Book All")
+                        }
                     </button>
                 </div>
             </div>
@@ -655,18 +766,31 @@ function FlightCard({ flight, onSelect, btnText }) {
         .map(leg => leg.arrival.split(',')[0])
         .join(", ");
 
-    // 4. Calculate Duration
-    const start = new Date(firstLeg.departure_time.replace(" ", "T"));
-    const end = new Date(lastLeg.arrival_time.replace(" ", "T"));
+    // 4. Calculate Total Duration (Flights + Layovers)
+    let totalMinutes = 0;
     
-    let durationString = "N/A";
-    if (!isNaN(start) && !isNaN(end)) {
-        const diffMs = end - start;
-        const diffMins = Math.floor(diffMs / 60000);
-        const hours = Math.floor(diffMins / 60);
-        const mins = diffMins % 60;
-        durationString = `${hours}h ${mins}m`;
+    // Sum flight durations (air time)
+    flight.flights.forEach(leg => {
+        totalMinutes += parseInt(leg.duration) || 0;
+    });
+
+    // Sum layover durations (ground time)
+    for (let i = 0; i < flight.flights.length - 1; i++) {
+        const currentLegArr = new Date(flight.flights[i].arrival_time.replace(" ", "T"));
+        const nextLegDep = new Date(flight.flights[i+1].departure_time.replace(" ", "T"));
+        
+        if (!isNaN(currentLegArr) && !isNaN(nextLegDep)) {
+            const layoverMs = nextLegDep - currentLegArr;
+            const layoverMins = Math.floor(layoverMs / 60000); // ms to minutes
+            if (layoverMins > 0) {
+                totalMinutes += layoverMins;
+            }
+        }
     }
+
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    const durationString = `${hours}h ${mins}m`;
 
     return (
       <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition">

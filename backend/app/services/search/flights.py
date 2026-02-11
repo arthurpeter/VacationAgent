@@ -39,7 +39,6 @@ def get_location_data(area_input: str, country_filter: str = None):
         is_code_match = (code == target_code)
         
         if is_city_match or is_code_match:
-            print(f"Matched airport: {code} in {data.get('city')}, {data.get('country')}")
             if target_country and data.get('country') != target_country:
                 continue
                 

@@ -72,14 +72,15 @@ async def search_outbound_flights(
         departure = data.departure.split(",")
         city = departure[0].strip()
         country = departure[1].strip() if len(departure) > 1 else None
-        log.info(f"Parsed departure: city='{city}', country='{country}'")
         results = flights.get_location_data(city, country)
 
         arrival = data.arrival.split(",")
         city = arrival[0].strip()
         country = arrival[1].strip() if len(arrival) > 1 else None
-        log.info(f"Parsed arrival: city='{city}', country='{country}'")
         arrival_id = flights.get_location_data(city, country).get("departure_id")
+
+        log.info(f"Location data for departure {city}, {country}: {results}")
+        log.info(f"Location data for arrival {city}, {country}: {arrival_id}")
 
         if not results.get("departure_id"):
              raise HTTPException(status_code=400, detail=f"Could not find airports for origin: {data.departure}")
