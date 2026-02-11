@@ -89,6 +89,7 @@ async def search_outbound_flights(
 
     except Exception as e:
         log.error(f"Error getting flight parameters: {e}")
+        raise HTTPException(status_code=400, detail="Invalid location format")
 
     # UPDATE session currency preference, DATES, DESTINATION
     try:
@@ -159,10 +160,10 @@ async def search_outbound_flights(
                 flight_detail = schemas.Flight(
                     airline=detail.get('airline', ''),
                     airline_logo=detail.get('airline_logo'),
-                    departure=detail.get('departure_airport').get('name'),
-                    departure_time=detail.get('departure_airport').get('time'),
-                    arrival=detail.get('arrival_airport').get('name'),
-                    arrival_time=detail.get('arrival_airport').get('time'),
+                    departure=detail.get('departure_airport', {}).get('name'),
+                    departure_time=detail.get('departure_airport', {}).get('time'),
+                    arrival=detail.get('arrival_airport', {}).get('name'),
+                    arrival_time=detail.get('arrival_airport', {}).get('time'),
                     duration=str(detail.get('duration', '')),
                 )
                 flight_schema.flights.append(flight_detail)
@@ -180,7 +181,7 @@ async def search_inbound_flights(
     access_token: TokenPayload = Depends(auth.access_token_required)
     ):
     log.info(f"Request data: {data}")
-    log.info(f"Searching flight: {data.departure_id} -> {data.arrival_id}")
+    log.info(f"Searching flight: {data.departure} -> {data.arrival}")
     try:
         departure = data.departure.split(",")
         city = departure[0].strip()
@@ -191,8 +192,15 @@ async def search_inbound_flights(
         city = arrival[0].strip()
         country = arrival[1].strip() if len(arrival) > 1 else None
         arrival_id = flights.get_location_data(city, country).get("departure_id")
+
+        if not results.get("departure_id"):
+             raise HTTPException(status_code=400, detail=f"Could not find airports for origin: {data.departure}")
+        
+        if not arrival_id:
+             raise HTTPException(status_code=400, detail=f"Could not find airports for destination: {data.arrival}")
     except Exception as e:
         log.error(f"Error getting flight parameters: {e}")
+        raise HTTPException(status_code=400, detail="Invalid location format")
 
     log.info("Searching for inbound flights...")
     flight_results = flights.call_flights_api(
@@ -224,7 +232,7 @@ async def search_inbound_flights(
     try:
         response = []
         for flight in all_flights[:5]:
-            log.info(f"Flight: Price {flight.price}")
+            log.info(f"Flight: Price {flight.get('price')}")
             flight_schema = schemas.FlightsResponse(
                 token=flight.get('booking_token'),
                 price=flight.get('price'),
@@ -235,10 +243,10 @@ async def search_inbound_flights(
                 flight_detail = schemas.Flight(
                     airline=detail.get('airline', ''),
                     airline_logo=detail.get('airline_logo'),
-                    departure=detail.get('departure_airport').get('name'),
-                    departure_time=detail.get('departure_airport').get('time'),
-                    arrival=detail.get('arrival_airport').get('name'),
-                    arrival_time=detail.get('arrival_airport').get('time'),
+                    departure=detail.get('departure_airport', {}).get('name'),
+                    departure_time=detail.get('departure_airport', {}).get('time'),
+                    arrival=detail.get('arrival_airport', {}).get('name'),
+                    arrival_time=detail.get('arrival_airport', {}).get('time'),
                     duration=str(detail.get('duration', '')),
                 )
                 flight_schema.flights.append(flight_detail)
@@ -256,7 +264,7 @@ async def book_flight(
     access_token: TokenPayload = Depends(auth.access_token_required)
     ):
     log.info(f"Request data: {data}")
-    log.info(f"Searching flight: {data.departure_id} -> {data.arrival_id}")
+    log.info(f"Searching flight: {data.departure} -> {data.arrival}")
     try:
         departure = data.departure.split(",")
         city = departure[0].strip()
@@ -267,12 +275,18 @@ async def book_flight(
         city = arrival[0].strip()
         country = arrival[1].strip() if len(arrival) > 1 else None
         arrival_id = flights.get_location_data(city, country).get("departure_id")
+
+        if not results.get("departure_id"):
+             raise HTTPException(status_code=400, detail=f"Could not find airports for origin: {data.departure}")
+        if not arrival_id:
+            raise HTTPException(status_code=400, detail=f"Could not find airports for destination: {data.arrival}")
     except Exception as e:
         log.error(f"Error getting flight parameters: {e}")
+        raise HTTPException(status_code=400, detail="Invalid location format")
 
-    log.info("Searching for inbound flights...")
+    log.info("Searching for booking link...")
     booking_results = flights.call_flights_api(
-        departure_token=data.token,
+        booking_token=data.token,
         departure_id=results.get("departure_id"),
         arrival_id=arrival_id,
         outbound_date=data.outbound_date,
@@ -363,7 +377,7 @@ async def get_accomodations(
     response = []
     for hotel in sorted_hotels:
         hotel_info = hotel.get("property", {})
-        price_info = hotel_info.get("priceBreakdown", {}).get("grossPrice", {}).get("value", float('inf'))
+        price_info = round(hotel_info.get("priceBreakdown", {}).get("grossPrice", {}).get("value", float('inf')), 2)
         response.append(schemas.AccomodationsResponse(
             hotel_id=str(hotel.get("hotel_id", "")),
             hotel_name=hotel_info.get("name", ""),
@@ -386,7 +400,7 @@ async def book_accomodation(
     access_token: TokenPayload = Depends(auth.access_token_required)
     ):
     log.info(f"Request data: {data}")
-    log.info(f"Booking accomodation: {data.hotel_id} in {data.location}")
+    log.info(f"Booking accomodation: {data.loc_id} in {data.location}")
     
     currency_code = db.query(models.VacationSession).filter(
         models.VacationSession.id == data.session_id,
@@ -395,8 +409,8 @@ async def book_accomodation(
 
     try:
         results = accomodations_v2.get_hotel_details(
-            hotel_id=data.get("loc_id"),
-            search_type=data.get("search_type"),
+            hotel_id=data.loc_id,
+            search_type=data.search_type,
             arrival_date=data.arrival_date,
             departure_date=data.departure_date,
             currency_code=currency_code,

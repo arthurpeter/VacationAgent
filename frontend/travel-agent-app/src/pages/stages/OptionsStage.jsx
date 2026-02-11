@@ -345,16 +345,18 @@ export default function OptionsStage() {
         departure_date: dates.end,
         adults: travelerCounts.adults,
         children: childrenString,
-        room_qty: roomQty, // NEW: Passed here
+        room_qty: roomQty,
         price_min: null,
         price_max: null
     };
 
     try {
-      const [flightRes, hotelRes] = await Promise.all([
-        fetchWithAuth("http://localhost:5000/search/getOutboundFlights", flightsBody, "POST"),
-        fetchWithAuth("http://localhost:5000/search/getAccomodations", hotelsBody, "POST")
-      ]);
+    //   const [flightRes, hotelRes] = await Promise.all([
+    //     fetchWithAuth("http://localhost:5000/search/getOutboundFlights", flightsBody, "POST"),
+    //     fetchWithAuth("http://localhost:5000/search/getAccomodations", hotelsBody, "POST")
+    //   ]);
+
+      const flightRes = await fetchWithAuth("http://localhost:5000/search/getOutboundFlights", flightsBody, "POST");
 
       if (flightRes.ok) {
         const flights = await flightRes.json();
@@ -363,12 +365,12 @@ export default function OptionsStage() {
         console.error("Flight search failed");
       }
 
-      if (hotelRes.ok) {
-        const hotelsData = await hotelRes.json();
-        setHotels(hotelsData);
-      } else {
-        console.error("Hotel search failed");
-      }
+    //   if (hotelRes.ok) {
+    //     const hotelsData = await hotelRes.json();
+    //     setHotels(hotelsData);
+    //   } else {
+    //     console.error("Hotel search failed");
+    //   }
 
     } catch (err) {
       console.error(err);
@@ -429,6 +431,7 @@ export default function OptionsStage() {
                     departure: origin,
                     arrival: destination,
                     outbound_date: dates.start,
+                    return_date: dates.end,
                     adults: travelerCounts.adults,
                 }, "POST")
             );
