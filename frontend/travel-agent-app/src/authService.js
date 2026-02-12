@@ -50,7 +50,7 @@ export async function fetchWithAuth(url, body = {}, method = "POST") {
   let res = await fetch(url, options);
 
   // If unauthorized, try to refresh
-  if (res.status === 401 || res.status === 422) {
+  if (res.status === 401) {
     // Try to refresh
     const csrfToken = getCSRFToken();
     const refreshHeaders = {
@@ -73,22 +73,27 @@ export async function fetchWithAuth(url, body = {}, method = "POST") {
       setTokens(tokens.access_token);
       // Retry original request with new access token
       accessToken = tokens.access_token;
-      res = await fetch(url, {
+      const retryOptions = {
         method,
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(body),
-      });
+        }
+      };
+
+      if (method !== "GET" && method !== "HEAD") {
+        retryOptions.body = JSON.stringify(body);
+      }
+
+      res = await fetch(url, retryOptions);
       if (res.status === 401) {
         clearTokens();
-        redirectToLogin();
+        window.location.href = "/login";
         return null;
       }
     } else {
       clearTokens();
-      redirectToLogin();
+      window.location.href = "/login";
       return null;
     }
   }

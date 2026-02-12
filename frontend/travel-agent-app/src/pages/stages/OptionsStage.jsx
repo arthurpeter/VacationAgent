@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { fetchWithAuth } from '../../authService';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -259,6 +259,119 @@ function TravelersInput({ counts, setCounts, childAges, setChildAges }) {
     );
 }
 
+// --- NEW: Hotel Details Modal ---
+function HotelDetailsModal({ hotel, onClose, onSelect }) {
+    if (!hotel) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-5xl h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col relative animate-in fade-in zoom-in duration-200">
+                
+                {/* Header */}
+                <div className="flex justify-between items-center p-4 border-b border-gray-100">
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-900">{hotel.hotel_name}</h2>
+                        <p className="text-gray-500 text-sm">{hotel.location_string || "Excellent Location"}</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition">
+                        <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                {/* Scrollable Content */}
+                <div className="flex-grow overflow-y-auto p-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        
+                        {/* LEFT COLUMN: Gallery & Map */}
+                        <div className="lg:col-span-2 space-y-6">
+                            
+                            {/* Photo Gallery */}
+                            <div className="space-y-2">
+                                <div className="h-80 w-full bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
+                                    {hotel.photo_urls?.[0] ? (
+                                        <img src={hotel.photo_urls[0]} alt="Main View" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-gray-400">No Image Available</div>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {hotel.photo_urls?.slice(1, 5).map((url, i) => (
+                                        <div key={i} className="h-20 bg-gray-50 rounded-lg overflow-hidden border border-gray-100">
+                                            <img src={url} alt={`Gallery ${i}`} className="w-full h-full object-cover hover:scale-110 transition" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Interactive Map */}
+                            <div className="h-64 w-full bg-gray-100 rounded-xl overflow-hidden border border-gray-200 relative z-0">
+                                <MapContainer 
+                                    center={[hotel.latitude, hotel.longitude]} 
+                                    zoom={15} 
+                                    scrollWheelZoom={true} 
+                                    style={{ height: "100%", width: "100%" }}
+                                >
+                                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                    <Marker position={[hotel.latitude, hotel.longitude]}>
+                                        <Popup>{hotel.hotel_name}</Popup>
+                                    </Marker>
+                                </MapContainer>
+                            </div>
+
+                            {/* Description / Amenities */}
+                            <div>
+                                <h3 className="font-bold text-lg mb-2">About this Property</h3>
+                                <p className="text-gray-600 leading-relaxed">
+                                    {hotel.description || "Experience comfort and style at this top-rated accommodation. Perfect for travelers seeking convenience and quality service."}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* RIGHT COLUMN: Price & Action */}
+                        <div className="lg:col-span-1">
+                            <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 sticky top-0">
+                                <div className="mb-6">
+                                    <span className="text-sm text-gray-500 uppercase tracking-wide font-bold">Total Price</span>
+                                    <div className="text-4xl font-bold text-blue-700 mt-1">{hotel.price} {hotel.currency}</div>
+                                    <div className="text-sm text-green-600 mt-1 font-medium">✓ Taxes & Fees included</div>
+                                </div>
+
+                                <div className="space-y-3 mb-6">
+                                    <div className="flex items-center gap-3 text-sm text-gray-700">
+                                        <span className="w-6 text-center">🛏️</span>
+                                        <span>Standard Room Option</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm text-gray-700">
+                                        <span className="w-6 text-center">📶</span>
+                                        <span>Free Wi-Fi</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm text-gray-700">
+                                        <span className="w-6 text-center">⭐</span>
+                                        <span>Top Rated Property</span>
+                                    </div>
+                                </div>
+
+                                <button 
+                                    onClick={() => onSelect(hotel)}
+                                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition flex justify-center items-center gap-2"
+                                >
+                                    Select & Continue 
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                                </button>
+                                
+                                <p className="text-xs text-center text-gray-400 mt-4">
+                                    You won't be charged yet.
+                                </p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // --- Main Component ---
 export default function OptionsStage() {
   const { sessionData } = useOutletContext();
@@ -296,17 +409,9 @@ export default function OptionsStage() {
                 const data = await res.json();
                 console.log("Loaded Session Data:", data);
 
-                // 1. Set Origin (Departure)
-                if (data.departure) {
-                    setOrigin(data.departure);
-                }
+                if (data.departure) setOrigin(data.departure);
+                if (data.destination) setDestination(data.destination);
 
-                // 2. Set Destination
-                if (data.destination) {
-                    setDestination(data.destination);
-                }
-
-                // 3. Set Dates (Format ISO to YYYY-MM-DD for input fields)
                 const formatForInput = (isoString) => {
                     if (!isoString) return "";
                     return isoString.split("T")[0];
@@ -339,6 +444,9 @@ export default function OptionsStage() {
   const [selectedOutbound, setSelectedOutbound] = useState(null);
   const [selectedInbound, setSelectedInbound] = useState(null);
   const [selectedHotel, setSelectedHotel] = useState(null);
+
+  // --- NEW: State to control the Hotel Modal ---
+  const [viewingHotel, setViewingHotel] = useState(null);
 
   // 1. Initial Search
   const handleSearch = async () => {
@@ -380,12 +488,11 @@ export default function OptionsStage() {
     };
 
     try {
-    //   const [flightRes, hotelRes] = await Promise.all([
-    //     fetchWithAuth("http://localhost:5000/search/getOutboundFlights", flightsBody, "POST"),
-    //     fetchWithAuth("http://localhost:5000/search/getAccomodations", hotelsBody, "POST")
-    //   ]);
-
-      const flightRes = await fetchWithAuth("http://localhost:5000/search/getOutboundFlights", flightsBody, "POST");
+      // ENABLED: Fetching both flights and hotels now
+      const [flightRes, hotelRes] = await Promise.all([
+        fetchWithAuth("http://localhost:5000/search/getOutboundFlights", flightsBody, "POST"),
+        fetchWithAuth("http://localhost:5000/search/getAccomodations", hotelsBody, "POST")
+      ]);
 
       if (flightRes.ok) {
         const flights = await flightRes.json();
@@ -394,12 +501,12 @@ export default function OptionsStage() {
         console.error("Flight search failed");
       }
 
-    //   if (hotelRes.ok) {
-    //     const hotelsData = await hotelRes.json();
-    //     setHotels(hotelsData);
-    //   } else {
-    //     console.error("Hotel search failed");
-    //   }
+      if (hotelRes.ok) {
+        const hotelsData = await hotelRes.json();
+        setHotels(hotelsData);
+      } else {
+        console.error("Hotel search failed");
+      }
 
     } catch (err) {
       console.error(err);
@@ -447,6 +554,14 @@ export default function OptionsStage() {
     setStep('CONFIRM');
   };
 
+  // 3. Handle Hotel Selection from Modal
+  const handleSelectHotel = (hotel) => {
+      setSelectedHotel(hotel);
+      setViewingHotel(null); // Close the modal
+      // Note: We don't change 'step' here, we just update the selection state.
+      // The "Ready to Book" section will update automatically if visible.
+  };
+
   const handleBookTrip = async () => {
     // 1. Check if there is anything NEW to book
     const needsFlight = selectedInbound && !booked.flights;
@@ -464,9 +579,8 @@ export default function OptionsStage() {
 
     try {
         const bookingPromises = [];
-        const bookingTypes = []; // Track what we are trying to book
+        const bookingTypes = []; 
 
-        // Book Flight (only if not already booked)
         if (needsFlight) {
             bookingPromises.push(
                 fetchWithAuth("http://localhost:5000/search/bookFlight", {
@@ -481,7 +595,6 @@ export default function OptionsStage() {
             );
         }
 
-        // Book Hotel (only if not already booked)
         if (needsHotel) {
             const childrenString = childAges.length > 0 ? childAges.join(",") : null;
             bookingPromises.push(
@@ -494,21 +607,20 @@ export default function OptionsStage() {
                     departure_date: dates.end,
                     adults: travelerCounts.adults,
                     children: childrenString,
-                    room_qty: roomQty 
+                    room_qty: roomQty,
+                    price_min: null,
+                    price_max: null
                 }, "POST").then(res => ({ type: 'hotel', res }))
             );
         }
 
         const results = await Promise.all(bookingPromises);
         
-        // Process results
         let newBookedState = { ...booked };
-        let successCount = 0;
 
         for (const item of results) {
             if (item.res.ok) {
                 newBookedState[item.type] = true;
-                successCount++;
                 const data = await item.res.json();
                 console.log(`${item.type} booking URL:`, data);
             } else {
@@ -518,16 +630,12 @@ export default function OptionsStage() {
 
         setBooked(newBookedState);
 
-        // --- NAVIGATION LOGIC ---
-        // Only navigate if BOTH are now booked (either previously or just now)
         if (newBookedState.flights && newBookedState.hotel) {
             alert("Success! Flights and Accommodation booked. Proceeding to Itinerary.");
             navigate(`/plan/${sessionData.id}/itinerary`);
         } else if (newBookedState.flights && !newBookedState.hotel) {
-            // Flights done, Hotel missing
             alert("Flights booked successfully! \n\nPlease select and book a Hotel to complete your package.");
         } else if (!newBookedState.flights && newBookedState.hotel) {
-            // Hotel done, Flights missing
             alert("Accommodation booked successfully! \n\nPlease select and book your Flights to proceed.");
         }
 
@@ -549,9 +657,18 @@ export default function OptionsStage() {
 
   return (
     <div className="flex flex-col w-full h-full bg-gray-50 overflow-hidden">
+      
+      {/* --- HOTEL DETAIL MODAL --- */}
+      {viewingHotel && (
+          <HotelDetailsModal 
+            hotel={viewingHotel} 
+            onClose={() => setViewingHotel(null)} 
+            onSelect={handleSelectHotel}
+          />
+      )}
+
       {/* --- Filter Bar --- */}
       <div className="bg-white border-b border-gray-200 p-4 shadow-sm shrink-0 flex flex-wrap gap-4 items-end z-20">
-        
         <LocationAutocomplete 
             label="Origin"
             value={origin} 
@@ -591,7 +708,6 @@ export default function OptionsStage() {
             setChildAges={setChildAges} 
         />
 
-        {/* NEW: Room Quantity Dropdown */}
         <div className="flex flex-col gap-1 w-20">
             <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Rooms</label>
             <select 
@@ -599,7 +715,6 @@ export default function OptionsStage() {
                 onChange={(e) => setRoomQty(parseInt(e.target.value))}
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
-                {/* Dynamically create options 1...N where N = number of adults */}
                 {Array.from({ length: travelerCounts.adults }, (_, i) => i + 1).map(num => (
                     <option key={num} value={num}>{num}</option>
                 ))}
@@ -621,32 +736,40 @@ export default function OptionsStage() {
           {error && <div className="bg-red-100 text-red-700 p-4 rounded-lg">{error}</div>}
 
           {/* CONFIRMATION STEP */}
-          {step === 'CONFIRM' && selectedOutbound && selectedInbound && (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
-                <h2 className="text-3xl font-bold text-green-800 mb-4">Ready to Book?</h2>
+          {/* Modified logic: Show if we are in CONFIRM step OR if a hotel is selected (allowing hotel-only booking) */}
+          {(step === 'CONFIRM' || selectedHotel) && (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center animate-in fade-in slide-in-from-top-4 duration-500">
+                <h2 className="text-3xl font-bold text-green-800 mb-4">Trip Summary</h2>
                 
-                <div className="flex justify-center gap-8 text-left mb-8">
-                    {/* Outbound Card */}
-                    <div className={`bg-white p-4 rounded shadow-sm w-64 border-l-4 ${booked.flights ? 'border-gray-400 opacity-75' : 'border-blue-500'}`}>
-                        <div className="flex justify-between">
-                            <h3 className="font-bold text-gray-500 text-xs uppercase">Outbound</h3>
-                            {booked.flights && <span className="text-xs font-bold text-green-600 bg-green-100 px-2 rounded-full">BOOKED</span>}
+                <div className="flex justify-center gap-8 text-left mb-8 flex-wrap">
+                    {/* Flights */}
+                    {selectedOutbound && selectedInbound ? (
+                        <>
+                             <div className={`bg-white p-4 rounded shadow-sm w-64 border-l-4 ${booked.flights ? 'border-gray-400 opacity-75' : 'border-blue-500'}`}>
+                                <div className="flex justify-between">
+                                    <h3 className="font-bold text-gray-500 text-xs uppercase">Outbound</h3>
+                                    {booked.flights && <span className="text-xs font-bold text-green-600 bg-green-100 px-2 rounded-full">BOOKED</span>}
+                                </div>
+                                <div className="font-bold text-lg">{selectedOutbound.flights[0].airline}</div>
+                                <div>{selectedOutbound.flights[0].departure_time} - {selectedOutbound.flights[0].arrival_time}</div>
+                            </div>
+                            <div className={`bg-white p-4 rounded shadow-sm w-64 border-l-4 ${booked.flights ? 'border-gray-400 opacity-75' : 'border-blue-500'}`}>
+                                 <div className="flex justify-between">
+                                    <h3 className="font-bold text-gray-500 text-xs uppercase">Return</h3>
+                                    {booked.flights && <span className="text-xs font-bold text-green-600 bg-green-100 px-2 rounded-full">BOOKED</span>}
+                                </div>
+                                <div className="font-bold text-lg">{selectedInbound.flights[0].airline}</div>
+                                <div>{selectedInbound.flights[0].departure_time} - {selectedInbound.flights[0].arrival_time}</div>
+                            </div>
+                        </>
+                    ) : (
+                         /* Placeholder if user skipped flights or is doing hotel first */
+                        <div className="bg-gray-100 border-2 border-dashed border-gray-300 p-4 rounded shadow-sm flex flex-col justify-center items-center w-64 opacity-50">
+                            <span className="text-gray-500 font-bold text-lg">No Flights Selected</span>
                         </div>
-                        <div className="font-bold text-lg">{selectedOutbound.flights[0].airline}</div>
-                        <div>{selectedOutbound.flights[0].departure_time} - {selectedOutbound.flights[0].arrival_time}</div>
-                    </div>
+                    )}
                     
-                    {/* Return Card */}
-                    <div className={`bg-white p-4 rounded shadow-sm w-64 border-l-4 ${booked.flights ? 'border-gray-400 opacity-75' : 'border-blue-500'}`}>
-                         <div className="flex justify-between">
-                            <h3 className="font-bold text-gray-500 text-xs uppercase">Return</h3>
-                            {booked.flights && <span className="text-xs font-bold text-green-600 bg-green-100 px-2 rounded-full">BOOKED</span>}
-                        </div>
-                        <div className="font-bold text-lg">{selectedInbound.flights[0].airline}</div>
-                        <div>{selectedInbound.flights[0].departure_time} - {selectedInbound.flights[0].arrival_time}</div>
-                    </div>
-                    
-                    {/* Hotel Card OR Warning Placeholder */}
+                    {/* Hotel Card */}
                     {selectedHotel ? (
                         <div className={`bg-white p-4 rounded shadow-sm w-64 border-l-4 ${booked.hotel ? 'border-gray-400 opacity-75' : 'border-green-500'}`}>
                             <div className="flex justify-between">
@@ -662,38 +785,26 @@ export default function OptionsStage() {
                     ) : (
                         <div className="bg-orange-50 border-2 border-dashed border-orange-300 p-4 rounded shadow-sm flex flex-col justify-center items-center w-64">
                             <span className="text-orange-600 font-bold text-lg mb-1">No Hotel Yet</span>
-                            <p className="text-xs text-orange-500 text-center">
-                                {booked.flights ? "Please select a hotel below to finish." : "You can book flights now, but must select a hotel to finish."}
-                            </p>
+                            <p className="text-xs text-orange-500 text-center">Select a hotel below.</p>
                         </div>
                     )}
                 </div>
                 
                 <div className="flex justify-center gap-4">
                     <button onClick={resetSelection} className="px-6 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-lg">
-                        Start Over
+                        Reset All
                     </button>
                     
-                    {/* Button Logic:
-                        1. Loading? -> Processing
-                        2. Flights booked & No Hotel? -> "Flights Booked - Select Hotel" (Disabled)
-                        3. Flights booked & Hotel Selected & Hotel not booked? -> "Book Accommodation"
-                        4. Nothing booked? -> "Confirm & Book [All/Flights]" 
-                    */}
                     <button 
                         onClick={handleBookTrip} 
-                        disabled={loading || (booked.flights && !selectedHotel)} 
+                        disabled={loading || (booked.flights && booked.hotel)} 
                         className={`px-8 py-3 font-bold rounded-lg shadow-lg transform transition ${
-                            loading || (booked.flights && !selectedHotel)
+                            loading || (booked.flights && booked.hotel)
                             ? "bg-gray-400 cursor-not-allowed text-gray-100" 
                             : "bg-green-600 text-white hover:bg-green-700 hover:-translate-y-1"
                         }`}
                     >
-                        {loading ? "Processing..." : 
-                          (booked.flights && !selectedHotel ? "Flights Booked - Select Hotel" :
-                           booked.flights && !booked.hotel ? "Book Accommodation" :
-                           !selectedHotel ? "Book Flights & Continue" : "Confirm & Book All")
-                        }
+                        {loading ? "Processing..." : "Confirm & Book Selected"}
                     </button>
                 </div>
             </div>
@@ -721,7 +832,7 @@ export default function OptionsStage() {
                         />
                     ))}
                     {(step === 'SEARCH' ? outboundFlights : inboundFlights).length === 0 && !loading && (
-                        <div className="col-span-2 text-center py-10 text-gray-400 border-2 border-dashed rounded-xl">No flights found for these dates.</div>
+                        <div className="col-span-2 text-center py-10 text-gray-400 border-2 border-dashed rounded-xl">No flights found.</div>
                     )}
                 </div>
             </section>
@@ -736,7 +847,7 @@ export default function OptionsStage() {
                         key={hotel.hotel_id} 
                         hotel={hotel} 
                         isSelected={selectedHotel?.hotel_id === hotel.hotel_id}
-                        onSelect={() => setSelectedHotel(hotel)}
+                        onSelect={() => setViewingHotel(hotel)} // Open Modal on click
                     />
                 ))}
                 {hotels.length === 0 && !loading && (
@@ -753,44 +864,23 @@ export default function OptionsStage() {
 
 // --- Sub-components ---
 function FlightCard({ flight, onSelect, btnText }) {
-    // 1. Get First and Last Leg
     const firstLeg = flight.flights[0];
     const lastLeg = flight.flights[flight.flights.length - 1];
-
-    // 2. Calculate Stops
     const stopsCount = flight.flights.length - 1;
+    const stopoverCities = flight.flights.slice(0, -1).map(leg => leg.arrival.split(',')[0]).join(", ");
 
-    // 3. Get Stopover Cities
-    const stopoverCities = flight.flights
-        .slice(0, -1)
-        .map(leg => leg.arrival.split(',')[0])
-        .join(", ");
-
-    // 4. Calculate Total Duration (Flights + Layovers)
     let totalMinutes = 0;
-    
-    // Sum flight durations (air time)
-    flight.flights.forEach(leg => {
-        totalMinutes += parseInt(leg.duration) || 0;
-    });
-
-    // Sum layover durations (ground time)
+    flight.flights.forEach(leg => { totalMinutes += parseInt(leg.duration) || 0; });
     for (let i = 0; i < flight.flights.length - 1; i++) {
         const currentLegArr = new Date(flight.flights[i].arrival_time.replace(" ", "T"));
         const nextLegDep = new Date(flight.flights[i+1].departure_time.replace(" ", "T"));
-        
         if (!isNaN(currentLegArr) && !isNaN(nextLegDep)) {
-            const layoverMs = nextLegDep - currentLegArr;
-            const layoverMins = Math.floor(layoverMs / 60000); // ms to minutes
-            if (layoverMins > 0) {
-                totalMinutes += layoverMins;
-            }
+            const layoverMins = Math.floor((nextLegDep - currentLegArr) / 60000);
+            if (layoverMins > 0) totalMinutes += layoverMins;
         }
     }
 
-    const hours = Math.floor(totalMinutes / 60);
-    const mins = totalMinutes % 60;
-    const durationString = `${hours}h ${mins}m`;
+    const durationString = `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
 
     return (
       <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition">
@@ -799,36 +889,22 @@ function FlightCard({ flight, onSelect, btnText }) {
              {firstLeg.airline_logo && <img src={firstLeg.airline_logo} alt={firstLeg.airline} className="h-8 w-8 object-contain" />}
              <span className="font-bold text-lg text-gray-800">{firstLeg.airline}</span>
           </div>
-          {/* DISPLAY DYNAMIC CURRENCY */}
           <div className="text-blue-600 font-bold text-xl">{flight.price} {flight.currency}</div>
         </div>
         
         <div className="flex justify-between items-center text-sm text-gray-600 mb-4 bg-gray-50 p-3 rounded-lg">
-          {/* DEPARTURE: First Leg */}
           <div>
               <div className="font-bold text-gray-900">{firstLeg.departure_time.split(" ")[1]}</div>
               <div className="text-gray-400 max-w-[100px] truncate" title={firstLeg.departure}>{firstLeg.departure}</div>
           </div>
-
-          {/* DURATION & STOPS CENTER */}
           <div className="flex flex-col items-center px-4 w-1/3">
              <span className="text-xs text-gray-500 font-medium">{durationString}</span>
              <span className="text-gray-300">──────✈──────</span>
-             
-             {/* Dynamic Stops Label */}
              <span className={`text-[10px] font-bold mt-1 ${stopsCount > 0 ? 'text-orange-500' : 'text-green-600'}`}>
                 {stopsCount === 0 ? "Direct" : `${stopsCount} Stop${stopsCount > 1 ? 's' : ''}`}
              </span>
-             
-             {/* Show Stopover City if applicable */}
-             {stopsCount > 0 && (
-                <span className="text-[9px] text-gray-400 w-full truncate text-center" title={stopoverCities}>
-                    Via {stopoverCities}
-                </span>
-             )}
+             {stopsCount > 0 && <span className="text-[9px] text-gray-400 w-full truncate text-center" title={stopoverCities}>Via {stopoverCities}</span>}
           </div>
-
-          {/* ARRIVAL: Last Leg */}
           <div className="text-right">
               <div className="font-bold text-gray-900">{lastLeg.arrival_time.split(" ")[1]}</div>
               <div className="text-gray-400 max-w-[100px] truncate ml-auto" title={lastLeg.arrival}>{lastLeg.arrival}</div>
@@ -845,36 +921,32 @@ function FlightCard({ flight, onSelect, btnText }) {
 function HotelCard({ hotel, onSelect, isSelected }) {
     return (
       <div 
-        className={`bg-white rounded-xl border-2 shadow-sm transition overflow-hidden flex flex-col h-[400px] cursor-pointer ${isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-transparent hover:shadow-lg'}`}
+        className={`bg-white rounded-xl border-2 shadow-sm transition overflow-hidden flex flex-col h-[350px] cursor-pointer group ${isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-transparent hover:shadow-lg'}`}
         onClick={onSelect}
       >
-        <div className="h-48 w-full relative z-0">
-             {hotel.latitude && hotel.longitude ? (
-                 <MapContainer center={[hotel.latitude, hotel.longitude]} zoom={13} scrollWheelZoom={false} style={{ height: "100%", width: "100%" }} zoomControl={false} dragging={false}>
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                    <Marker position={[hotel.latitude, hotel.longitude]} />
-                 </MapContainer>
+        <div className="h-48 w-full relative overflow-hidden">
+             {hotel.photo_urls?.[0] ? (
+                 <img src={hotel.photo_urls[0]} alt="Hotel" className="h-full w-full object-cover group-hover:scale-105 transition duration-500" />
              ) : (
-                <div className="h-full w-full bg-gray-200 flex items-center justify-center text-gray-400">No Map Available</div>
+                <div className="h-full w-full bg-gray-200 flex items-center justify-center text-gray-400">No Image</div>
              )}
-             {hotel.photo_urls?.[0] && (
-                 <div className="absolute bottom-2 right-2 h-16 w-16 rounded border-2 border-white shadow-lg overflow-hidden z-[1000]">
-                     <img src={hotel.photo_urls[0]} alt="Hotel" className="h-full w-full object-cover" />
-                 </div>
-             )}
+             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-60"></div>
+             <div className="absolute bottom-3 left-3 text-white">
+                 <div className="font-bold text-lg drop-shadow-md line-clamp-1">{hotel.hotel_name}</div>
+             </div>
         </div>
-        <div className="p-4 flex flex-col flex-grow relative bg-white">
-          <h3 className="font-bold text-gray-800 mb-1 line-clamp-1 text-lg">{hotel.hotel_name}</h3>
-          <div className="flex-grow mt-2">
-            {isSelected ? (
-                <div className="text-blue-600 text-sm font-bold flex items-center gap-2">✓ Selected</div>
-            ) : (
-                <p className="text-xs text-gray-400">Click to select</p>
-            )}
+        <div className="p-4 flex flex-col flex-grow bg-white">
+          <div className="flex justify-between items-start mb-2">
+             <div className="text-xs text-gray-400 line-clamp-2">{hotel.location_string || "Unknown Location"}</div>
           </div>
-          <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-end">
-              <span className="text-sm text-gray-400">Total Price</span>
-              <span className="text-xl font-bold text-gray-900">{hotel.price} {hotel.currency}</span>
+          <div className="mt-auto pt-3 border-t border-gray-100 flex justify-between items-center">
+              <div>
+                  <div className="text-xs text-gray-400">Total Price</div>
+                  <div className="text-lg font-bold text-gray-900">{hotel.price} {hotel.currency}</div>
+              </div>
+              <button className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-100 transition">
+                  View
+              </button>
           </div>
         </div>
       </div>

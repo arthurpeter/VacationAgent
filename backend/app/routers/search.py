@@ -411,7 +411,6 @@ async def book_accomodation(
     try:
         results = accomodations_v2.get_hotel_details(
             hotel_id=data.loc_id,
-            search_type=data.search_type,
             arrival_date=data.arrival_date,
             departure_date=data.departure_date,
             currency_code=currency_code,
