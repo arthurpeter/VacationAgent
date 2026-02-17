@@ -921,31 +921,60 @@ function FlightCard({ flight, onSelect, btnText }) {
 function HotelCard({ hotel, onSelect, isSelected }) {
     return (
       <div 
-        className={`bg-white rounded-xl border-2 shadow-sm transition overflow-hidden flex flex-col h-[350px] cursor-pointer group ${isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-transparent hover:shadow-lg'}`}
+        className={`bg-white rounded-xl border-2 shadow-sm transition overflow-hidden flex flex-col h-[400px] cursor-pointer group ${isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-transparent hover:shadow-lg'}`}
         onClick={onSelect}
       >
-        <div className="h-48 w-full relative overflow-hidden">
+        <div className="h-40 w-full relative overflow-hidden">
              {hotel.photo_urls?.[0] ? (
                  <img src={hotel.photo_urls[0]} alt="Hotel" className="h-full w-full object-cover group-hover:scale-105 transition duration-500" />
              ) : (
                 <div className="h-full w-full bg-gray-200 flex items-center justify-center text-gray-400">No Image</div>
              )}
-             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-60"></div>
+             {/* Star Rating Overlay */}
+             <div className="absolute top-2 left-2 bg-white/90 backdrop-blur px-2 py-0.5 rounded text-[10px] font-bold shadow-sm">
+                 {"⭐".repeat(hotel.propertyClass || 0)}
+             </div>
+             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60"></div>
              <div className="absolute bottom-3 left-3 text-white">
                  <div className="font-bold text-lg drop-shadow-md line-clamp-1">{hotel.hotel_name}</div>
              </div>
         </div>
+
         <div className="p-4 flex flex-col flex-grow bg-white">
-          <div className="flex justify-between items-start mb-2">
-             <div className="text-xs text-gray-400 line-clamp-2">{hotel.location_string || "Unknown Location"}</div>
+          <div className="flex items-center gap-2 mb-2">
+             {hotel.reviewScore && (
+                 <span className="bg-blue-700 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                     {hotel.reviewScore}
+                 </span>
+             )}
+             <span className="text-xs font-bold text-gray-800">{hotel.reviewScoreWord}</span>
+             <span className="text-[10px] text-gray-400">({hotel.reviewCount} reviews)</span>
           </div>
+
+          {/* New Accessibility Teaser */}
+          <p className="text-[11px] text-gray-500 line-clamp-2 italic mb-3">
+              "{hotel.accessibilityLabel}"
+          </p>
+
+          {/* Preserving your original Time Range info */}
+          <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="bg-gray-50 p-1.5 rounded border border-gray-100">
+                  <div className="text-[9px] uppercase text-gray-400 font-bold">Check-in</div>
+                  <div className="text-[10px] font-medium text-gray-700">{hotel.checkin_time_range || "Flexible"}</div>
+              </div>
+              <div className="bg-gray-50 p-1.5 rounded border border-gray-100">
+                  <div className="text-[9px] uppercase text-gray-400 font-bold">Check-out</div>
+                  <div className="text-[10px] font-medium text-gray-700">{hotel.checkout_time_range || "Flexible"}</div>
+              </div>
+          </div>
+
           <div className="mt-auto pt-3 border-t border-gray-100 flex justify-between items-center">
               <div>
-                  <div className="text-xs text-gray-400">Total Price</div>
-                  <div className="text-lg font-bold text-gray-900">{hotel.price} {hotel.currency}</div>
+                  <div className="text-[10px] text-gray-400">Total Price</div>
+                  <div className="text-lg font-bold text-blue-700">{hotel.price} {hotel.currency}</div>
               </div>
-              <button className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-100 transition">
-                  View
+              <button className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-600 hover:text-white transition">
+                  View Details
               </button>
           </div>
         </div>

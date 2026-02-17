@@ -7,3 +7,64 @@ Decision: keep the explore service as a tool for the agent to make better recomm
 experience for the search and make better asessments fr the recommended period.
 
 Remember the currency used in the database either session wide or user wide
+
+new flow for better accomodations experience:
+Search & Listing (The Teaser - Cost $0)
+
+The user searches for a destination.
+
+We display a list of "Mini Cards" using only the initial data (Bulk Search).
+
+What the user sees: Hotel Name, Price, Small Photo (thumbnail), Rating, and a short description (extracted from accessibilityLabel).
+
+Goal: To spark interest without consuming additional resources.
+
+View Details (The Closer - Cost ~$1/click)
+
+The user clicks on a hotel ("View Details").
+
+A Modal (overlay window) opens instantly.
+
+Initial State: Displays the data from the "Teaser" + Skeleton Loaders (loading bars) for missing content.
+
+Background Action: The getHotelDetails API call is triggered (only for this specific hotel).
+
+Loading & Caching (Optimization)
+
+Once the data arrives (1-2 sec), the Modal updates with: HD Photo Gallery, Full Description, Structured Facilities, and Interactive Map.
+
+Cache: Data is saved in the app's memory. If the user re-opens this hotel, the information appears instantly, with no extra API cost.
+
+Booking
+
+The final "Select & Book" button is located inside this detailed Modal, ensuring the user knows exactly what they are purchasing.
+
+
+Implementation Plan
+Step 1: Backend - Expose Details Endpoint
+
+Modify backend/app/routers/search.py to add a new POST /getHotelDetails endpoint.
+
+This endpoint will accept hotel_id and search parameters, then call the existing get_hotel_details service function.
+
+Step 2: Frontend - "Teaser" Card
+
+Update HotelCard.jsx to show limited info (the "Teaser") and a "View Details" button instead of "Select".
+
+Step 3: Frontend - "Closer" Modal
+
+Create HotelDetailsModal.jsx.
+
+Implement the layout: Left column (Gallery + Map), Right column (Price + Book Button).
+
+Add "Skeleton" loading states for the data that isn't available yet.
+
+Step 4: Frontend - Integration
+
+Update OptionsStage.jsx to handle opening the modal and fetching data when "View Details" is clicked.
+
+Move the final booking logic to trigger from within the Modal.
+
+Step 5: Optimization - Caching
+
+Implement a simple cache in OptionsStage.jsx so that re-opening a hotel doesn't trigger a new API call.

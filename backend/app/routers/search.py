@@ -388,6 +388,10 @@ async def get_accomodations(
             currency=currency_code,
             photo_urls=hotel_info.get("photoUrls", []),
             accessibilityLabel=hotel.get("accessibilityLabel"),
+            reviewScoreWord=hotel_info.get("reviewScoreWord"),
+            reviewScore=hotel_info.get("reviewScore"),
+            reviewCount=hotel_info.get("reviewCount"),
+            propertyClass=hotel_info.get("propertyClass"),
             checkin_time_range=hotel_info.get("checkin", {}).get("fromTime") + ' - ' + hotel_info.get("checkin", {}).get("untilTime") if hotel_info.get("checkin") else None,
             checkout_time_range=hotel_info.get("checkout", {}).get("fromTime") + ' - ' + hotel_info.get("checkout", {}).get("untilTime") if hotel_info.get("checkout") else None,
         ))

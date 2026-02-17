@@ -63,6 +63,10 @@ class AccomodationsResponse(BaseModel):
     currency: str
     photo_urls: list[str]
     accessibilityLabel: Optional[str]
+    reviewScoreWord: Optional[str]
+    reviewScore: Optional[float]
+    reviewCount: Optional[int]
+    propertyClass: Optional[int]
     checkin_time_range: Optional[str]
     checkout_time_range: Optional[str]
 
