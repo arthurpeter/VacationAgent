@@ -50,7 +50,7 @@ export async function fetchWithAuth(url, body = {}, method = "POST") {
   let res = await fetch(url, options);
 
   // If unauthorized, try to refresh
-  if (res.status === 401) {
+  if (res.status === 401 || res.status === 403 || res.status === 422) {
     // Try to refresh
     const csrfToken = getCSRFToken();
     const refreshHeaders = {
