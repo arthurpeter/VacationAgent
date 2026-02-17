@@ -398,19 +398,17 @@ async def get_accomodations(
 
     return response
 
-@router.post("/bookAccomodation", response_model=schemas.AccomodationBookingResponse)
-async def book_accomodation(
+@router.post("/getHotelDetails", response_model=schemas.HotelDetailsResponse)
+async def get_hotel_details(
     data: schemas.AccomodationsRequest,
     db: Session = Depends(get_db),
     access_token: TokenPayload = Depends(auth.access_token_required)
-    ):
-    log.info(f"Request data: {data}")
-    log.info(f"Booking accomodation: {data.loc_id} in {data.location}")
-    
-    currency_code = db.query(models.VacationSession).filter(
+):
+    session = db.query(models.VacationSession).filter(
         models.VacationSession.id == data.session_id,
         models.VacationSession.user_id == access_token.sub
-    ).first().currency or "EUR"
+    ).first()
+    currency_code = session.currency or "EUR"
 
     try:
         results = accomodations_v2.get_hotel_details(
@@ -423,31 +421,87 @@ async def book_accomodation(
             room_qty=data.room_qty,
         )
 
-        if not results or results.get("message").lower() != "success":
-            log.warning("No accomodations found for the given criteria.")
-            raise HTTPException(status_code=404, detail="No accomodations found")
-    except Exception as e:
-        log.error(f"Error searching accomodations: {e}")
-        raise HTTPException(status_code=500, detail="Error searching accomodations")
-    
-    booking_url = results.get("data", {}).get("url")
+        if not results or results.get("status") is False:
+            raise HTTPException(status_code=404, detail="Hotel details not found")
+            
+        raw_data = results.get("data", {})
+        
+        facilities_data = raw_data.get("facilities_block", {})
+        facilities_list = facilities_data.get("facilities", []) if isinstance(facilities_data, dict) else []
+        amenities = [f.get("name") for f in facilities_list]
 
-    if not booking_url:
-        log.error("Booking failed: Incomplete booking information received.")
-        raise HTTPException(status_code=500, detail="Booking failed")
+        photo_urls = [p.get("url_max1280") for p in raw_data.get("photos", []) if p.get("url_max1280")]
+        log.info(f"Extracted {len(photo_urls)} photo URLs for hotel {data.loc_id}")
+
+        highlights = []
+        for h in raw_data.get("property_highlight_strip", []):
+            icons = h.get("icon_list", [])
+            icon_val = icons[0].get("icon") if icons else None
+            highlights.append({"name": h.get("name"), "icon": icon_val})
+
+        policies = raw_data.get("block", [{}])[0].get("policies", [])
+        cancel_p = next((p.get("content") for p in policies if p.get("class") == "POLICY_CANCELLATION"), None)
+        prepay_p = next((p.get("content") for p in policies if p.get("class") == "POLICY_PREPAY"), None)
+
+        rooms_data = raw_data.get("rooms", {})
+        bed_info = "Bed information not available"
+        if rooms_data and isinstance(rooms_data, dict):
+            first_room = list(rooms_data.values())[0]
+            bed_configs = first_room.get("bed_configurations", [])
+            if bed_configs:
+                bed_types = bed_configs[0].get("bed_types", [])
+                bed_info = ", ".join([bt.get("name_with_count") for bt in bed_types])
+
+        response = schemas.HotelDetailsResponse(
+            hotel_id=str(raw_data.get("hotel_id")),
+            url=raw_data.get("url", ""),
+            description=raw_data.get("hotel_text", {}).get("description") or raw_data.get("description", ""),
+            photos=photo_urls,
+            amenities=amenities,
+            sustainability_info=raw_data.get("sustainability"),
+            property_highlights=highlights,
+            languages_spoken=raw_data.get("spoken_languages", []),
+            price_breakdown_details=raw_data.get("product_price_breakdown"),
+            cancellation_policy=cancel_p,
+            prepayment_policy=prepay_p,
+            bed_details=bed_info
+        )
+        
+        return response
+    
+    except Exception as e:
+        log.error(f"Error constructing hotel details: {e}")
+        log.info(f"Raw response data: {results}")
+        raise HTTPException(status_code=500, detail="Internal server error fetching details")
+
+@router.post("/bookAccomodation", response_model=schemas.AccomodationBookingResponse)
+async def book_accomodation(
+    data: schemas.AccomodationBookingRequest,
+    db: Session = Depends(get_db),
+    access_token: TokenPayload = Depends(auth.access_token_required)
+    ):
+    log.info(f"Saving booking URL for session {data.session_id}")
     
     try:
-        db.query(models.VacationSession).filter(
+        result = db.query(models.VacationSession).filter(
             models.VacationSession.id == data.session_id,
             models.VacationSession.user_id == access_token.sub
         ).update(
-            {"accomodation_url": booking_url}
+            {"accomodation_url": data.booking_url}
         )
+        
+        if result == 0:
+            raise HTTPException(status_code=404, detail="Session not found or unauthorized")
+            
         db.commit()
+        log.info(f"Successfully updated session {data.session_id} with booking URL.")
+        
     except Exception as e:
         db.rollback()
         log.error(f"Error updating session with accomodation booking URL: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error updating booking")
 
     return schemas.AccomodationBookingResponse(
-        booking_url=booking_url
+        message="ok",
+        booking_url=data.booking_url
     )

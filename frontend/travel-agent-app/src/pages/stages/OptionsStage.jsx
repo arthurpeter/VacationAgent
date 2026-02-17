@@ -259,109 +259,117 @@ function TravelersInput({ counts, setCounts, childAges, setChildAges }) {
     );
 }
 
-// --- NEW: Hotel Details Modal ---
-function HotelDetailsModal({ hotel, onClose, onSelect }) {
+function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
     if (!hotel) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white w-full max-w-5xl h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col relative animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-6xl h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col relative animate-in fade-in zoom-in duration-200">
                 
                 {/* Header */}
-                <div className="flex justify-between items-center p-4 border-b border-gray-100">
+                <div className="flex justify-between items-center p-6 border-b border-gray-100">
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-900">{hotel.hotel_name}</h2>
-                        <p className="text-gray-500 text-sm">{hotel.location_string || "Excellent Location"}</p>
+                        <div className="flex items-center gap-2 mb-1">
+                            <h2 className="text-2xl font-black text-gray-900">{hotel.hotel_name}</h2>
+                            <span className="text-orange-400">{"⭐".repeat(hotel.propertyClass)}</span>
+                        </div>
+                        <p className="text-gray-500 text-sm flex items-center gap-1">
+                            {/* Location Pin Icon */}
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+                            {details?.address || hotel.location_string}
+                        </p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition">
-                        <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </button>
                 </div>
 
-                {/* Scrollable Content */}
-                <div className="flex-grow overflow-y-auto p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="flex-grow overflow-y-auto p-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                         
-                        {/* LEFT COLUMN: Gallery & Map */}
-                        <div className="lg:col-span-2 space-y-6">
+                        {/* LEFT: Photos & Description */}
+                        <div className="lg:col-span-2 space-y-8">
                             
-                            {/* Photo Gallery */}
-                            <div className="space-y-2">
-                                <div className="h-80 w-full bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
-                                    {hotel.photo_urls?.[0] ? (
-                                        <img src={hotel.photo_urls[0]} alt="Main View" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-gray-400">No Image Available</div>
-                                    )}
+                            {/* Photo Grid (Skeleton or Real) */}
+                            <div className="grid grid-cols-4 grid-rows-2 gap-3 h-96">
+                                <div className="col-span-2 row-span-2 rounded-2xl overflow-hidden bg-gray-100">
+                                    <img src={details?.photos?.[0] || hotel.photo_urls?.[0]} className="w-full h-full object-cover" alt="Main" />
                                 </div>
-                                <div className="grid grid-cols-4 gap-2">
-                                    {hotel.photo_urls?.slice(1, 5).map((url, i) => (
-                                        <div key={i} className="h-20 bg-gray-50 rounded-lg overflow-hidden border border-gray-100">
-                                            <img src={url} alt={`Gallery ${i}`} className="w-full h-full object-cover hover:scale-110 transition" />
-                                        </div>
-                                    ))}
-                                </div>
+                                {(details?.photos?.slice(1, 5) || [null, null, null, null]).map((url, i) => (
+                                    <div key={i} className="rounded-xl overflow-hidden bg-gray-100">
+                                        {url ? (
+                                            <img src={url} className="w-full h-full object-cover" alt={`Gallery ${i}`} />
+                                        ) : (
+                                            <div className="animate-pulse w-full h-full bg-gray-200" />
+                                        )}
+                                    </div>
+                                ))}
                             </div>
 
-                            {/* Interactive Map */}
-                            <div className="h-64 w-full bg-gray-100 rounded-xl overflow-hidden border border-gray-200 relative z-0">
-                                <MapContainer 
-                                    center={[hotel.latitude, hotel.longitude]} 
-                                    zoom={15} 
-                                    scrollWheelZoom={true} 
-                                    style={{ height: "100%", width: "100%" }}
-                                >
-                                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                                    <Marker position={[hotel.latitude, hotel.longitude]}>
-                                        <Popup>{hotel.hotel_name}</Popup>
-                                    </Marker>
-                                </MapContainer>
+                            {/* Features Strip */}
+                            <div className="flex flex-wrap gap-4">
+                                {details?.property_highlights?.map((h, i) => (
+                                    <div key={i} className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-xs font-bold">
+                                        <span>{h.name}</span>
+                                    </div>
+                                ))}
                             </div>
 
-                            {/* Description / Amenities */}
+                            {/* Description */}
                             <div>
-                                <h3 className="font-bold text-lg mb-2">About this Property</h3>
-                                <p className="text-gray-600 leading-relaxed">
-                                    {hotel.description || "Experience comfort and style at this top-rated accommodation. Perfect for travelers seeking convenience and quality service."}
-                                </p>
+                                <h3 className="text-lg font-bold mb-3">About this property</h3>
+                                {isLoading ? (
+                                    <div className="space-y-2">
+                                        <div className="h-4 bg-gray-100 rounded w-full animate-pulse"/>
+                                        <div className="h-4 bg-gray-100 rounded w-5/6 animate-pulse"/>
+                                        <div className="h-4 bg-gray-100 rounded w-4/6 animate-pulse"/>
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-600 leading-relaxed text-sm whitespace-pre-line">
+                                        {details?.description || "No description available."}
+                                    </p>
+                                )}
                             </div>
                         </div>
 
-                        {/* RIGHT COLUMN: Price & Action */}
+                        {/* RIGHT: Pricing & Booking Card */}
                         <div className="lg:col-span-1">
-                            <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 sticky top-0">
-                                <div className="mb-6">
-                                    <span className="text-sm text-gray-500 uppercase tracking-wide font-bold">Total Price</span>
-                                    <div className="text-4xl font-bold text-blue-700 mt-1">{hotel.price} {hotel.currency}</div>
-                                    <div className="text-sm text-green-600 mt-1 font-medium">✓ Taxes & Fees included</div>
+                            <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 sticky top-0 space-y-6">
+                                <div>
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Pricing Breakdown</span>
+                                    <div className="text-4xl font-black text-blue-700 mt-2">{hotel.price} {hotel.currency}</div>
+                                    <p className="text-xs text-green-600 font-bold mt-1">
+                                        {details?.price_breakdown_details?.composite_price_breakdown?.items?.[0]?.translated_copy || "Includes taxes & fees"}
+                                    </p>
                                 </div>
 
-                                <div className="space-y-3 mb-6">
-                                    <div className="flex items-center gap-3 text-sm text-gray-700">
-                                        <span className="w-6 text-center">🛏️</span>
-                                        <span>Standard Room Option</span>
+                                <div className="space-y-3 py-4 border-y border-gray-200">
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <span className="text-lg">🛏️</span>
+                                        <span className="font-bold text-gray-700">{details?.bed_details || "Standard Bedding"}</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-sm text-gray-700">
-                                        <span className="w-6 text-center">📶</span>
-                                        <span>Free Wi-Fi</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm text-gray-700">
-                                        <span className="w-6 text-center">⭐</span>
-                                        <span>Top Rated Property</span>
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <span className="text-lg">🛡️</span>
+                                        <span className="text-gray-600">{details?.cancellation_policy || "Check cancellation terms"}</span>
                                     </div>
                                 </div>
 
                                 <button 
-                                    onClick={() => onSelect(hotel)}
-                                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition flex justify-center items-center gap-2"
+                                    disabled={isLoading}
+                                    onClick={() => onSelect({ ...hotel, booking_url: details.url })}
+                                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    Select & Continue 
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                                    {isLoading ? "Loading Details..." : "Select & Save this Hotel"}
                                 </button>
                                 
-                                <p className="text-xs text-center text-gray-400 mt-4">
-                                    You won't be charged yet.
-                                </p>
+                                {details?.sustainability_info && (
+                                    <div className="p-4 bg-green-50 rounded-xl border border-green-100">
+                                        <div className="flex items-center gap-2 text-green-700 font-bold text-xs mb-1">
+                                            <span>🌿</span> {details.sustainability_info.hotel_page.title}
+                                        </div>
+                                        <p className="text-[10px] text-green-600">{details.sustainability_info.hotel_page.description}</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -392,31 +400,38 @@ export default function OptionsStage() {
       infantsLap: 0
   });
   const [childAges, setChildAges] = useState([]);
-
   const [roomQty, setRoomQty] = useState(1);
-
   const [booked, setBooked] = useState({ flights: false, hotel: false });
+
+  // --- NEW: State for Hotel Details Flow ---
+  const [viewingHotel, setViewingHotel] = useState(null); // Which hotel is open in modal
+  const [selectedHotelDetails, setSelectedHotelDetails] = useState(null); // Deep data for modal
+  const [loadingDetails, setLoadingDetails] = useState(false); // Spinner for modal
+  
+  // --- Selection State ---
+  const [outboundFlights, setOutboundFlights] = useState([]);
+  const [inboundFlights, setInboundFlights] = useState([]);
+  const [hotels, setHotels] = useState([]);
+  
+  const [selectedOutbound, setSelectedOutbound] = useState(null);
+  const [selectedInbound, setSelectedInbound] = useState(null);
+  const [selectedHotel, setSelectedHotel] = useState(null);
 
   // Sync from DB
   useEffect(() => {
     const fetchSessionDetails = async () => {
         if (!sessionData?.id) return;
-
         try {
             const res = await fetchWithAuth(`http://localhost:5000/session/${sessionData.id}`, {}, "GET");
-            
             if (res.ok) {
                 const data = await res.json();
                 console.log("Loaded Session Data:", data);
-
                 if (data.departure) setOrigin(data.departure);
                 if (data.destination) setDestination(data.destination);
-
                 const formatForInput = (isoString) => {
                     if (!isoString) return "";
                     return isoString.split("T")[0];
                 };
-
                 setDates({
                     start: formatForInput(data.from_date),
                     end: formatForInput(data.to_date)
@@ -429,24 +444,13 @@ export default function OptionsStage() {
     fetchSessionDetails();
   }, [sessionData?.id]);
 
-  // Ensure room qty doesn't exceed adults if adults count drops
   useEffect(() => {
       if (roomQty > travelerCounts.adults) {
           setRoomQty(travelerCounts.adults);
       }
   }, [travelerCounts.adults, roomQty]);
 
-  // --- Result State ---
-  const [outboundFlights, setOutboundFlights] = useState([]);
-  const [inboundFlights, setInboundFlights] = useState([]);
-  const [hotels, setHotels] = useState([]);
-  
-  const [selectedOutbound, setSelectedOutbound] = useState(null);
-  const [selectedInbound, setSelectedInbound] = useState(null);
-  const [selectedHotel, setSelectedHotel] = useState(null);
-
-  // --- NEW: State to control the Hotel Modal ---
-  const [viewingHotel, setViewingHotel] = useState(null);
+  // --- Handlers ---
 
   // 1. Initial Search
   const handleSearch = async () => {
@@ -473,7 +477,6 @@ export default function OptionsStage() {
     };
 
     const childrenString = childAges.length > 0 ? childAges.join(",") : null;
-
     const hotelsBody = {
         session_id: parseInt(sessionData?.id) || 0,
         location: destination,
@@ -488,26 +491,17 @@ export default function OptionsStage() {
     };
 
     try {
-      // ENABLED: Fetching both flights and hotels now
       const [flightRes, hotelRes] = await Promise.all([
         fetchWithAuth("http://localhost:5000/search/getOutboundFlights", flightsBody, "POST"),
         fetchWithAuth("http://localhost:5000/search/getAccomodations", hotelsBody, "POST")
       ]);
 
       if (flightRes.ok) {
-        const flights = await flightRes.json();
-        setOutboundFlights(flights);
-      } else {
-        console.error("Flight search failed");
+        setOutboundFlights(await flightRes.json());
       }
-
       if (hotelRes.ok) {
-        const hotelsData = await hotelRes.json();
-        setHotels(hotelsData);
-      } else {
-        console.error("Hotel search failed");
+        setHotels(await hotelRes.json());
       }
-
     } catch (err) {
       console.error(err);
       setError("Failed to fetch search results. Please try again.");
@@ -516,7 +510,7 @@ export default function OptionsStage() {
     }
   };
 
-  // 2. Select Outbound -> Fetch Inbound
+  // 2. Select Flights
   const handleSelectOutbound = async (flight) => {
     setSelectedOutbound(flight);
     setLoading(true);
@@ -537,8 +531,7 @@ export default function OptionsStage() {
     try {
       const res = await fetchWithAuth("http://localhost:5000/search/getInboundFlights", flightsBody, "POST");
       if (res.ok) {
-        const inboundData = await res.json();
-        setInboundFlights(inboundData);
+        setInboundFlights(await res.json());
         setStep('SELECT_INBOUND');
       }
     } catch (err) {
@@ -554,23 +547,47 @@ export default function OptionsStage() {
     setStep('CONFIRM');
   };
 
-  // 3. Handle Hotel Selection from Modal
-  const handleSelectHotel = (hotel) => {
-      setSelectedHotel(hotel);
-      setViewingHotel(null); // Close the modal
-      // Note: We don't change 'step' here, we just update the selection state.
-      // The "Ready to Book" section will update automatically if visible.
+  // 3. View Details (Triggers Modal & Deep Fetch)
+  const handleViewDetails = async (hotel) => {
+    setViewingHotel(hotel); // Open modal with "Teaser" data immediately
+    setLoadingDetails(true);
+    setSelectedHotelDetails(null); // Reset deep data
+
+    const childrenString = childAges.length > 0 ? childAges.join(",") : null;
+    const detailsBody = {
+        session_id: parseInt(sessionData?.id) || 0,
+        loc_id: hotel.hotel_id,
+        location: destination,
+        search_type: "CITY",
+        arrival_date: dates.start,
+        departure_date: dates.end,
+        adults: travelerCounts.adults,
+        children: childrenString,
+        room_qty: roomQty,
+        price_min: null,
+        price_max: null
+    };
+
+    try {
+        const res = await fetchWithAuth("http://localhost:5000/search/getHotelDetails", detailsBody, "POST");
+        if (res.ok) {
+            const data = await res.json();
+            setSelectedHotelDetails(data);
+        }
+    } catch (err) {
+        console.error("Error fetching details:", err);
+    } finally {
+        setLoadingDetails(false);
+    }
   };
 
+  // 4. Handle Final Booking
   const handleBookTrip = async () => {
-    // 1. Check if there is anything NEW to book
     const needsFlight = selectedInbound && !booked.flights;
     const needsHotel = selectedHotel && !booked.hotel;
 
     if (!needsFlight && !needsHotel) {
-        if (!selectedHotel) {
-             setError("Please select an accommodation to continue.");
-        }
+        if (!selectedHotel) setError("Please select an accommodation to continue.");
         return;
     }
 
@@ -579,7 +596,6 @@ export default function OptionsStage() {
 
     try {
         const bookingPromises = [];
-        const bookingTypes = []; 
 
         if (needsFlight) {
             bookingPromises.push(
@@ -595,34 +611,27 @@ export default function OptionsStage() {
             );
         }
 
-        if (needsHotel) {
-            const childrenString = childAges.length > 0 ? childAges.join(",") : null;
+        // UPDATED: Simplified Hotel Booking using the URL we got from Details
+        if (needsHotel && selectedHotel.booking_url) {
             bookingPromises.push(
                 fetchWithAuth("http://localhost:5000/search/bookAccomodation", {
-                    session_id: parseInt(sessionData?.id) || 0,
-                    loc_id: selectedHotel.hotel_id,
-                    location: destination,
-                    search_type: "CITY",
-                    arrival_date: dates.start,
-                    departure_date: dates.end,
-                    adults: travelerCounts.adults,
-                    children: childrenString,
-                    room_qty: roomQty,
-                    price_min: null,
-                    price_max: null
+                    session_id: parseInt(sessionData?.id),
+                    booking_url: selectedHotel.booking_url 
                 }, "POST").then(res => ({ type: 'hotel', res }))
             );
+        } else if (needsHotel) {
+             console.error("Booking URL missing from selected hotel object.");
+             setError("Missing hotel booking details. Please try viewing details again.");
+             setLoading(false);
+             return;
         }
 
         const results = await Promise.all(bookingPromises);
-        
         let newBookedState = { ...booked };
 
         for (const item of results) {
             if (item.res.ok) {
                 newBookedState[item.type] = true;
-                const data = await item.res.json();
-                console.log(`${item.type} booking URL:`, data);
             } else {
                 setError(`Failed to book ${item.type}. Please try again.`);
             }
@@ -631,12 +640,12 @@ export default function OptionsStage() {
         setBooked(newBookedState);
 
         if (newBookedState.flights && newBookedState.hotel) {
-            alert("Success! Flights and Accommodation booked. Proceeding to Itinerary.");
+            alert("Success! Flights and Accommodation booked.");
             navigate(`/plan/${sessionData.id}/itinerary`);
         } else if (newBookedState.flights && !newBookedState.hotel) {
-            alert("Flights booked successfully! \n\nPlease select and book a Hotel to complete your package.");
+            alert("Flights booked! Please proceed with hotel booking.");
         } else if (!newBookedState.flights && newBookedState.hotel) {
-            alert("Accommodation booked successfully! \n\nPlease select and book your Flights to proceed.");
+            alert("Accommodation booked! Please proceed with flights.");
         }
 
     } catch (err) {
@@ -653,6 +662,7 @@ export default function OptionsStage() {
     setSelectedInbound(null);
     setInboundFlights([]);
     setBooked({ flights: false, hotel: false });
+    setSelectedHotel(null);
   };
 
   return (
@@ -661,9 +671,14 @@ export default function OptionsStage() {
       {/* --- HOTEL DETAIL MODAL --- */}
       {viewingHotel && (
           <HotelDetailsModal 
-            hotel={viewingHotel} 
+            hotel={viewingHotel}
+            details={selectedHotelDetails}
+            isLoading={loadingDetails}
             onClose={() => setViewingHotel(null)} 
-            onSelect={handleSelectHotel}
+            onSelect={(hotelWithUrl) => {
+                setSelectedHotel(hotelWithUrl); // Saves URL into state
+                setViewingHotel(null);
+            }}
           />
       )}
 
@@ -675,52 +690,33 @@ export default function OptionsStage() {
             onChange={setOrigin} 
             placeholder="City, Country"
         />
-
         <LocationAutocomplete 
             label="Destination"
             value={destination} 
             onChange={setDestination} 
             placeholder="City, Country"
         />
-
         <div className="flex flex-col gap-1">
             <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Dates</label>
             <div className="flex items-center gap-2">
-                <input 
-                    type="date" 
-                    value={dates.start} 
-                    onChange={(e) => setDates(p => ({...p, start: e.target.value}))} 
-                    className="border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-700"
-                />
-                <input 
-                    type="date" 
-                    value={dates.end} 
-                    onChange={(e) => setDates(p => ({...p, end: e.target.value}))} 
-                    className="border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-700"
-                />
+                <input type="date" value={dates.start} onChange={(e) => setDates(p => ({...p, start: e.target.value}))} className="border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-700"/>
+                <input type="date" value={dates.end} onChange={(e) => setDates(p => ({...p, end: e.target.value}))} className="border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-700"/>
             </div>
         </div>
-
         <TravelersInput 
             counts={travelerCounts} 
             setCounts={setTravelerCounts} 
             childAges={childAges} 
             setChildAges={setChildAges} 
         />
-
         <div className="flex flex-col gap-1 w-20">
             <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Rooms</label>
-            <select 
-                value={roomQty}
-                onChange={(e) => setRoomQty(parseInt(e.target.value))}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            >
+            <select value={roomQty} onChange={(e) => setRoomQty(parseInt(e.target.value))} className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                 {Array.from({ length: travelerCounts.adults }, (_, i) => i + 1).map(num => (
                     <option key={num} value={num}>{num}</option>
                 ))}
             </select>
         </div>
-
         <button 
           onClick={handleSearch}
           disabled={loading || !destination}
@@ -735,51 +731,35 @@ export default function OptionsStage() {
         <div className="max-w-6xl mx-auto space-y-8">
           {error && <div className="bg-red-100 text-red-700 p-4 rounded-lg">{error}</div>}
 
-          {/* CONFIRMATION STEP */}
-          {/* Modified logic: Show if we are in CONFIRM step OR if a hotel is selected (allowing hotel-only booking) */}
+          {/* CONFIRMATION SUMMARY */}
           {(step === 'CONFIRM' || selectedHotel) && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center animate-in fade-in slide-in-from-top-4 duration-500">
                 <h2 className="text-3xl font-bold text-green-800 mb-4">Trip Summary</h2>
-                
                 <div className="flex justify-center gap-8 text-left mb-8 flex-wrap">
-                    {/* Flights */}
+                    {/* Flights UI */}
                     {selectedOutbound && selectedInbound ? (
                         <>
                              <div className={`bg-white p-4 rounded shadow-sm w-64 border-l-4 ${booked.flights ? 'border-gray-400 opacity-75' : 'border-blue-500'}`}>
-                                <div className="flex justify-between">
-                                    <h3 className="font-bold text-gray-500 text-xs uppercase">Outbound</h3>
-                                    {booked.flights && <span className="text-xs font-bold text-green-600 bg-green-100 px-2 rounded-full">BOOKED</span>}
-                                </div>
+                                <div className="flex justify-between"><h3 className="font-bold text-gray-500 text-xs uppercase">Outbound</h3>{booked.flights && <span className="text-xs font-bold text-green-600 bg-green-100 px-2 rounded-full">BOOKED</span>}</div>
                                 <div className="font-bold text-lg">{selectedOutbound.flights[0].airline}</div>
                                 <div>{selectedOutbound.flights[0].departure_time} - {selectedOutbound.flights[0].arrival_time}</div>
                             </div>
                             <div className={`bg-white p-4 rounded shadow-sm w-64 border-l-4 ${booked.flights ? 'border-gray-400 opacity-75' : 'border-blue-500'}`}>
-                                 <div className="flex justify-between">
-                                    <h3 className="font-bold text-gray-500 text-xs uppercase">Return</h3>
-                                    {booked.flights && <span className="text-xs font-bold text-green-600 bg-green-100 px-2 rounded-full">BOOKED</span>}
-                                </div>
+                                 <div className="flex justify-between"><h3 className="font-bold text-gray-500 text-xs uppercase">Return</h3>{booked.flights && <span className="text-xs font-bold text-green-600 bg-green-100 px-2 rounded-full">BOOKED</span>}</div>
                                 <div className="font-bold text-lg">{selectedInbound.flights[0].airline}</div>
                                 <div>{selectedInbound.flights[0].departure_time} - {selectedInbound.flights[0].arrival_time}</div>
                             </div>
                         </>
                     ) : (
-                         /* Placeholder if user skipped flights or is doing hotel first */
-                        <div className="bg-gray-100 border-2 border-dashed border-gray-300 p-4 rounded shadow-sm flex flex-col justify-center items-center w-64 opacity-50">
-                            <span className="text-gray-500 font-bold text-lg">No Flights Selected</span>
-                        </div>
+                        <div className="bg-gray-100 border-2 border-dashed border-gray-300 p-4 rounded shadow-sm flex flex-col justify-center items-center w-64 opacity-50"><span className="text-gray-500 font-bold text-lg">No Flights Selected</span></div>
                     )}
                     
-                    {/* Hotel Card */}
+                    {/* Hotel UI */}
                     {selectedHotel ? (
                         <div className={`bg-white p-4 rounded shadow-sm w-64 border-l-4 ${booked.hotel ? 'border-gray-400 opacity-75' : 'border-green-500'}`}>
-                            <div className="flex justify-between">
-                                <h3 className="font-bold text-gray-500 text-xs uppercase">Accommodation</h3>
-                                {booked.hotel && <span className="text-xs font-bold text-green-600 bg-green-100 px-2 rounded-full">BOOKED</span>}
-                            </div>
+                            <div className="flex justify-between"><h3 className="font-bold text-gray-500 text-xs uppercase">Accommodation</h3>{booked.hotel && <span className="text-xs font-bold text-green-600 bg-green-100 px-2 rounded-full">BOOKED</span>}</div>
                             <div className="font-bold text-lg truncate" title={selectedHotel.hotel_name}>{selectedHotel.hotel_name}</div>
-                            <div className="text-sm text-gray-600">
-                                {roomQty} Room{roomQty > 1 ? 's' : ''}, {travelerCounts.adults} Adult{travelerCounts.adults > 1 ? 's' : ''}
-                            </div>
+                            <div className="text-sm text-gray-600">{roomQty} Room{roomQty > 1 ? 's' : ''}, {travelerCounts.adults} Adult{travelerCounts.adults > 1 ? 's' : ''}</div>
                             <div className="text-green-600 font-bold mt-1">{selectedHotel.price} {selectedHotel.currency}</div>
                         </div>
                     ) : (
@@ -791,18 +771,11 @@ export default function OptionsStage() {
                 </div>
                 
                 <div className="flex justify-center gap-4">
-                    <button onClick={resetSelection} className="px-6 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-lg">
-                        Reset All
-                    </button>
-                    
+                    <button onClick={resetSelection} className="px-6 py-3 text-gray-600 font-bold hover:bg-gray-100 rounded-lg">Reset All</button>
                     <button 
                         onClick={handleBookTrip} 
                         disabled={loading || (booked.flights && booked.hotel)} 
-                        className={`px-8 py-3 font-bold rounded-lg shadow-lg transform transition ${
-                            loading || (booked.flights && booked.hotel)
-                            ? "bg-gray-400 cursor-not-allowed text-gray-100" 
-                            : "bg-green-600 text-white hover:bg-green-700 hover:-translate-y-1"
-                        }`}
+                        className={`px-8 py-3 font-bold rounded-lg shadow-lg transform transition ${loading || (booked.flights && booked.hotel) ? "bg-gray-400 cursor-not-allowed text-gray-100" : "bg-green-600 text-white hover:bg-green-700 hover:-translate-y-1"}`}
                     >
                         {loading ? "Processing..." : "Confirm & Book Selected"}
                     </button>
@@ -810,35 +783,23 @@ export default function OptionsStage() {
             </div>
           )}
 
-          {/* FLIGHTS SECTION */}
+          {/* FLIGHTS LIST */}
           {(step === 'SEARCH' || step === 'SELECT_INBOUND') && (
             <section>
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-bold text-gray-800">
-                        {step === 'SEARCH' ? '1. Select Outbound Flight' : '2. Select Return Flight'}
-                    </h2>
-                    {step === 'SELECT_INBOUND' && (
-                        <button onClick={resetSelection} className="text-sm text-red-500 font-bold hover:underline">Change Outbound</button>
-                    )}
+                    <h2 className="text-2xl font-bold text-gray-800">{step === 'SEARCH' ? '1. Select Outbound Flight' : '2. Select Return Flight'}</h2>
+                    {step === 'SELECT_INBOUND' && <button onClick={resetSelection} className="text-sm text-red-500 font-bold hover:underline">Change Outbound</button>}
                 </div>
-                
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {(step === 'SEARCH' ? outboundFlights : inboundFlights).map((flight, idx) => (
-                        <FlightCard 
-                            key={idx} 
-                            flight={flight} 
-                            onSelect={() => step === 'SEARCH' ? handleSelectOutbound(flight) : handleSelectInbound(flight)}
-                            btnText={step === 'SEARCH' ? "Select Outbound" : "Select Return"}
-                        />
+                        <FlightCard key={idx} flight={flight} onSelect={() => step === 'SEARCH' ? handleSelectOutbound(flight) : handleSelectInbound(flight)} btnText={step === 'SEARCH' ? "Select Outbound" : "Select Return"} />
                     ))}
-                    {(step === 'SEARCH' ? outboundFlights : inboundFlights).length === 0 && !loading && (
-                        <div className="col-span-2 text-center py-10 text-gray-400 border-2 border-dashed rounded-xl">No flights found.</div>
-                    )}
+                    {(step === 'SEARCH' ? outboundFlights : inboundFlights).length === 0 && !loading && <div className="col-span-2 text-center py-10 text-gray-400 border-2 border-dashed rounded-xl">No flights found.</div>}
                 </div>
             </section>
           )}
 
-          {/* HOTELS SECTION */}
+          {/* HOTELS LIST */}
           <section className="mt-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Accommodations</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -847,12 +808,10 @@ export default function OptionsStage() {
                         key={hotel.hotel_id} 
                         hotel={hotel} 
                         isSelected={selectedHotel?.hotel_id === hotel.hotel_id}
-                        onSelect={() => setViewingHotel(hotel)} // Open Modal on click
+                        onSelect={() => handleViewDetails(hotel)} // UPDATED: Calls the fetcher
                     />
                 ))}
-                {hotels.length === 0 && !loading && (
-                    <div className="col-span-full text-center py-10 text-gray-400 border-2 border-dashed rounded-xl">No hotels found.</div>
-                )}
+                {hotels.length === 0 && !loading && <div className="col-span-full text-center py-10 text-gray-400 border-2 border-dashed rounded-xl">No hotels found.</div>}
             </div>
           </section>
 
@@ -867,19 +826,8 @@ function FlightCard({ flight, onSelect, btnText }) {
     const firstLeg = flight.flights[0];
     const lastLeg = flight.flights[flight.flights.length - 1];
     const stopsCount = flight.flights.length - 1;
-    const stopoverCities = flight.flights.slice(0, -1).map(leg => leg.arrival.split(',')[0]).join(", ");
-
     let totalMinutes = 0;
     flight.flights.forEach(leg => { totalMinutes += parseInt(leg.duration) || 0; });
-    for (let i = 0; i < flight.flights.length - 1; i++) {
-        const currentLegArr = new Date(flight.flights[i].arrival_time.replace(" ", "T"));
-        const nextLegDep = new Date(flight.flights[i+1].departure_time.replace(" ", "T"));
-        if (!isNaN(currentLegArr) && !isNaN(nextLegDep)) {
-            const layoverMins = Math.floor((nextLegDep - currentLegArr) / 60000);
-            if (layoverMins > 0) totalMinutes += layoverMins;
-        }
-    }
-
     const durationString = `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
 
     return (
@@ -891,29 +839,12 @@ function FlightCard({ flight, onSelect, btnText }) {
           </div>
           <div className="text-blue-600 font-bold text-xl">{flight.price} {flight.currency}</div>
         </div>
-        
         <div className="flex justify-between items-center text-sm text-gray-600 mb-4 bg-gray-50 p-3 rounded-lg">
-          <div>
-              <div className="font-bold text-gray-900">{firstLeg.departure_time.split(" ")[1]}</div>
-              <div className="text-gray-400 max-w-[100px] truncate" title={firstLeg.departure}>{firstLeg.departure}</div>
-          </div>
-          <div className="flex flex-col items-center px-4 w-1/3">
-             <span className="text-xs text-gray-500 font-medium">{durationString}</span>
-             <span className="text-gray-300">──────✈──────</span>
-             <span className={`text-[10px] font-bold mt-1 ${stopsCount > 0 ? 'text-orange-500' : 'text-green-600'}`}>
-                {stopsCount === 0 ? "Direct" : `${stopsCount} Stop${stopsCount > 1 ? 's' : ''}`}
-             </span>
-             {stopsCount > 0 && <span className="text-[9px] text-gray-400 w-full truncate text-center" title={stopoverCities}>Via {stopoverCities}</span>}
-          </div>
-          <div className="text-right">
-              <div className="font-bold text-gray-900">{lastLeg.arrival_time.split(" ")[1]}</div>
-              <div className="text-gray-400 max-w-[100px] truncate ml-auto" title={lastLeg.arrival}>{lastLeg.arrival}</div>
-          </div>
+          <div><div className="font-bold text-gray-900">{firstLeg.departure_time.split(" ")[1]}</div><div className="text-gray-400 max-w-[100px] truncate" title={firstLeg.departure}>{firstLeg.departure}</div></div>
+          <div className="flex flex-col items-center px-4 w-1/3"><span className="text-xs text-gray-500 font-medium">{durationString}</span><span className="text-gray-300">──────✈──────</span><span className={`text-[10px] font-bold mt-1 ${stopsCount > 0 ? 'text-orange-500' : 'text-green-600'}`}>{stopsCount === 0 ? "Direct" : `${stopsCount} Stop${stopsCount > 1 ? 's' : ''}`}</span></div>
+          <div className="text-right"><div className="font-bold text-gray-900">{lastLeg.arrival_time.split(" ")[1]}</div><div className="text-gray-400 max-w-[100px] truncate ml-auto" title={lastLeg.arrival}>{lastLeg.arrival}</div></div>
         </div>
-
-        <button onClick={onSelect} className="w-full py-2 rounded-lg border border-blue-100 text-blue-600 hover:bg-blue-50 font-semibold text-sm transition">
-          {btnText}
-        </button>
+        <button onClick={onSelect} className="w-full py-2 rounded-lg border border-blue-100 text-blue-600 hover:bg-blue-50 font-semibold text-sm transition">{btnText}</button>
       </div>
     );
 }
@@ -930,50 +861,32 @@ function HotelCard({ hotel, onSelect, isSelected }) {
              ) : (
                 <div className="h-full w-full bg-gray-200 flex items-center justify-center text-gray-400">No Image</div>
              )}
-             {/* Star Rating Overlay */}
-             <div className="absolute top-2 left-2 bg-white/90 backdrop-blur px-2 py-0.5 rounded text-[10px] font-bold shadow-sm">
-                 {"⭐".repeat(hotel.propertyClass || 0)}
-             </div>
+             <div className="absolute top-2 left-2 bg-white/90 backdrop-blur px-2 py-0.5 rounded text-[10px] font-bold shadow-sm">{"⭐".repeat(hotel.propertyClass || 0)}</div>
              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60"></div>
-             <div className="absolute bottom-3 left-3 text-white">
-                 <div className="font-bold text-lg drop-shadow-md line-clamp-1">{hotel.hotel_name}</div>
-             </div>
+             <div className="absolute bottom-3 left-3 text-white"><div className="font-bold text-lg drop-shadow-md line-clamp-1">{hotel.hotel_name}</div></div>
         </div>
-
         <div className="p-4 flex flex-col flex-grow bg-white">
           <div className="flex items-center gap-2 mb-2">
-             {hotel.reviewScore && (
-                 <span className="bg-blue-700 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                     {hotel.reviewScore}
-                 </span>
-             )}
+             {hotel.reviewScore && <span className="bg-blue-700 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">{hotel.reviewScore}</span>}
              <span className="text-xs font-bold text-gray-800">{hotel.reviewScoreWord}</span>
              <span className="text-[10px] text-gray-400">({hotel.reviewCount} reviews)</span>
           </div>
-
-          {/* New Accessibility Teaser */}
-          <p className="text-[11px] text-gray-500 line-clamp-2 italic mb-3">
-              "{hotel.accessibilityLabel}"
-          </p>
-
-          {/* Preserving your original Time Range info */}
+          <p className="text-[11px] text-gray-500 line-clamp-2 italic mb-3">"{hotel.accessibilityLabel}"</p>
           <div className="grid grid-cols-2 gap-2 mb-3">
-              <div className="bg-gray-50 p-1.5 rounded border border-gray-100">
-                  <div className="text-[9px] uppercase text-gray-400 font-bold">Check-in</div>
-                  <div className="text-[10px] font-medium text-gray-700">{hotel.checkin_time_range || "Flexible"}</div>
-              </div>
-              <div className="bg-gray-50 p-1.5 rounded border border-gray-100">
-                  <div className="text-[9px] uppercase text-gray-400 font-bold">Check-out</div>
-                  <div className="text-[10px] font-medium text-gray-700">{hotel.checkout_time_range || "Flexible"}</div>
-              </div>
+              <div className="bg-gray-50 p-1.5 rounded border border-gray-100"><div className="text-[9px] uppercase text-gray-400 font-bold">Check-in</div><div className="text-[10px] font-medium text-gray-700">{hotel.checkin_time_range || "Flexible"}</div></div>
+              <div className="bg-gray-50 p-1.5 rounded border border-gray-100"><div className="text-[9px] uppercase text-gray-400 font-bold">Check-out</div><div className="text-[10px] font-medium text-gray-700">{hotel.checkout_time_range || "Flexible"}</div></div>
           </div>
-
           <div className="mt-auto pt-3 border-t border-gray-100 flex justify-between items-center">
-              <div>
-                  <div className="text-[10px] text-gray-400">Total Price</div>
-                  <div className="text-lg font-bold text-blue-700">{hotel.price} {hotel.currency}</div>
-              </div>
-              <button className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-600 hover:text-white transition">
+              <div><div className="text-[10px] text-gray-400">Total Price</div><div className="text-lg font-bold text-blue-700">{hotel.price} {hotel.currency}</div></div>
+              
+              {/* FIXED: Button now triggers the click event properly */}
+              <button 
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onSelect();
+                }}
+                className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-600 hover:text-white transition"
+              >
                   View Details
               </button>
           </div>

@@ -70,9 +70,28 @@ class AccomodationsResponse(BaseModel):
     checkin_time_range: Optional[str]
     checkout_time_range: Optional[str]
 
+class HotelDetailsResponse(BaseModel):
+    hotel_id: str
+    url: str
+    description: Optional[str]
+    photos: list[str]
+    amenities: list[str]
+    sustainability_info: Optional[dict]
+    property_highlights: list[dict]
+    languages_spoken: list[str]
+    price_breakdown_details: Optional[dict] 
+    cancellation_policy: Optional[str]
+    prepayment_policy: Optional[str]
+    bed_details: Optional[str]
+
+class AccomodationBookingRequest(BaseModel):
+    """Simplified schema for booking an accomodation."""
+    session_id: int
+    booking_url: str
+
 class AccomodationBookingResponse(BaseModel):
     """Schema for accomodation booking response."""
-    booking_url: str
+    message: str
 
 
 # class ExploreResponse(BaseModel):

@@ -86,7 +86,7 @@ export async function fetchWithAuth(url, body = {}, method = "POST") {
       }
 
       res = await fetch(url, retryOptions);
-      if (res.status === 401) {
+      if (res.status === 401 || res.status === 403 || res.status === 422) {
         clearTokens();
         window.location.href = "/login";
         return null;

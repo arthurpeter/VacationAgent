@@ -1,0 +1,1099 @@
+{
+   "ufi":-126693,
+   "hotel_id":81030,
+   "hotel_name":"c-hotels Club House Roma",
+   "url":"https://www.booking.com/hotel/it/club-house-roma.html",
+   "hotel_name_trans":"",
+   "review_nr":5156,
+   "arrival_date":"2026-02-19",
+   "departure_date":"2026-02-26",
+   "price_transparency_mode":"none",
+   "accommodation_type_name":"Hotels",
+   "latitude":41.9043142611358,
+   "longitude":12.4267280101776,
+   "address":"Via Andrea Alciato 14",
+   "address_trans":"",
+   "city":"Rome",
+   "city_trans":"Rome",
+   "city_in_trans":"in Rome",
+   "city_name_en":"Rome",
+   "district":"Aurelio",
+   "countrycode":"it",
+   "distance_to_cc":4.71993614152797,
+   "default_language":"it",
+   "country_trans":"Italy",
+   "currency_code":"EUR",
+   "zip":"00167",
+   "timezone":"Europe/Rome",
+   "rare_find_state":"NOT_RARE",
+   "soldout":0,
+   "available_rooms":1,
+   "max_rooms_in_reservation":10,
+   "average_room_size_for_ufi_m2":"17.45",
+   "is_family_friendly":0,
+   "is_closed":0,
+   "is_crimea":0,
+   "is_hotel_ctrip":0,
+   "is_price_transparent":0,
+   "is_genius_deal":0,
+   "is_cash_accepted_check_enabled":1,
+   "qualifies_for_no_cc_reservation":0,
+   "hotel_include_breakfast":0,
+   "cc1":"it",
+   "family_facilities":[
+      "Family rooms"
+   ],
+   "product_price_breakdown":{
+      "net_amount":{
+         "amount_rounded":"2,153\\xa0lei",
+         "amount_unrounded":"2,153.02\\xa0lei",
+         "currency":"RON",
+         "value":2153.0177917853
+      },
+      "included_taxes_and_charges_amount":{
+         "amount_unrounded":"236.08\\xa0lei",
+         "currency":"RON",
+         "amount_rounded":"236\\xa0lei",
+         "value":236.076288768639
+      },
+      "has_long_stays_weekly_rate_price":0,
+      "strikethrough_amount":{
+         "amount_rounded":"2,597\\xa0lei",
+         "amount_unrounded":"2,596.84\\xa0lei",
+         "currency":"RON",
+         "value":2596.83917645503
+      },
+      "items":[
+         {
+            "base":{
+               "percentage":10,
+               "kind":"percentage"
+            },
+            "kind":"charge",
+            "name":"VAT",
+            "item_amount":{
+               "value":236.076288768639,
+               "amount_unrounded":"236.08\\xa0lei",
+               "amount_rounded":"236\\xa0lei",
+               "currency":"RON"
+            },
+            "inclusion_type":"included",
+            "details":"10 % VAT"
+         },
+         {
+            "base":{
+               "kind":"per_person_per_night",
+               "base_amount":7.5
+            },
+            "name":"City tax",
+            "kind":"charge",
+            "item_amount":{
+               "value":267.515759990363,
+               "currency":"RON",
+               "amount_unrounded":"267.52\\xa0lei",
+               "amount_rounded":"268\\xa0lei"
+            },
+            "inclusion_type":"excluded",
+            "details":"City tax"
+         },
+         {
+            "base":{
+               "kind":"bsb"
+            },
+            "name":"Booking.com pays",
+            "identifier":"BSB",
+            "kind":"discount",
+            "item_amount":{
+               "value":207.745095901088,
+               "amount_unrounded":"207.75\\xa0lei",
+               "currency":"RON",
+               "amount_rounded":"208\\xa0lei"
+            },
+            "details":"You’ll get a reduced rate when you pay online because Booking.com will pay part of the price."
+         }
+      ],
+      "gross_amount":{
+         "amount_unrounded":"2,389.09\\xa0lei",
+         "currency":"RON",
+         "amount_rounded":"2,389\\xa0lei",
+         "value":2389.09408055394
+      },
+      "has_long_stays_monthly_rate_price":0,
+      "gross_amount_hotel_currency":{
+         "value":468.86,
+         "amount_rounded":"€\\xa0469",
+         "amount_unrounded":"€\\xa0468.86",
+         "currency":"EUR"
+      },
+      "charges_details":{
+         "translated_copy":"",
+         "amount":{
+            "value":268,
+            "currency":"RON"
+         },
+         "mode":"extra_charges"
+      },
+      "gross_amount_per_night":{
+         "value":341.299154364848,
+         "amount_unrounded":"341.30\\xa0lei",
+         "amount_rounded":"341\\xa0lei",
+         "currency":"RON"
+      },
+      "excluded_amount":{
+         "amount_unrounded":"267.52\\xa0lei",
+         "currency":"RON",
+         "amount_rounded":"268\\xa0lei",
+         "value":267.515759990363
+      },
+      "nr_stays":1,
+      "all_inclusive_amount_hotel_currency":{
+         "value":521.36,
+         "amount_unrounded":"€\\xa0521.36",
+         "currency":"EUR",
+         "amount_rounded":"€\\xa0521"
+      },
+      "discounted_amount":{
+         "value":207.745095901088,
+         "amount_rounded":"208\\xa0lei",
+         "amount_unrounded":"207.75\\xa0lei",
+         "currency":"RON"
+      },
+      "price_display_config":[
+         {
+            "key":"use_nightly_prices",
+            "value":0
+         },
+         {
+            "value":0,
+            "key":"use_nightly_as_dominant"
+         },
+         {
+            "key":"use_js_tracking",
+            "value":1
+         }
+      ],
+      "all_inclusive_amount":{
+         "value":2656.6098405443,
+         "amount_unrounded":"2,656.61\\xa0lei",
+         "currency":"RON",
+         "amount_rounded":"2,657\\xa0lei"
+      },
+      "strikethrough_amount_per_night":{
+         "amount_rounded":"371\\xa0lei",
+         "amount_unrounded":"370.98\\xa0lei",
+         "currency":"RON",
+         "value":370.977025207861
+      },
+      "benefits":[
+         {
+            "name":"8% off",
+            "identifier":"combined-discount",
+            "kind":"badge",
+            "badge_variant":"constructive",
+            "details":"You’ll get a reduced rate when you pay online because Booking.com will pay part of the price.",
+            "icon":"None"
+         }
+      ]
+   },
+   "composite_price_breakdown":{
+      "items":[
+         {
+            "kind":"charge",
+            "name":"VAT",
+            "base":{
+               "percentage":10,
+               "kind":"percentage"
+            },
+            "item_amount":{
+               "currency":"RON",
+               "amount_unrounded":"236.08\\xa0lei",
+               "amount_rounded":"236\\xa0lei",
+               "value":236.076288768639
+            },
+            "inclusion_type":"included",
+            "details":"10 % VAT"
+         },
+         {
+            "inclusion_type":"excluded",
+            "details":"City tax",
+            "item_amount":{
+               "value":267.515759990363,
+               "amount_rounded":"268\\xa0lei",
+               "amount_unrounded":"267.52\\xa0lei",
+               "currency":"RON"
+            },
+            "kind":"charge",
+            "name":"City tax",
+            "base":{
+               "kind":"per_person_per_night",
+               "base_amount":7.5
+            }
+         },
+         {
+            "base":{
+               "kind":"bsb"
+            },
+            "identifier":"BSB",
+            "kind":"discount",
+            "name":"Booking.com pays",
+            "details":"You’ll get a reduced rate when you pay online because Booking.com will pay part of the price.",
+            "item_amount":{
+               "value":207.745095901088,
+               "amount_unrounded":"207.75\\xa0lei",
+               "amount_rounded":"208\\xa0lei",
+               "currency":"RON"
+            }
+         }
+      ],
+      "strikethrough_amount":{
+         "value":2596.83917645503,
+         "amount_rounded":"2,597\\xa0lei",
+         "amount_unrounded":"2,596.84\\xa0lei",
+         "currency":"RON"
+      },
+      "has_long_stays_weekly_rate_price":0,
+      "included_taxes_and_charges_amount":{
+         "value":236.076288768639,
+         "currency":"RON",
+         "amount_unrounded":"236.08\\xa0lei",
+         "amount_rounded":"236\\xa0lei"
+      },
+      "net_amount":{
+         "value":2153.0177917853,
+         "amount_rounded":"2,153\\xa0lei",
+         "amount_unrounded":"2,153.02\\xa0lei",
+         "currency":"RON"
+      },
+      "strikethrough_amount_per_night":{
+         "value":370.977025207861,
+         "amount_unrounded":"370.98\\xa0lei",
+         "amount_rounded":"371\\xa0lei",
+         "currency":"RON"
+      },
+      "benefits":[
+         {
+            "icon":"None",
+            "details":"You’ll get a reduced rate when you pay online because Booking.com will pay part of the price.",
+            "badge_variant":"constructive",
+            "identifier":"combined-discount",
+            "name":"8% off",
+            "kind":"badge"
+         }
+      ],
+      "all_inclusive_amount_hotel_currency":{
+         "value":521.36,
+         "amount_unrounded":"€\\xa0521.36",
+         "amount_rounded":"€\\xa0521",
+         "currency":"EUR"
+      },
+      "price_display_config":[
+         {
+            "key":"use_nightly_prices",
+            "value":0
+         },
+         {
+            "key":"use_nightly_as_dominant",
+            "value":0
+         },
+         {
+            "value":1,
+            "key":"use_js_tracking"
+         }
+      ],
+      "discounted_amount":{
+         "amount_unrounded":"207.75\\xa0lei",
+         "amount_rounded":"208\\xa0lei",
+         "currency":"RON",
+         "value":207.745095901088
+      },
+      "all_inclusive_amount":{
+         "amount_rounded":"2,657\\xa0lei",
+         "amount_unrounded":"2,656.61\\xa0lei",
+         "currency":"RON",
+         "value":2656.6098405443
+      },
+      "charges_details":{
+         "mode":"extra_charges",
+         "amount":{
+            "value":268,
+            "currency":"RON"
+         },
+         "translated_copy":""
+      },
+      "gross_amount_hotel_currency":{
+         "value":468.86,
+         "amount_rounded":"€\\xa0469",
+         "amount_unrounded":"€\\xa0468.86",
+         "currency":"EUR"
+      },
+      "excluded_amount":{
+         "value":267.515759990363,
+         "amount_unrounded":"267.52\\xa0lei",
+         "currency":"RON",
+         "amount_rounded":"268\\xa0lei"
+      },
+      "gross_amount_per_night":{
+         "value":341.299154364848,
+         "currency":"RON",
+         "amount_unrounded":"341.30\\xa0lei",
+         "amount_rounded":"341\\xa0lei"
+      },
+      "gross_amount":{
+         "amount_rounded":"2,389\\xa0lei",
+         "amount_unrounded":"2,389.09\\xa0lei",
+         "currency":"RON",
+         "value":2389.09408055394
+      },
+      "has_long_stays_monthly_rate_price":0
+   },
+   "property_highlight_strip":[
+      {
+         "name":"Pet friendly",
+         "icon_list":[
+            {
+               "icon":"iconset/pawprint",
+               "size":1
+            }
+         ]
+      },
+      {
+         "icon_list":[
+            {
+               "size":1,
+               "icon":"iconset/snowflake"
+            }
+         ],
+         "name":"Air conditioning"
+      },
+      {
+         "name":"Private bathroom",
+         "icon_list":[
+            {
+               "icon":"iconset/shower",
+               "size":1
+            }
+         ]
+      },
+      {
+         "name":"Free Wifi",
+         "icon_list":[
+            {
+               "size":1,
+               "icon":"iconset/wifi"
+            }
+         ]
+      },
+      {
+         "name":"Minibar",
+         "icon_list":[
+            {
+               "icon":"iconset/food",
+               "size":1
+            }
+         ]
+      },
+      {
+         "name":"Family rooms",
+         "icon_list":[
+            {
+               "icon":"iconset/family",
+               "size":1
+            }
+         ]
+      },
+      {
+         "icon_list":[
+            {
+               "icon":"iconset/gourmet",
+               "size":1
+            }
+         ],
+         "name":"Room service"
+      },
+      {
+         "icon_list":[
+            {
+               "size":1,
+               "icon":"iconset/nosmoking"
+            }
+         ],
+         "name":"Non-smoking rooms"
+      },
+      {
+         "name":"Meeting/Banquet facilities",
+         "icon_list":[
+            {
+               "size":1,
+               "icon":"iconset/couple"
+            }
+         ]
+      },
+      {
+         "icon_list":[
+            {
+               "size":1,
+               "icon":"iconset/garden"
+            }
+         ],
+         "name":"Garden"
+      }
+   ],
+   "facilities_block":{
+      "name":"Most Popular Facilities",
+      "type":"popular",
+      "facilities":[
+         {
+            "name":"Non-smoking rooms",
+            "icon":"nosmoking"
+         },
+         {
+            "name":"Room service",
+            "icon":"clean"
+         },
+         {
+            "icon":"wifi",
+            "name":"Wifi in all areas"
+         },
+         {
+            "icon":"family",
+            "name":"Family rooms"
+         },
+         {
+            "name":"Pet friendly",
+            "icon":"pawprint"
+         },
+         {
+            "icon":"wifi",
+            "name":"Free Wifi"
+         }
+      ]
+   },
+   "top_ufi_benefits":[
+      {
+         "icon":"wifi",
+         "translated_name":"Wifi"
+      },
+      {
+         "translated_name":"Family rooms",
+         "icon":"family"
+      },
+      {
+         "translated_name":"Pet friendly",
+         "icon":"pawprint"
+      },
+      {
+         "icon":"nosmoking",
+         "translated_name":"Non-smoking rooms"
+      },
+      {
+         "icon":"frontdesk",
+         "translated_name":"24-hour front desk"
+      },
+      {
+         "icon":"clean",
+         "translated_name":"Room service"
+      }
+   ],
+   "languages_spoken":{
+      "languagecode":[
+         "ro",
+         "pl",
+         "it",
+         "fr",
+         "es",
+         "en-gb"
+      ]
+   },
+   "spoken_languages":[
+      "ro",
+      "pl",
+      "it",
+      "fr",
+      "es",
+      "en-gb"
+   ],
+   "breakfast_review_score":{
+      "review_number":0,
+      "review_count":0,
+      "review_score":0,
+      "rating":0,
+      "review_score_word":"",
+      "review_snippet":""
+   },
+   "wifi_review_score":{
+      "rating":"9.0"
+   },
+   "min_room_distribution":{
+      "adults":1,
+      "children":[
+         
+      ]
+   },
+   "tax_exceptions":[
+      
+   ],
+   "booking_home":{
+      
+   },
+   "aggregated_data":{
+      "has_kitchen":0,
+      "has_nonrefundable":1,
+      "has_refundable":0,
+      "has_seating":0,
+      "common_kitchen_fac":[
+         
+      ]
+   },
+   "last_reservation":{
+      "countrycode":"None",
+      "time":"",
+      "country":"None"
+   },
+   "free_facilities_cancel_breakfast":[
+      
+   ],
+   "room_recommendation":[
+      {
+         "number_of_extra_babycots":0,
+         "number_of_extra_beds_for_children":0,
+         "extra_babycots_price_in_hotel_currency":0,
+         "total_extra_bed_price":0,
+         "extra_beds_for_adults_price":0,
+         "extra_beds_for_children_price_in_hotel_currency":0,
+         "babies":0,
+         "total_extra_bed_price_in_hotel_currency":0,
+         "extra_babycots_price":0,
+         "children":0,
+         "number_of_extra_beds_for_adults":0,
+         "block_id":"8103004_93707771_0_2_0_573814",
+         "adults":1,
+         "number_of_extra_beds_and_babycots_total":0,
+         "extra_beds_for_children_price":0,
+         "extra_beds_for_adults_price_in_hotel_currency":0
+      }
+   ],
+   "hotel_text":{
+      
+   },
+   "districts":[
+      607,
+      10347
+   ],
+   "preferences":[
+      
+   ],
+   "hotel_important_information_with_codes":[
+      {
+         "phrase":"In response to the coronavirus (COVID-19), additional safety and sanitation measures are in effect at this property.",
+         "sentence_id":50,
+         "executing_phase":0
+      },
+      {
+         "executing_phase":0,
+         "sentence_id":51,
+         "phrase":"Food and beverage services at this property may be limited or unavailable due to the coronavirus (COVID-19)."
+      },
+      {
+         "phrase":"Due to the coronavirus (COVID-19), this property is taking steps to protect the safety of guests and staff. Certain services and amenities may be reduced or unavailable as a result.",
+         "sentence_id":54,
+         "executing_phase":0
+      },
+      {
+         "phrase":"Please inform c-hotels Club House Roma of your expected arrival time in advance. You can use the Special Requests box when booking, or contact the property directly using the contact details in your confirmation.",
+         "sentence_id":4,
+         "executing_phase":0
+      },
+      {
+         "executing_phase":0,
+         "sentence_id":3,
+         "phrase":"Guests are required to show a photo ID and credit card upon check-in. Please note that all Special Requests are subject to availability and additional charges may apply."
+      },
+      {
+         "is_license":1,
+         "phrase":"License number: <strong>0058091-ALB-00668, IT058091A1ETMOUYWI</strong>"
+      }
+   ],
+   "rooms":{
+      "8103004":{
+         "description":"Room with attached bathroom with carpeted floors. Features a satellite TV, a mini-bar, and air conditioning. WiFi is free.",
+         "highlights":[
+            {
+               "translated_name":"Free WiFi",
+               "icon":"wifi"
+            },
+            {
+               "translated_name":"Air conditioning",
+               "icon":"snowflake",
+               "id":11
+            },
+            {
+               "translated_name":"Private bathroom",
+               "icon":"bath",
+               "id":38
+            },
+            {
+               "id":75,
+               "translated_name":"Flat-screen TV",
+               "icon":"screen"
+            },
+            {
+               "icon":"soundproof",
+               "translated_name":"Soundproof",
+               "id":79
+            },
+            {
+               "id":3,
+               "icon":"checkmark",
+               "translated_name":"Minibar"
+            }
+         ],
+         "private_bathroom_count":0,
+         "private_bathroom_highlight":{
+            "has_highlight":1
+         },
+         "children_and_beds_text":{
+            "allow_children":1,
+            "cribs_and_extra_beds":[
+               {
+                  "text":"No capacity for extra beds or cribs.",
+                  "highlight":0
+               }
+            ],
+            "age_intervals":[
+               
+            ],
+            "children_at_the_property":[
+               {
+                  "text":"Children of all ages are welcome.",
+                  "highlight":0
+               },
+               {
+                  "text":"Children 4 and above will be charged as adults at this property.",
+                  "highlight":0
+               },
+               {
+                  "highlight":1,
+                  "text":"To see correct prices and occupancy info, add the number and ages of children in your group to your search."
+               }
+            ]
+         },
+         "bed_configurations":[
+            {
+               "bed_types":[
+                  {
+                     "description_localized":"None",
+                     "name":"Twin bed(s)",
+                     "count":1,
+                     "description_imperial":"35–51 inches wide",
+                     "description":"90–130 cm wide",
+                     "bed_type":1,
+                     "name_with_count":"1 twin bed"
+                  }
+               ]
+            }
+         ],
+         "photos":[
+            {
+               "ratio":0.650875576036866,
+               "photo_id":196201851,
+               "url_max300":"https://cf.bstatic.com/xdata/images/hotel/max300/196201851.jpg?k=be58c38dc2c56b60e1f8937aa3c7d61a6401b663b1b05384eb1ddede051c4945&o=",
+               "url_square60":"https://cf.bstatic.com/xdata/images/hotel/square60/196201851.jpg?k=be58c38dc2c56b60e1f8937aa3c7d61a6401b663b1b05384eb1ddede051c4945&o=",
+               "url_640x200":"https://cf.bstatic.com/xdata/images/hotel/640x200/196201851.jpg?k=be58c38dc2c56b60e1f8937aa3c7d61a6401b663b1b05384eb1ddede051c4945&o=",
+               "url_max750":"https://cf.bstatic.com/xdata/images/hotel/max750/196201851.jpg?k=be58c38dc2c56b60e1f8937aa3c7d61a6401b663b1b05384eb1ddede051c4945&o=",
+               "url_square180":"https://cf.bstatic.com/xdata/images/hotel/square180/196201851.jpg?k=be58c38dc2c56b60e1f8937aa3c7d61a6401b663b1b05384eb1ddede051c4945&o=",
+               "url_max1280":"https://cf.bstatic.com/xdata/images/hotel/1280x900/196201851.jpg?k=be58c38dc2c56b60e1f8937aa3c7d61a6401b663b1b05384eb1ddede051c4945&o=",
+               "last_update_date":"2019-05-06 12:42:56",
+               "url_original":"https://cf.bstatic.com/xdata/images/hotel/max500/196201851.jpg?k=be58c38dc2c56b60e1f8937aa3c7d61a6401b663b1b05384eb1ddede051c4945&o="
+            },
+            {
+               "url_square60":"https://cf.bstatic.com/xdata/images/hotel/square60/786914876.jpg?k=473b30109590d61a845d59d4d078fa697bd09e9a5c5a496484c626cf1178ee49&o=",
+               "url_max1280":"https://cf.bstatic.com/xdata/images/hotel/1280x900/786914876.jpg?k=473b30109590d61a845d59d4d078fa697bd09e9a5c5a496484c626cf1178ee49&o=",
+               "url_square180":"https://cf.bstatic.com/xdata/images/hotel/square180/786914876.jpg?k=473b30109590d61a845d59d4d078fa697bd09e9a5c5a496484c626cf1178ee49&o=",
+               "url_640x200":"https://cf.bstatic.com/xdata/images/hotel/640x200/786914876.jpg?k=473b30109590d61a845d59d4d078fa697bd09e9a5c5a496484c626cf1178ee49&o=",
+               "url_max750":"https://cf.bstatic.com/xdata/images/hotel/max750/786914876.jpg?k=473b30109590d61a845d59d4d078fa697bd09e9a5c5a496484c626cf1178ee49&o=",
+               "photo_id":786914876,
+               "ratio":1.5,
+               "url_max300":"https://cf.bstatic.com/xdata/images/hotel/max300/786914876.jpg?k=473b30109590d61a845d59d4d078fa697bd09e9a5c5a496484c626cf1178ee49&o=",
+               "url_original":"https://cf.bstatic.com/xdata/images/hotel/max500/786914876.jpg?k=473b30109590d61a845d59d4d078fa697bd09e9a5c5a496484c626cf1178ee49&o=",
+               "last_update_date":"2025-12-03 17:52:26"
+            },
+            {
+               "url_max1280":"https://cf.bstatic.com/xdata/images/hotel/1280x900/786914880.jpg?k=a44436bc01231c767f8f69760a75e8d53a147162cfe33e7bbf5e0b7bf1edceac&o=",
+               "url_square180":"https://cf.bstatic.com/xdata/images/hotel/square180/786914880.jpg?k=a44436bc01231c767f8f69760a75e8d53a147162cfe33e7bbf5e0b7bf1edceac&o=",
+               "url_640x200":"https://cf.bstatic.com/xdata/images/hotel/640x200/786914880.jpg?k=a44436bc01231c767f8f69760a75e8d53a147162cfe33e7bbf5e0b7bf1edceac&o=",
+               "url_max750":"https://cf.bstatic.com/xdata/images/hotel/max750/786914880.jpg?k=a44436bc01231c767f8f69760a75e8d53a147162cfe33e7bbf5e0b7bf1edceac&o=",
+               "url_square60":"https://cf.bstatic.com/xdata/images/hotel/square60/786914880.jpg?k=a44436bc01231c767f8f69760a75e8d53a147162cfe33e7bbf5e0b7bf1edceac&o=",
+               "url_max300":"https://cf.bstatic.com/xdata/images/hotel/max300/786914880.jpg?k=a44436bc01231c767f8f69760a75e8d53a147162cfe33e7bbf5e0b7bf1edceac&o=",
+               "photo_id":786914880,
+               "ratio":1.5,
+               "url_original":"https://cf.bstatic.com/xdata/images/hotel/max500/786914880.jpg?k=a44436bc01231c767f8f69760a75e8d53a147162cfe33e7bbf5e0b7bf1edceac&o=",
+               "last_update_date":"2025-12-03 17:52:26"
+            },
+            {
+               "last_update_date":"2025-12-03 17:52:26",
+               "url_original":"https://cf.bstatic.com/xdata/images/hotel/max500/786914878.jpg?k=c25c997e7afc3f37119e3320e38cad3ae4de15d8c84f1cfa65db5c078e2c0db4&o=",
+               "photo_id":786914878,
+               "ratio":1.5,
+               "url_max300":"https://cf.bstatic.com/xdata/images/hotel/max300/786914878.jpg?k=c25c997e7afc3f37119e3320e38cad3ae4de15d8c84f1cfa65db5c078e2c0db4&o=",
+               "url_square60":"https://cf.bstatic.com/xdata/images/hotel/square60/786914878.jpg?k=c25c997e7afc3f37119e3320e38cad3ae4de15d8c84f1cfa65db5c078e2c0db4&o=",
+               "url_max1280":"https://cf.bstatic.com/xdata/images/hotel/1280x900/786914878.jpg?k=c25c997e7afc3f37119e3320e38cad3ae4de15d8c84f1cfa65db5c078e2c0db4&o=",
+               "url_square180":"https://cf.bstatic.com/xdata/images/hotel/square180/786914878.jpg?k=c25c997e7afc3f37119e3320e38cad3ae4de15d8c84f1cfa65db5c078e2c0db4&o=",
+               "url_640x200":"https://cf.bstatic.com/xdata/images/hotel/640x200/786914878.jpg?k=c25c997e7afc3f37119e3320e38cad3ae4de15d8c84f1cfa65db5c078e2c0db4&o=",
+               "url_max750":"https://cf.bstatic.com/xdata/images/hotel/max750/786914878.jpg?k=c25c997e7afc3f37119e3320e38cad3ae4de15d8c84f1cfa65db5c078e2c0db4&o="
+            },
+            {
+               "url_original":"https://cf.bstatic.com/xdata/images/hotel/max500/786914875.jpg?k=43bc8473f600bdece39acfaf05442eb5f847b4a921e8ae73ee65817406fecd47&o=",
+               "last_update_date":"2025-12-03 17:52:26",
+               "url_640x200":"https://cf.bstatic.com/xdata/images/hotel/640x200/786914875.jpg?k=43bc8473f600bdece39acfaf05442eb5f847b4a921e8ae73ee65817406fecd47&o=",
+               "url_max750":"https://cf.bstatic.com/xdata/images/hotel/max750/786914875.jpg?k=43bc8473f600bdece39acfaf05442eb5f847b4a921e8ae73ee65817406fecd47&o=",
+               "url_max1280":"https://cf.bstatic.com/xdata/images/hotel/1280x900/786914875.jpg?k=43bc8473f600bdece39acfaf05442eb5f847b4a921e8ae73ee65817406fecd47&o=",
+               "url_square180":"https://cf.bstatic.com/xdata/images/hotel/square180/786914875.jpg?k=43bc8473f600bdece39acfaf05442eb5f847b4a921e8ae73ee65817406fecd47&o=",
+               "url_square60":"https://cf.bstatic.com/xdata/images/hotel/square60/786914875.jpg?k=43bc8473f600bdece39acfaf05442eb5f847b4a921e8ae73ee65817406fecd47&o=",
+               "url_max300":"https://cf.bstatic.com/xdata/images/hotel/max300/786914875.jpg?k=43bc8473f600bdece39acfaf05442eb5f847b4a921e8ae73ee65817406fecd47&o=",
+               "photo_id":786914875,
+               "ratio":1.5
+            }
+         ],
+         "facilities":[
+            {
+               "facilitytype_id":6,
+               "alt_facilitytype_id":6,
+               "id":8,
+               "alt_facilitytype_name":"Media & Technology",
+               "name":"TV"
+            },
+            {
+               "alt_facilitytype_name":"Food & Drink",
+               "name":"Minibar",
+               "id":3,
+               "facilitytype_id":7,
+               "alt_facilitytype_id":7
+            },
+            {
+               "name":"Safe",
+               "alt_facilitytype_name":"General",
+               "id":6,
+               "alt_facilitytype_id":1,
+               "facilitytype_id":4
+            },
+            {
+               "id":82,
+               "alt_facilitytype_name":"General",
+               "name":"Hardwood or parquet floors",
+               "alt_facilitytype_id":1,
+               "facilitytype_id":4
+            },
+            {
+               "facilitytype_id":5,
+               "alt_facilitytype_id":5,
+               "id":31,
+               "name":"Toilet",
+               "alt_facilitytype_name":"Bathroom"
+            },
+            {
+               "alt_facilitytype_name":"Media & Technology",
+               "name":"Flat-screen TV",
+               "id":75,
+               "facilitytype_id":6,
+               "alt_facilitytype_id":6
+            },
+            {
+               "facilitytype_id":8,
+               "alt_facilitytype_id":3,
+               "name":"Wake-up service",
+               "alt_facilitytype_name":"Services",
+               "id":83
+            },
+            {
+               "alt_facilitytype_id":39,
+               "facilitytype_id":39,
+               "id":230,
+               "name":"Single-room AC for guest accommodation",
+               "alt_facilitytype_name":"Physical distancing"
+            },
+            {
+               "alt_facilitytype_id":1,
+               "facilitytype_id":4,
+               "alt_facilitytype_name":"General",
+               "name":"Heating",
+               "id":40
+            },
+            {
+               "name":"Telephone",
+               "alt_facilitytype_name":"Media & Technology",
+               "id":9,
+               "facilitytype_id":6,
+               "alt_facilitytype_id":6
+            },
+            {
+               "facilitytype_id":5,
+               "alt_facilitytype_id":5,
+               "id":4,
+               "name":"Shower",
+               "alt_facilitytype_name":"Bathroom"
+            },
+            {
+               "facilitytype_id":5,
+               "alt_facilitytype_id":5,
+               "name":"Bidet",
+               "alt_facilitytype_name":"Bathroom",
+               "id":100
+            },
+            {
+               "id":27,
+               "name":"Free toiletries",
+               "alt_facilitytype_name":"Bathroom",
+               "alt_facilitytype_id":5,
+               "facilitytype_id":5
+            },
+            {
+               "facilitytype_id":5,
+               "alt_facilitytype_id":5,
+               "id":141,
+               "alt_facilitytype_name":"Bathroom",
+               "name":"Toilet paper"
+            },
+            {
+               "alt_facilitytype_name":"General",
+               "name":"Soundproof",
+               "id":79,
+               "alt_facilitytype_id":1,
+               "facilitytype_id":4
+            },
+            {
+               "name":"Satellite channels",
+               "alt_facilitytype_name":"Media & Technology",
+               "id":44,
+               "facilitytype_id":6,
+               "alt_facilitytype_id":6
+            },
+            {
+               "facilitytype_id":4,
+               "alt_facilitytype_id":1,
+               "name":"Air conditioning",
+               "alt_facilitytype_name":"General",
+               "id":11
+            },
+            {
+               "alt_facilitytype_id":5,
+               "facilitytype_id":5,
+               "name":"Bathtub",
+               "alt_facilitytype_name":"Bathroom",
+               "id":5
+            },
+            {
+               "name":"Private bathroom",
+               "alt_facilitytype_name":"Bathroom",
+               "id":38,
+               "alt_facilitytype_id":5,
+               "facilitytype_id":5
+            },
+            {
+               "name":"Hairdryer",
+               "alt_facilitytype_name":"Bathroom",
+               "id":12,
+               "facilitytype_id":5,
+               "alt_facilitytype_id":5
+            }
+         ]
+      }
+   },
+   "block":[
+      {
+         "block_text":{
+            "policies":[
+               {
+                  "class":"POLICY_CANCELLATION",
+                  "content":"If you cancel, modify the booking, or don't show up, the fee will be the total price of the reservation."
+               },
+               {
+                  "class":"POLICY_PREPAY",
+                  "content":"The total price of the reservation is charged at the time of booking."
+               },
+               {
+                  "class":"POLICY_HOTEL_MEALPLAN",
+                  "mealplan_vector":"2",
+                  "content":"Breakfast RON 76"
+               },
+               {
+                  "content":"Non Refundable",
+                  "class":"POLICY_TITLE"
+               }
+            ]
+         },
+         "number_of_bedrooms":0,
+         "bundle_extras":{
+            "has_rich_content":"",
+            "generated_name":"High-speed internet",
+            "rich_footer":[
+               "All additional services are the responsibility of the property.",
+               "Any unused products and services included in the rate are non-refundable."
+            ],
+            "highlighted_text":"Includes high-speed internet",
+            "icon":"",
+            "bundle_id":573814,
+            "rich_value_add_page_title":"",
+            "benefits":[
+               {
+                  "catalog_item_id":18,
+                  "details":[
+                     "High-speed internet throughout your stay."
+                  ],
+                  "category":"internet",
+                  "icon":"1267122",
+                  "title":"High-speed internet",
+                  "name":"Internet"
+               }
+            ]
+         },
+         "paymentterms":{
+            "prepayment":{
+               "type_translation":"SECURE YOUR BOOKING – pay now",
+               "extended_type_translation":"SECURE YOUR BOOKING – pay now",
+               "type":"full_prepayment",
+               "type_extended":"non_refundable_prepayment",
+               "simple_translation":"Prepayment",
+               "info":{
+                  "date_before":"None",
+                  "prepayment_at_booktime":0,
+                  "time":"None",
+                  "refundable":0,
+                  "is_midnight":"None",
+                  "timezone":"None",
+                  "time_before_midnight":"None",
+                  "date":"None",
+                  "timezone_offset":"None"
+               },
+               "description":"The total price of the reservation is charged at the time of booking."
+            },
+            "cancellation":{
+               "guaranteed_non_refundable":0,
+               "description":"If you cancel, modify the booking, or don't show up, the fee will be the total price of the reservation.",
+               "bucket":"SMP_NON_REF",
+               "info":{
+                  "date_before":"None",
+                  "timezone":"None",
+                  "date_raw":"None",
+                  "date":"None",
+                  "time_before_midnight":"None",
+                  "timezone_offset":"None",
+                  "date_before_raw":"None",
+                  "is_midnight":"None",
+                  "refundable":0,
+                  "time":"None",
+                  "refundable_date":"None"
+               },
+               "non_refundable_anymore":0,
+               "type":"non_refundable",
+               "type_translation":"Non-refundable"
+            }
+         },
+         "refundable_until":"",
+         "fit_status":0,
+         "nr_adults":1,
+         "room_name":"Single Room",
+         "max_children_free":0,
+         "room_id":8103004,
+         "room_surface_in_feet2":129.1669248,
+         "deposit_required":1,
+         "package_id":0,
+         "babycots_available":0,
+         "extrabed_available_amount":"None",
+         "room_count":2,
+         "refundable":0,
+         "roomtype_id":10,
+         "number_of_bathrooms":0,
+         "block_id":"8103004_93707771_0_2_0_573814",
+         "pay_in_advance":1,
+         "smoking":0,
+         "babycots_available_amount":"None",
+         "is_last_minute_deal":0,
+         "pod_ios_migrate_policies_to_smp_fullon":0,
+         "mealplan":"Breakfast RON 76",
+         "max_occupancy":"1",
+         "is_domestic_rate":0,
+         "nr_children":0,
+         "is_flash_deal":0,
+         "all_inclusive":0,
+         "must_reserve_free_parking":0,
+         "full_board":0,
+         "genius_discount_percentage":0,
+         "can_reserve_free_parking":0,
+         "fit_occupancy":{
+            "nr_adults":1,
+            "children_ages":[
+               
+            ]
+         },
+         "name_without_policy":"Single Room",
+         "extrabed_available":0,
+         "name":"Single Room - Non-refundable",
+         "is_smart_deal":0,
+         "is_block_fit":"",
+         "bh_room_highlights":[
+            
+         ],
+         "room_surface_in_m2":12,
+         "half_board":0,
+         "max_children_free_age":2,
+         "breakfast_included":0,
+         "children_ages":[
+            
+         ]
+      }
+   ],
+   "rawData":{
+      "mainPhotoId":196202180,
+      "name":"c-hotels Club House Roma",
+      "reviewCount":5156,
+      "position":0,
+      "accuratePropertyClass":4,
+      "wishlistName":"Rome",
+      "ufi":-126693,
+      "id":81030,
+      "latitude":41.9043142611358,
+      "isHighlightedHotel":true,
+      "countryCode":"it",
+      "checkout":{
+         "untilTime":"11:00",
+         "fromTime":"00:00"
+      },
+      "priceBreakdown":{
+         "grossPrice":{
+            "amountRounded":"€\\xa094",
+            "currency":"EUR",
+            "value":93.8040410240001
+         },
+         "chargesInfo":"Includes taxes and charges",
+         "benefitBadges":[
+            
+         ],
+         "taxExceptions":[
+            
+         ]
+      },
+      "rankingPosition":0,
+      "isPreferred":true,
+      "currency":"EUR",
+      "checkoutDate":"2026-02-19",
+      "reviewScoreWord":"Fabulous",
+      "isTPI":true,
+      "photoUrls":[
+         "https://cf.bstatic.com/xdata/images/hotel/square60/196202180.jpg?k=79668c6e6d58d1e4f5aa697d3d493bdef68a38f3e68b9f0bf11d62cedda5b3c0&o="
+      ],
+      "checkinDate":"2026-02-18",
+      "reviewScore":8.9,
+      "checkin":{
+         "fromTime":"15:00",
+         "untilTime":"00:00"
+      },
+      "isFirstPage":true,
+      "qualityClass":0,
+      "longitude":12.4267280101776,
+      "propertyClass":4,
+      "blockIds":[
+         "8103001_0_2_0_0"
+      ],
+      "optOutFromGalleryChanges":0
+   }
+}
