@@ -555,17 +555,19 @@ export default function OptionsStage() {
     };
 
     try {
-      const [flightRes, hotelRes] = await Promise.all([
-        fetchWithAuth("http://localhost:5000/search/getOutboundFlights", flightsBody, "POST"),
-        fetchWithAuth("http://localhost:5000/search/getAccomodations", hotelsBody, "POST")
-      ]);
+    //   const [flightRes, hotelRes] = await Promise.all([
+    //     fetchWithAuth("http://localhost:5000/search/getOutboundFlights", flightsBody, "POST"),
+    //     fetchWithAuth("http://localhost:5000/search/getAccomodations", hotelsBody, "POST")
+    //   ]);
+
+      const flightRes = await fetchWithAuth("http://localhost:5000/search/getOutboundFlights", flightsBody, "POST");
 
       if (flightRes.ok) {
         setOutboundFlights(await flightRes.json());
       }
-      if (hotelRes.ok) {
-        setHotels(await hotelRes.json());
-      }
+    //   if (hotelRes.ok) {
+    //     setHotels(await hotelRes.json());
+    //   }
     } catch (err) {
       console.error(err);
       setError("Failed to fetch search results. Please try again.");
@@ -887,28 +889,120 @@ export default function OptionsStage() {
 
 // --- Sub-components ---
 function FlightCard({ flight, onSelect, btnText }) {
-    const firstLeg = flight.flights[0];
-    const lastLeg = flight.flights[flight.flights.length - 1];
-    const stopsCount = flight.flights.length - 1;
-    let totalMinutes = 0;
-    flight.flights.forEach(leg => { totalMinutes += parseInt(leg.duration) || 0; });
-    const durationString = `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
+    const segments = flight.flights;
+    const firstLeg = segments[0];
+    const lastLeg = segments[segments.length - 1];
+    
+    // 1. Calculate Totals
+    let totalFlightMinutes = 0;
+    let totalLayoverMinutes = 0;
+    const layovers = [];
+
+    segments.forEach((segment, i) => {
+        // Add Flight Duration
+        totalFlightMinutes += parseInt(segment.duration) || 0;
+
+        // Calculate Layover (if there is a next segment)
+        if (i < segments.length - 1) {
+            const nextSegment = segments[i + 1];
+            
+            // Parse times ("2026-02-21 09:10" -> "2026-02-21T09:10") for Safari/ISO compatibility
+            const arrival = new Date(segment.arrival_time.replace(" ", "T"));
+            const departure = new Date(nextSegment.departure_time.replace(" ", "T"));
+            
+            // Difference in milliseconds -> minutes
+            const diffMins = Math.floor((departure - arrival) / 60000);
+            
+            if (diffMins > 0) {
+                totalLayoverMinutes += diffMins;
+                layovers.push({
+                    city: segment.arrival.split(',')[0], // Extract City Name
+                    code: segment.arrival.split('(')[1]?.replace(')', '') || '', // Extract Airport Code if available
+                    duration: diffMins
+                });
+            }
+        }
+    });
+
+    const totalDurationMinutes = totalFlightMinutes + totalLayoverMinutes;
+    
+    // Helper to format minutes into "2h 15m"
+    const formatDuration = (mins) => {
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return `${h}h ${m}m`;
+    };
 
     return (
-      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition">
+      <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition group">
+        
+        {/* Header: Airline & Price */}
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-3">
              {firstLeg.airline_logo && <img src={firstLeg.airline_logo} alt={firstLeg.airline} className="h-8 w-8 object-contain" />}
-             <span className="font-bold text-lg text-gray-800">{firstLeg.airline}</span>
+             <div>
+                 <div className="font-bold text-lg text-gray-800">{firstLeg.airline}</div>
+                 {/* Show operating carrier if different */}
+                 {segments.length > 1 && segments[0].airline !== segments[1].airline && (
+                     <div className="text-[10px] text-gray-400">Includes {segments[1].airline}</div>
+                 )}
+             </div>
           </div>
           <div className="text-blue-600 font-bold text-xl">{flight.price} {flight.currency}</div>
         </div>
-        <div className="flex justify-between items-center text-sm text-gray-600 mb-4 bg-gray-50 p-3 rounded-lg">
-          <div><div className="font-bold text-gray-900">{firstLeg.departure_time.split(" ")[1]}</div><div className="text-gray-400 max-w-[100px] truncate" title={firstLeg.departure}>{firstLeg.departure}</div></div>
-          <div className="flex flex-col items-center px-4 w-1/3"><span className="text-xs text-gray-500 font-medium">{durationString}</span><span className="text-gray-300">──────✈──────</span><span className={`text-[10px] font-bold mt-1 ${stopsCount > 0 ? 'text-orange-500' : 'text-green-600'}`}>{stopsCount === 0 ? "Direct" : `${stopsCount} Stop${stopsCount > 1 ? 's' : ''}`}</span></div>
-          <div className="text-right"><div className="font-bold text-gray-900">{lastLeg.arrival_time.split(" ")[1]}</div><div className="text-gray-400 max-w-[100px] truncate ml-auto" title={lastLeg.arrival}>{lastLeg.arrival}</div></div>
+
+        {/* Flight Timeline */}
+        <div className="flex justify-between items-center text-sm text-gray-600 mb-4 bg-gray-50 p-4 rounded-lg">
+          
+          {/* Departure */}
+          <div>
+              <div className="font-bold text-gray-900 text-lg">{firstLeg.departure_time.split(" ")[1]}</div>
+              <div className="text-gray-500 font-medium">{firstLeg.departure.split(',')[0]}</div>
+          </div>
+
+          {/* Visualization */}
+          <div className="flex flex-col items-center px-4 flex-grow">
+             <span className="text-xs text-gray-500 font-bold mb-1">{formatDuration(totalDurationMinutes)}</span>
+             
+             {/* Visual Line */}
+             <div className="w-full flex items-center gap-1">
+                 <div className="h-[2px] bg-gray-300 flex-grow relative">
+                    {/* Dots for stops */}
+                    {layovers.map((_, idx) => (
+                        <div key={idx} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white border-2 border-gray-400 rounded-full"></div>
+                    ))}
+                 </div>
+                 <span className="text-gray-400">✈</span>
+             </div>
+
+             {/* Stop Info */}
+             <span className={`text-[10px] font-bold mt-1 ${layovers.length > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                {layovers.length === 0 ? "Direct" : `${layovers.length} Stop${layovers.length > 1 ? 's' : ''}`}
+             </span>
+          </div>
+
+          {/* Arrival */}
+          <div className="text-right">
+              <div className="font-bold text-gray-900 text-lg">{lastLeg.arrival_time.split(" ")[1]}</div>
+              <div className="text-gray-500 font-medium">{lastLeg.arrival.split(',')[0]}</div>
+          </div>
         </div>
-        <button onClick={onSelect} className="w-full py-2 rounded-lg border border-blue-100 text-blue-600 hover:bg-blue-50 font-semibold text-sm transition">{btnText}</button>
+
+        {/* Detailed Connection Info (Only if stops exist) */}
+        {layovers.length > 0 && (
+            <div className="mb-4 text-xs bg-orange-50 border border-orange-100 p-2 rounded text-orange-800">
+                {layovers.map((stop, i) => (
+                    <div key={i} className="flex gap-1">
+                        <span className="font-bold">Stop in {stop.city}:</span>
+                        <span>{formatDuration(stop.duration)} layover</span>
+                    </div>
+                ))}
+            </div>
+        )}
+
+        <button onClick={onSelect} className="w-full py-2 rounded-lg border border-blue-100 text-blue-600 hover:bg-blue-50 font-semibold text-sm transition">
+          {btnText}
+        </button>
       </div>
     );
 }

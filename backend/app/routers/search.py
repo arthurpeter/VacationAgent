@@ -149,7 +149,7 @@ async def search_outbound_flights(
     log.info(f"Found {len(all_flights)} flights.")
     try:
         response = []
-        for flight in all_flights[:5]:
+        for flight in all_flights[:10]:
             log.info(f"Flight: Price {flight.get('price')}")
             flight_schema = schemas.FlightsResponse(
                 token=flight.get('departure_token'),
@@ -373,7 +373,7 @@ async def get_accomodations(
     hotels_list = results.get("data", {}).get("hotels")
 
     #sort hotels by price and return the first 5
-    sorted_hotels = sorted(hotels_list, key=lambda x: x.get("property", {}).get("priceBreakdown", {}).get("grossPrice", {}).get("value", float('inf')))[:5]
+    sorted_hotels = sorted(hotels_list, key=lambda x: x.get("property", {}).get("priceBreakdown", {}).get("grossPrice", {}).get("value", float('inf')))[:10]
 
     response = []
     for hotel in sorted_hotels:
