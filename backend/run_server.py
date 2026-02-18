@@ -5,6 +5,9 @@ Run this from the backend directory: python run_server.py
 import sys
 import os
 import uvicorn
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Change to the directory containing this script
 os.chdir(os.path.dirname(os.path.abspath(__file__)))

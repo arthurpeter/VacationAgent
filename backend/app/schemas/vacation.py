@@ -83,6 +83,7 @@ class HotelDetailsResponse(BaseModel):
     cancellation_policy: Optional[str]
     prepayment_policy: Optional[str]
     bed_details: Optional[str]
+    address: Optional[str]
 
 class AccomodationBookingRequest(BaseModel):
     """Simplified schema for booking an accomodation."""

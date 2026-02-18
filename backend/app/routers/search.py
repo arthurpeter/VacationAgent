@@ -425,12 +425,17 @@ async def get_hotel_details(
             raise HTTPException(status_code=404, detail="Hotel details not found")
             
         raw_data = results.get("data", {})
+
+        room_info = next(iter(raw_data.get("rooms", {}).values()), None)
+        description = raw_data.get("hotel_text", {}).get("description") or raw_data.get("description", "")
+        if not description and room_info:
+            description = room_info.get("description", "")
         
         facilities_data = raw_data.get("facilities_block", {})
         facilities_list = facilities_data.get("facilities", []) if isinstance(facilities_data, dict) else []
         amenities = [f.get("name") for f in facilities_list]
 
-        photo_urls = [p.get("url_max1280") for p in raw_data.get("photos", []) if p.get("url_max1280")]
+        photo_urls = [p.get("url_max1280") for p in room_info.get("photos", []) if p.get("url_max1280")]
         log.info(f"Extracted {len(photo_urls)} photo URLs for hotel {data.loc_id}")
 
         highlights = []
@@ -439,7 +444,8 @@ async def get_hotel_details(
             icon_val = icons[0].get("icon") if icons else None
             highlights.append({"name": h.get("name"), "icon": icon_val})
 
-        policies = raw_data.get("block", [{}])[0].get("policies", [])
+        blocks = raw_data.get("block", [])
+        policies = blocks[0].get("block_text", {}).get("policies", []) if blocks else []
         cancel_p = next((p.get("content") for p in policies if p.get("class") == "POLICY_CANCELLATION"), None)
         prepay_p = next((p.get("content") for p in policies if p.get("class") == "POLICY_PREPAY"), None)
 
@@ -455,7 +461,7 @@ async def get_hotel_details(
         response = schemas.HotelDetailsResponse(
             hotel_id=str(raw_data.get("hotel_id")),
             url=raw_data.get("url", ""),
-            description=raw_data.get("hotel_text", {}).get("description") or raw_data.get("description", ""),
+            description=description,
             photos=photo_urls,
             amenities=amenities,
             sustainability_info=raw_data.get("sustainability"),
@@ -464,7 +470,8 @@ async def get_hotel_details(
             price_breakdown_details=raw_data.get("product_price_breakdown"),
             cancellation_policy=cancel_p,
             prepayment_policy=prepay_p,
-            bed_details=bed_info
+            bed_details=bed_info,
+            address=raw_data.get("address", "Exact address not available") + (f", {raw_data.get('district', '')}" if raw_data.get("district") else "")
         )
         
         return response

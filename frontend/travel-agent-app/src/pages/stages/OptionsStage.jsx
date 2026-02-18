@@ -262,21 +262,24 @@ function TravelersInput({ counts, setCounts, childAges, setChildAges }) {
 function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
     if (!hotel) return null;
 
+    // Use coordinates from the search result 'hotel' object
+    const position = [hotel.latitude || 0, hotel.longitude || 0];
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
             <div className="bg-white w-full max-w-6xl h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col relative animate-in fade-in zoom-in duration-200">
                 
                 {/* Header */}
-                <div className="flex justify-between items-center p-6 border-b border-gray-100">
+                <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-white z-10">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
                             <h2 className="text-2xl font-black text-gray-900">{hotel.hotel_name}</h2>
                             <span className="text-orange-400">{"⭐".repeat(hotel.propertyClass)}</span>
                         </div>
+                        {/* Address Display */}
                         <p className="text-gray-500 text-sm flex items-center gap-1">
-                            {/* Location Pin Icon */}
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
-                            {details?.address || hotel.location_string}
+                            <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+                            <span className="font-medium">{details?.address || hotel.location_string || "Address details loading..."}</span>
                         </p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition">
@@ -287,16 +290,16 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
                 <div className="flex-grow overflow-y-auto p-8">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                         
-                        {/* LEFT: Photos & Description */}
+                        {/* LEFT COLUMN: Content */}
                         <div className="lg:col-span-2 space-y-8">
                             
-                            {/* Photo Grid (Skeleton or Real) */}
+                            {/* Photo Grid */}
                             <div className="grid grid-cols-4 grid-rows-2 gap-3 h-96">
-                                <div className="col-span-2 row-span-2 rounded-2xl overflow-hidden bg-gray-100">
-                                    <img src={details?.photos?.[0] || hotel.photo_urls?.[0]} className="w-full h-full object-cover" alt="Main" />
+                                <div className="col-span-2 row-span-2 rounded-2xl overflow-hidden bg-gray-100 relative">
+                                    <img src={details?.photos?.[0] || hotel.photo_urls?.[0]} className="w-full h-full object-cover" alt="Main View" />
                                 </div>
                                 {(details?.photos?.slice(1, 5) || [null, null, null, null]).map((url, i) => (
-                                    <div key={i} className="rounded-xl overflow-hidden bg-gray-100">
+                                    <div key={i} className="rounded-xl overflow-hidden bg-gray-100 relative">
                                         {url ? (
                                             <img src={url} className="w-full h-full object-cover" alt={`Gallery ${i}`} />
                                         ) : (
@@ -330,9 +333,33 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
                                     </p>
                                 )}
                             </div>
+
+                            {/* --- NEW: Interactive Map Section --- */}
+                            <div>
+                                <h3 className="text-lg font-bold mb-3">Location</h3>
+                                <div className="h-64 w-full bg-gray-100 rounded-2xl overflow-hidden border border-gray-200 relative z-0">
+                                    {/* We use key to force re-render if hotel changes */}
+                                    <MapContainer 
+                                        key={hotel.hotel_id} 
+                                        center={position} 
+                                        zoom={15} 
+                                        scrollWheelZoom={false} 
+                                        style={{ height: "100%", width: "100%" }}
+                                    >
+                                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                        <Marker position={position}>
+                                            <Popup>
+                                                <div className="font-bold">{hotel.hotel_name}</div>
+                                                <div className="text-xs">{details?.address}</div>
+                                            </Popup>
+                                        </Marker>
+                                    </MapContainer>
+                                </div>
+                            </div>
+
                         </div>
 
-                        {/* RIGHT: Pricing & Booking Card */}
+                        {/* RIGHT COLUMN: Pricing & Booking Card */}
                         <div className="lg:col-span-1">
                             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 sticky top-0 space-y-6">
                                 <div>
