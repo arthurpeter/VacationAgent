@@ -271,11 +271,23 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
                 
                 {/* Header */}
                 <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-white z-10">
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
+                    <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
                             <h2 className="text-2xl font-black text-gray-900">{hotel.hotel_name}</h2>
-                            <span className="text-orange-400">{"⭐".repeat(hotel.propertyClass)}</span>
+                            <span className="text-orange-400 text-sm">{"⭐".repeat(hotel.propertyClass)}</span>
+                            
+                            {/* Review Badge */}
+                            {hotel.reviewScore && (
+                                <div className="flex items-center bg-blue-600 text-white rounded-md px-2 py-1 shadow-sm ml-2">
+                                    <span className="font-bold text-lg leading-none">{hotel.reviewScore}</span>
+                                    <div className="flex flex-col ml-2 leading-none border-l border-blue-500 pl-2">
+                                        <span className="text-[10px] uppercase font-bold text-blue-100 tracking-wider">{hotel.reviewScoreWord}</span>
+                                        <span className="text-[9px] text-blue-200">{hotel.reviewCount} reviews</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
+
                         {/* Address Display */}
                         <p className="text-gray-500 text-sm flex items-center gap-1">
                             <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
@@ -325,7 +337,6 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
                                     <div className="space-y-2">
                                         <div className="h-4 bg-gray-100 rounded w-full animate-pulse"/>
                                         <div className="h-4 bg-gray-100 rounded w-5/6 animate-pulse"/>
-                                        <div className="h-4 bg-gray-100 rounded w-4/6 animate-pulse"/>
                                     </div>
                                 ) : (
                                     <p className="text-gray-600 leading-relaxed text-sm whitespace-pre-line">
@@ -334,11 +345,26 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
                                 )}
                             </div>
 
-                            {/* --- NEW: Interactive Map Section --- */}
+                            {/* Languages Spoken */}
+                            {details?.languages_spoken?.length > 0 && (
+                                <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+                                    <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide mb-3 flex items-center gap-2">
+                                        <span className="text-lg">🗣️</span> Languages Spoken
+                                    </h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {details.languages_spoken.map((lang, i) => (
+                                            <span key={i} className="px-3 py-1 bg-white text-gray-700 text-xs font-bold rounded-full border border-gray-200 uppercase shadow-sm">
+                                                {lang}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Interactive Map */}
                             <div>
                                 <h3 className="text-lg font-bold mb-3">Location</h3>
                                 <div className="h-64 w-full bg-gray-100 rounded-2xl overflow-hidden border border-gray-200 relative z-0">
-                                    {/* We use key to force re-render if hotel changes */}
                                     <MapContainer 
                                         key={hotel.hotel_id} 
                                         center={position} 
@@ -350,7 +376,6 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
                                         <Marker position={position}>
                                             <Popup>
                                                 <div className="font-bold">{hotel.hotel_name}</div>
-                                                <div className="text-xs">{details?.address}</div>
                                             </Popup>
                                         </Marker>
                                     </MapContainer>
@@ -370,7 +395,19 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
                                     </p>
                                 </div>
 
-                                <div className="space-y-3 py-4 border-y border-gray-200">
+                                {/* Check-in / Check-out Times */}
+                                <div className="grid grid-cols-2 gap-3 py-4 border-t border-gray-200">
+                                    <div className="bg-white p-2 rounded border border-gray-200 text-center">
+                                        <div className="text-[9px] uppercase text-gray-400 font-bold mb-1">Check-in</div>
+                                        <div className="text-sm font-bold text-gray-800">{hotel.checkin_time_range || "14:00+"}</div>
+                                    </div>
+                                    <div className="bg-white p-2 rounded border border-gray-200 text-center">
+                                        <div className="text-[9px] uppercase text-gray-400 font-bold mb-1">Check-out</div>
+                                        <div className="text-sm font-bold text-gray-800">{hotel.checkout_time_range || "11:00"}</div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3 pb-4 border-b border-gray-200">
                                     <div className="flex items-center gap-3 text-sm">
                                         <span className="text-lg">🛏️</span>
                                         <span className="font-bold text-gray-700">{details?.bed_details || "Standard Bedding"}</span>
