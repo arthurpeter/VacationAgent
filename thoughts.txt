@@ -39,97 +39,50 @@ Booking
 
 The final "Select & Book" button is located inside this detailed Modal, ensuring the user knows exactly what they are purchasing.
 
+I will build a docker compose to spin up the whole project including normal database and cache
 
-Implementation Plan
-Step 1: Backend - Expose Details Endpoint
+Phase 1: The Foundation (Local Setup)
+    Goal: Prepare your code for the "New World" of external services.
 
-Modify backend/app/routers/search.py to add a new POST /getHotelDetails endpoint.
+    Move the .env file: Drag it from /backend to the project root. This makes it easier for Docker Compose to find it tomorrow.
 
-This endpoint will accept hotel_id and search parameters, then call the existing get_hotel_details service function.
+    Update Database Logic: In backend/app/core/database.py, update the engine creation. Use os.getenv("DATABASE_URL") so it looks for Postgres, but keep the SQLite path as a fallback for safety.
 
-Step 2: Frontend - "Teaser" Card
+    Update Cache Logic: In backend/app/core/cache.py, update the Redis connection to use os.getenv("REDIS_HOST", "localhost"). Since your backend is local, it will use localhost.
 
-Update HotelCard.jsx to show limited info (the "Teaser") and a "View Details" button instead of "Select".
+    Install Drivers: Run the following in your terminal to allow your local Python to speak to the new services:
 
-Step 3: Frontend - "Closer" Modal
+    pip install psycopg2-binary redis
 
-Create HotelDetailsModal.jsx.
+Phase 2: Orchestration (The Infrastructure)
+    Goal: Launch the "Always-On" services with a single command.
 
-Implement the layout: Left column (Gallery + Map), Right column (Price + Book Button).
+    Create docker-compose.yml: In the project root, write the recipe for your shared services:
 
-Add "Skeleton" loading states for the data that isn't available yet.
+    Service db: Use image: postgres:15-alpine. Map ports "5432:5432".
 
-Step 4: Frontend - Integration
+    Service redis: Use image: redis:7-alpine. Map ports "6379:6379".
 
-Update OptionsStage.jsx to handle opening the modal and fetching data when "View Details" is clicked.
+    Volumes: Add a postgres_data volume so your users and sessions aren't deleted when you stop Docker.
 
-Move the final booking logic to trigger from within the Modal.
+Phase 3: The "Hybrid" Run (Testing)
+    Goal: Verify the connection while keeping your fast dev workflow.
 
-Step 5: Optimization - Caching
+    Start Infrastructure: Run docker compose up -d. This starts the DB and Cache in the background.
 
-Implement a simple cache in OptionsStage.jsx so that re-opening a hotel doesn't trigger a new API call.
+    Verify Backend: Start your backend locally. It should now connect to the Postgres container. Since the DB is empty, you will need to Register a new account to test.
 
-scratch the last part and we will build a redis cache using docker
+    Verify Cache: Perform a search. Check your terminal logs for the ✅ Cache HIT or miss Cache MISS messages we planned.
 
-first things first i will build dockerfiles for the backend and the frontend
+Phase 5: Production Prep (The Future)
+    Goal: Containerize the apps once your logic is 100% finished.
 
-second off i will build a docker compose to spin up the whole project including normal database and cache
+    Backend Dockerfile: Create backend/Dockerfile. It will install Python, copy your code, and run uvicorn.
 
- Phase 1: The Foundation (Local Setup)
-Goal: Prepare your code for the "New World" of external services.
+    Frontend Dockerfile: Create frontend/travel-agent-app/Dockerfile. This is a "multi-stage" build:
 
-Move the .env file: Drag it from /backend to the project root.
+    Stage 1: Use Node to build your React app into a dist/ folder.
 
-Update Database Logic: In backend/app/core/database.py, change the connection logic to look for a Postgres URL instead of a local SQLite file.
+    Stage 2: Use Nginx to serve that dist/ folder.
 
-Update Cache Logic: In backend/app/core/cache.py, make sure the Redis host is configurable (use localhost for now, but prepare for it to be redis).
-
-Install Drivers: Run pip install psycopg2-binary redis on your local machine to make sure your code can even talk to these services.
-
- Phase 2: Containerization (Building the Boxes)
-Goal: Package your apps so they run exactly the same way everywhere.
-
-Backend Dockerfile: Create backend/Dockerfile. It will install Python, copy your code, and run uvicorn.
-
-Frontend Dockerfile: Create frontend/travel-agent-app/Dockerfile. This is a "multi-stage" build:
-
-Stage 1: Use Node to build your React app into a dist/ folder.
-
-Stage 2: Use Nginx to serve that dist/ folder to the internet.
-
-Nginx Config: Create frontend/travel-agent-app/nginx.conf to make sure React Router works inside the container.
-
- Phase 3: Orchestration (Docker Compose)
-Goal: Launch the whole stack with a single command.
-
-Create docker-compose.yml: In the root, write the "recipe" for your stack:
-
-Service db: Uses the official postgres image.
-
-Service redis: Uses the official redis image.
-
-Service backend: Builds from your /backend folder.
-
-Service frontend: Builds from your /frontend folder.
-
-Network Links: Ensure the backend knows the database is at host db and the cache is at host redis.
-
- Phase 4: Verification & Scaling
-Goal: Prove it works and simulate high traffic.
-
-The First Boot: Run docker compose up --build. This will be the "moment of truth."
-
-Check the Logs: Verify the backend successfully connected to Postgres and Redis.
-
-The Scale Test: Once everything is running, run the "Independent Scaling" command:
-
-docker compose up -d --scale backend=3
-
-This spins up 3 API workers while keeping only 1 Frontend and 1 Database.
-
-Why this is "Production-Grade"
-Isolation: If your backend crashes, it doesn't take down your database.
-
-Portability: You can move this entire folder to a $5/mo Linux server, run one command, and your whole site is live.
-
-Security: Your Postgres and Redis ports don't even need to be open to the public internet; they stay safe inside the private Docker network.
+    Nginx Config: Create frontend/travel-agent-app/nginx.conf to ensure React Router works inside the container.
