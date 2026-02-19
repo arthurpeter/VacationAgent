@@ -68,3 +68,68 @@ Move the final booking logic to trigger from within the Modal.
 Step 5: Optimization - Caching
 
 Implement a simple cache in OptionsStage.jsx so that re-opening a hotel doesn't trigger a new API call.
+
+scratch the last part and we will build a redis cache using docker
+
+first things first i will build dockerfiles for the backend and the frontend
+
+second off i will build a docker compose to spin up the whole project including normal database and cache
+
+ Phase 1: The Foundation (Local Setup)
+Goal: Prepare your code for the "New World" of external services.
+
+Move the .env file: Drag it from /backend to the project root.
+
+Update Database Logic: In backend/app/core/database.py, change the connection logic to look for a Postgres URL instead of a local SQLite file.
+
+Update Cache Logic: In backend/app/core/cache.py, make sure the Redis host is configurable (use localhost for now, but prepare for it to be redis).
+
+Install Drivers: Run pip install psycopg2-binary redis on your local machine to make sure your code can even talk to these services.
+
+ Phase 2: Containerization (Building the Boxes)
+Goal: Package your apps so they run exactly the same way everywhere.
+
+Backend Dockerfile: Create backend/Dockerfile. It will install Python, copy your code, and run uvicorn.
+
+Frontend Dockerfile: Create frontend/travel-agent-app/Dockerfile. This is a "multi-stage" build:
+
+Stage 1: Use Node to build your React app into a dist/ folder.
+
+Stage 2: Use Nginx to serve that dist/ folder to the internet.
+
+Nginx Config: Create frontend/travel-agent-app/nginx.conf to make sure React Router works inside the container.
+
+ Phase 3: Orchestration (Docker Compose)
+Goal: Launch the whole stack with a single command.
+
+Create docker-compose.yml: In the root, write the "recipe" for your stack:
+
+Service db: Uses the official postgres image.
+
+Service redis: Uses the official redis image.
+
+Service backend: Builds from your /backend folder.
+
+Service frontend: Builds from your /frontend folder.
+
+Network Links: Ensure the backend knows the database is at host db and the cache is at host redis.
+
+ Phase 4: Verification & Scaling
+Goal: Prove it works and simulate high traffic.
+
+The First Boot: Run docker compose up --build. This will be the "moment of truth."
+
+Check the Logs: Verify the backend successfully connected to Postgres and Redis.
+
+The Scale Test: Once everything is running, run the "Independent Scaling" command:
+
+docker compose up -d --scale backend=3
+
+This spins up 3 API workers while keeping only 1 Frontend and 1 Database.
+
+Why this is "Production-Grade"
+Isolation: If your backend crashes, it doesn't take down your database.
+
+Portability: You can move this entire folder to a $5/mo Linux server, run one command, and your whole site is live.
+
+Security: Your Postgres and Redis ports don't even need to be open to the public internet; they stay safe inside the private Docker network.
