@@ -1,12 +1,31 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet, NavLink, useParams } from 'react-router-dom';
+import { Outlet, NavLink, useParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchWithAuth } from '../authService';
+
+const getStageFromPath = (pathname) => {
+  if (pathname.includes('/discovery')) return 'discovery';
+  if (pathname.includes('/options')) return 'options';
+  if (pathname.includes('/itinerary')) return 'itinerary';
+  if (pathname.includes('/booking')) return 'booking';
+  return null; 
+};
+
+const updateSessionStage = async (sessionId, stage) => {
+  try {
+    await fetchWithAuth(`http://localhost:5000/session/${sessionId}/stage`, {
+      stage: stage 
+    }, "PATCH");
+  } catch (error) {
+    console.error("Failed to auto-save stage:", error);
+  }
+};
 
 export default function VacationLayout() {
   const { id } = useParams(); // The vacation/session ID
   const [sessionData, setSessionData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
 
   // This function allows child components to refresh the shared state
   const refreshContext = async () => {
@@ -26,6 +45,13 @@ export default function VacationLayout() {
   useEffect(() => {
     refreshContext();
   }, [id]);
+
+  useEffect(() => {
+    const stage = getStageFromPath(location.pathname);
+    if (stage && id) {
+      updateSessionStage(id, stage);
+    }
+  }, [location.pathname, id]);
 
   if (loading) return <div className="p-10 text-center">Loading your trip...</div>;
 

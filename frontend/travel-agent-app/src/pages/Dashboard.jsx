@@ -1,18 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // 1. Import useNavigate
+import { useNavigate } from 'react-router-dom'; 
 import VacationCard from '../components/VacationCard';
 import { fetchWithAuth } from '../authService';
 
-const MOCK_HISTORY = [
-  { id: '1', destination: 'Paris, France', step: 2, description: 'Romantic getaway for 2, budget 3000€', date: '2 mins ago' },
-  { id: '2', destination: 'Tokyo, Japan', step: 1, description: 'Adventure trip seeking anime spots', date: '2 days ago' },
-  { id: '3', destination: 'Bali, Indonesia', step: 4, description: 'Relaxing beach vacation', date: '1 month ago' },
-];
-
 export default function Dashboard() {
-  const [vacations, setVacations] = useState([]); // Start empty, remove MOCK_HISTORY
+  const [vacations, setVacations] = useState([]);
   const navigate = useNavigate();
 
+  // 1. Helper to fetch a single session's details (used for resume)
+  const getSession = async (sessionId) => {
+    try {
+      const res = await fetchWithAuth(`http://localhost:5000/session/${sessionId}`, {}, "GET");
+      if (res && res.ok) {
+        return await res.json();
+      }
+    } catch (error) {
+      console.error("Error fetching session details:", error);
+    }
+    return null;
+  };
+
+  // 2. Load all sessions on mount
   useEffect(() => {
     const loadSessions = async () => {
         try {
@@ -21,6 +29,7 @@ export default function Dashboard() {
                 const data = await res.json();
                 const ids = data.session_ids || [];
 
+                // Fetch details for each ID in parallel
                 const sessionPromises = ids.map(id => 
                     fetchWithAuth(`http://localhost:5000/session/${id}`, {}, "GET")
                         .then(r => r.json())
@@ -28,12 +37,16 @@ export default function Dashboard() {
                 
                 const sessionsDetails = await Promise.all(sessionPromises);
                 
+                // Format for the UI
                 const formattedSessions = sessionsDetails.map(s => ({
                     id: s.id, 
                     destination: s.destination || "New Trip",
-                    step: 1,
-                    description: `Created on ${new Date(s.created_at).toLocaleDateString()}`,
-                    date: new Date(s.updated_at || s.created_at).toLocaleDateString()
+                    // Map backend "current_stage" to a number for the UI if needed, or pass string
+                    stage: s.current_stage || 'discovery', 
+                    current_stage: s.current_stage || 'discovery',
+                    description: s.session_data?.summary || `Created on ${new Date(s.created_at).toLocaleDateString()}`,
+                    date: new Date(s.updated_at || s.created_at).toLocaleDateString(),
+                    budget: s.session_data?.budget 
                 }));
 
                 setVacations(formattedSessions);
@@ -45,14 +58,45 @@ export default function Dashboard() {
     loadSessions();
   }, []);
 
-  // 3. Create a handler for new trips
+  // 3. Smart Resume Handler: Redirects to the correct stage
+  const handleResumeSession = async (sessionId) => {
+    // Optimistic check from local state first
+    const session = vacations.find(v => v.id === sessionId);
+    let stage = session?.current_stage;
+
+    // If missing, fetch fresh data
+    if (!stage) {
+        const freshData = await getSession(sessionId);
+        stage = freshData?.current_stage;
+    }
+
+    // Default to discovery
+    let targetRoute = 'discovery'; 
+    
+    // Map backend stage to frontend route
+    if (stage) {
+        const stageMap = {
+            'discovery': 'discovery',
+            'options': 'options',
+            'itinerary': 'itinerary',
+            'booking': 'booking',
+            'completed': 'itinerary' 
+        };
+        targetRoute = stageMap[stage] || 'discovery';
+    }
+
+    navigate(`/plan/${sessionId}/${targetRoute}`);
+  };
+
+  // 4. Create New Session Handler
   const handleCreateNew = async () => {
     try {
       const res = await fetchWithAuth("http://localhost:5000/session/create", {}, "POST");
       
       if (res && res.ok) {
         const data = await res.json();
-        navigate(`/plan/${data.session_id}`);
+        // New sessions always start at discovery
+        navigate(`/plan/${data.session_id}/discovery`);
       } else {
         console.error("Failed to create session");
       }
@@ -71,7 +115,6 @@ export default function Dashboard() {
             <h1 className="text-3xl font-extrabold text-gray-900">Your Trips</h1>
             <p className="text-gray-500 mt-1">Manage your ongoing plans and past adventures.</p>
           </div>
-          {/* 4. Update Button to use handler instead of Link */}
           <button 
             onClick={handleCreateNew}
             className="mt-4 md:mt-0 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg transition transform hover:-translate-y-0.5"
@@ -80,11 +123,11 @@ export default function Dashboard() {
           </button>
         </div>
 
+        {/* Empty State */}
         {vacations.length === 0 && (
           <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-3xl p-10 text-white text-center shadow-xl mb-12">
             <h2 className="text-3xl font-bold mb-4">Ready for your next adventure?</h2>
             <p className="text-blue-100 mb-8 max-w-xl mx-auto">Start a conversation with our AI agent to build your perfect itinerary from scratch.</p>
-            {/* 5. Update Call to Action */}
             <button 
               onClick={handleCreateNew}
               className="px-8 py-3 bg-white text-blue-600 font-bold rounded-xl shadow hover:bg-gray-100 transition"
@@ -97,7 +140,8 @@ export default function Dashboard() {
         {/* History Grid */}
         {vacations.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* 6. Update "Plan a New Trip" Card */}
+            
+            {/* "Plan a New Trip" Card */}
             <div 
               onClick={handleCreateNew}
               className="group border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:border-blue-500 hover:bg-blue-50 transition min-h-[200px] cursor-pointer"
@@ -109,8 +153,12 @@ export default function Dashboard() {
               <p className="text-sm text-gray-400 mt-2">Start from scratch</p>
             </div>
 
+            {/* Vacation Cards */}
             {vacations.map(vacation => (
-              <VacationCard key={vacation.id} vacation={vacation} />
+              // We wrap the card in a div to capture the click and handle the resume logic
+              <div key={vacation.id} onClick={() => handleResumeSession(vacation.id)} className="cursor-pointer">
+                 <VacationCard vacation={vacation} />
+              </div>
             ))}
           </div>
         )}

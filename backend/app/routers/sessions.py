@@ -1,3 +1,5 @@
+from pydantic import BaseModel
+
 from app.core.database import get_db
 from fastapi import APIRouter, Depends, HTTPException
 from app import schemas, models
@@ -5,10 +7,34 @@ from app.core.logger import get_logger
 from sqlalchemy.orm import Session
 from authx import TokenPayload
 from app.core.auth import auth
+from app.models.vacation_session import SessionStage
 
 log = get_logger(__name__)
 
 router = APIRouter(prefix="/session", tags=["Session Management"])
+
+class StageUpdate(BaseModel):
+    stage: SessionStage
+
+@router.patch("/{session_id}/stage")
+async def update_session_stage(
+    session_id: int,
+    update: StageUpdate,
+    db: Session = Depends(get_db),
+    access_token: TokenPayload = Depends(auth.access_token_required)
+):
+    """Updates the user's progress stage."""
+    session = db.query(models.VacationSession).filter_by(
+        id=session_id, user_id=access_token.sub
+    ).first()
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session.current_stage = update.stage
+    db.commit()
+    
+    return {"status": "success", "current_stage": session.current_stage}
 
 @router.post("/create")
 async def create_vacation_session(
