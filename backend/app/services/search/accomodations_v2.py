@@ -3,8 +3,8 @@ import requests
 import os
 from dotenv import load_dotenv
 import json
+from app.core.cache import redis_cache
 
-# Load environment variables from .env file
 load_dotenv()
 
 # --- API Configuration ---
@@ -17,6 +17,7 @@ if not RAPIDAPI_KEY:
     print("Error: RAPIDAPI_KEY not found. Please create a .env file with your key.")
     exit()
 
+@redis_cache(expire_time=3600 * 24 * 7)
 def get_destination_id(location_name: str) -> dict:
     """
     Calls the /api/v1/hotels/searchDestination endpoint.
@@ -53,6 +54,8 @@ def get_destination_id(location_name: str) -> dict:
             print(f"Response body: {response.text}")
         return None
 
+# change to 5 - 15 minutes in prod
+@redis_cache(expire_time=3600 * 24)
 def search_hotels(
         dest_id: str,
         search_type: str,
@@ -120,6 +123,8 @@ def search_hotels(
             print(f"Response body: {response.text}")
         return {}
 
+ # change to 5 - 15 minutes in prod 
+@redis_cache(expire_time=3600 * 24)
 def get_hotel_details(
         hotel_id: str,
         arrival_date: str,
@@ -174,7 +179,6 @@ def get_hotel_details(
             print(f"Response body: {response.text}")
         return {}
 
-# --- (FIXED) Main Function ---
 def main():
     """
     Runs the full workflow:
@@ -185,15 +189,12 @@ def main():
     5. Print the direct booking link.
     """
     
-    # --- 1. Define Search Parameters ---
     LOCATION = "Paris, France"
-    # FIX 1: Use dates within the 1-year limit (e.g., 6 months from now)
     CHECKIN_DATE = "2026-05-10"
     CHECKOUT_DATE = "2026-05-17"
 
     print(f"Step 1: Getting Destination ID for '{LOCATION}'...")
     
-    # --- 2. Call Destination API ---
     destination = get_destination_id(LOCATION)
     
     if not destination or "dest_id" not in destination or "search_type" not in destination:
@@ -205,14 +206,11 @@ def main():
     
     print(f"Found Destination ID: {dest_id} (Type: {search_type})")
 
-    # --- 3. Call Search API ---
     print(f"Step 2: Searching for hotels...")
     search_results = search_hotels(dest_id, search_type, CHECKIN_DATE, CHECKOUT_DATE)
     
-    # --- ADDED: Print the full search result as requested ---
     print(json.dumps(search_results, indent=2))
     
-    # FIX 2: Add better error printing to see the API's message
     if not search_results or not search_results.get("status"):
         print("Search API call failed.")
         if search_results:
@@ -227,50 +225,42 @@ def main():
         
     print(f"Found {len(hotels_list)} hotels. Finding the cheapest one...")
 
-    # --- 4. Find Cheapest Hotel ---
     cheapest_hotel = None
     min_price = float('inf')
 
     for hotel in hotels_list:
-        # --- FIX: All data is inside the 'property' sub-object ---
         property_data = hotel.get("property")
         if not property_data:
-            continue # Skip if this hotel has no 'property' object
-        # --- END FIX ---
+            continue
 
-        # Navigate the JSON path to get the price
         try:
-            # Use .get() for safer dictionary access
             price_breakdown = property_data.get("priceBreakdown", {})
             gross_price = price_breakdown.get("grossPrice", {})
-            price_value = gross_price.get("value") # Get value first
+            price_value = gross_price.get("value")
 
             if price_value is None:
-                raise ValueError("Price value is None") # Trigger the except block
+                raise ValueError("Price value is None")
 
-            price_value = float(price_value) # Now convert to float
+            price_value = float(price_value)
             
             if price_value < min_price:
                 min_price = price_value
                 cheapest_hotel = hotel
         except (KeyError, TypeError, ValueError, AttributeError) as e:
-            # Price parsing failed for this hotel, skip it
             continue
             
     if not cheapest_hotel:
         print("Could not find any hotels with a valid price.")
         return
         
-    # --- FIX: Get id and name from the correct locations ---
-    hotel_id = cheapest_hotel.get("hotel_id") # ID is at the top level
-    hotel_name = cheapest_hotel.get("property", {}).get("name") # Name is inside 'property'
+    hotel_id = cheapest_hotel.get("hotel_id")
+    hotel_name = cheapest_hotel.get("property", {}).get("name")
     
     print(f"\nStep 3: Found cheapest hotel:")
     print(f"  Name: {hotel_name}")
     print(f"  Price: ${min_price}")
     print(f"  Hotel ID: {hotel_id}")
     
-    # --- 5. Call Details API ---
     print(f"Getting details and booking link for {hotel_name}...")
     details_response = get_hotel_details(hotel_id, CHECKIN_DATE, CHECKOUT_DATE)
     
@@ -281,7 +271,6 @@ def main():
             print(f"Full Response: {json.dumps(details_response, indent=2)}")
         return
         
-    # --- 6. Print the Link ---
     booking_link = details_response.get("data", {}).get("url")
     
     if booking_link:

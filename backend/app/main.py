@@ -13,6 +13,7 @@ from app.routers.auth import router as auth_router
 from app.routers.users import router as users_router
 from app.routers.sessions import router as sessions_router
 from app.routers.search import router as search_router
+import app.models
 
 # Create database tables using sync engine
 Base.metadata.create_all(bind=engine)

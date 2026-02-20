@@ -1,12 +1,15 @@
 """
 Core application configuration.
 """
+import os
+from pathlib import Path
 from typing import Optional
 from pydantic_settings import BaseSettings
 from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 
-load_dotenv()
+ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
+load_dotenv(ROOT_ENV)
 
 class Settings(BaseSettings):
     """Application settings."""
@@ -17,8 +20,11 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     # Database
-    DATABASE_URL: str = "sqlite:///./mydatabase.db"
+    DATABASE_URL: str = os.getenv("DATABASE_URL")
     SESSION_EXPIRY_DAYS: int = 30
+
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", 6379))
     
     JWT_SECRET_KEY: str = "your_secret_key"
     JWT_ALGORITHM: str = "HS256"
@@ -31,6 +37,14 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: Optional[str] = None
     SERPAPI_API_KEY: Optional[str] = None
     RAPIDAPI_KEY: Optional[str] = None
+
+    # Other env variables
+    POSTGRES_USER: Optional[str] = None
+    POSTGRES_PASSWORD: Optional[str] = None
+    POSTGRES_DB: Optional[str] = None
+    DATABASE_URL: Optional[str] = None
+    REDIS_HOST: Optional[str] = None
+    REDIS_PORT: Optional[int] = None
     
     # LLM Configuration
     LLM_MODEL: str = "gemini-2.0-flash"
@@ -45,7 +59,7 @@ class Settings(BaseSettings):
         )
     
     class Config:
-        env_file = ".env"
+        env_file = str(ROOT_ENV)
         case_sensitive = True
 
 

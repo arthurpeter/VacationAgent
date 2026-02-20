@@ -2,8 +2,17 @@ import redis
 import json
 import functools
 from app.core.config import settings
+from app.core.logger import get_logger
 
-r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+log = get_logger(__name__)
+
+r = redis.Redis(
+    host=settings.REDIS_HOST, 
+    port=settings.REDIS_PORT, 
+    db=0, 
+    decode_responses=True
+)
+log.info(f"Connected to Redis at {settings.REDIS_HOST}:{settings.REDIS_PORT}")
 
 def redis_cache(expire_time=1800):
     """
@@ -19,18 +28,18 @@ def redis_cache(expire_time=1800):
             try:
                 cached_data = r.get(cache_key)
                 if cached_data:
-                    print(f"✅ Cache HIT: Serving {cache_key} from Redis")
+                    log.info(f"Cache HIT: Serving {cache_key} from Redis")
                     return json.loads(cached_data)
             except redis.ConnectionError:
-                print("⚠️ Redis is down, skipping cache.")
+                log.error(f" Redis at {settings.REDIS_HOST} is down, skipping cache.")
 
-            print(f"miss Cache MISS: Calling API for {cache_key}")
+            log.warning(f"Cache MISS: Calling API for {cache_key}")
             result = func(*args, **kwargs)
 
             try:
                 r.setex(cache_key, expire_time, json.dumps(result))
             except Exception as e:
-                print(f"Failed to cache data: {e}")
+                log.error(f"Failed to cache data: {e}")
 
             return result
         return wrapper
