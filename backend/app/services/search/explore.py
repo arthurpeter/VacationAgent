@@ -2,15 +2,15 @@ import os
 from serpapi import GoogleSearch
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
+from app.core.cache import redis_cache
 
 load_dotenv()
 
-# Set your API key globally from the .env file
-# The GoogleSearch class will automatically use this.
 GoogleSearch.SERP_API_KEY = os.getenv('SERPAPI_API_KEY')
 if not GoogleSearch.SERP_API_KEY:
     raise ValueError("SERPAPI_API_KEY environment variable is required")
 
+@redis_cache(expire_time=3600 * 24)
 def call_explore_api(
     departure_id: str,
     arrival_id: Optional[str] = None,
@@ -36,13 +36,11 @@ def call_explore_api(
     Uses the official serpapi-python library.
     """
     
-    # Start with the required parameters
     params = {
         "engine": "google_travel_explore",
         "departure_id": departure_id
     }
     
-    # Add optional parameters only if they are not None
     optional_params = {
         "arrival_id": arrival_id,
         "arrival_area_id": arrival_area_id,
@@ -63,7 +61,6 @@ def call_explore_api(
         "no_cache": no_cache
     }
     
-    # Only add non-None values to the final parameters dictionary
     for key, value in optional_params.items():
         if value is not None:
             params[key] = value
@@ -72,8 +69,6 @@ def call_explore_api(
         search = GoogleSearch(params)
         results = search.get_dict()
         
-        # The library will raise an exception on a bad API call,
-        # but it's good practice to check for an 'error' in the response
         if "error" in results:
             raise Exception(results["error"])
             
