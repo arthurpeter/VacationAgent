@@ -853,12 +853,18 @@ export default function OptionsStage() {
           {(step === 'SEARCH' || step === 'SELECT_INBOUND') && (
             <section>
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-bold text-gray-800">{step === 'SEARCH' ? '1. Select Outbound Flight' : '2. Select Return Flight'}</h2>
+                    <h2 className="text-2xl font-bold text-gray-800">
+                        {step === 'SEARCH' && outboundFlights.length === 0 
+                            ? 'Flights' 
+                            : step === 'SEARCH' 
+                                ? '1. Select Outbound Flight' 
+                                : '2. Select Return Flight'}
+                    </h2>
                     {step === 'SELECT_INBOUND' && <button onClick={resetSelection} className="text-sm text-red-500 font-bold hover:underline">Change Outbound</button>}
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {(step === 'SEARCH' ? outboundFlights : inboundFlights).map((flight, idx) => (
-                        <FlightCard key={idx} flight={flight} onSelect={() => step === 'SEARCH' ? handleSelectOutbound(flight) : handleSelectInbound(flight)} btnText={step === 'SEARCH' ? "Select Outbound" : "Select Return"} />
+                        <FlightCard key={idx} flight={flight} onSelect={() => step === 'SEARCH' ? handleSelectOutbound(flight) : handleSelectInbound(flight)} btnText={step === 'SEARCH' ? "Select Outbound" : "Select Return"} isOutbound={step === 'SEARCH'}/>
                     ))}
                     {(step === 'SEARCH' ? outboundFlights : inboundFlights).length === 0 && !loading && <div className="col-span-2 text-center py-10 text-gray-400 border-2 border-dashed rounded-xl">No flights found.</div>}
                 </div>
@@ -888,7 +894,7 @@ export default function OptionsStage() {
 }
 
 // --- Sub-components ---
-function FlightCard({ flight, onSelect, btnText }) {
+function FlightCard({ flight, onSelect, btnText, isOutbound }) {
     const segments = flight.flights;
     const firstLeg = segments[0];
     const lastLeg = segments[segments.length - 1];
@@ -937,18 +943,23 @@ function FlightCard({ flight, onSelect, btnText }) {
       <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition group">
         
         {/* Header: Airline & Price */}
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-3">
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center gap-3 mt-1">
              {firstLeg.airline_logo && <img src={firstLeg.airline_logo} alt={firstLeg.airline} className="h-8 w-8 object-contain" />}
              <div>
-                 <div className="font-bold text-lg text-gray-800">{firstLeg.airline}</div>
+                 <div className="font-bold text-lg text-gray-800 leading-none">{firstLeg.airline}</div>
                  {/* Show operating carrier if different */}
                  {segments.length > 1 && segments[0].airline !== segments[1].airline && (
-                     <div className="text-[10px] text-gray-400">Includes {segments[1].airline}</div>
+                     <div className="text-[10px] text-gray-400 mt-1">Includes {segments[1].airline}</div>
                  )}
              </div>
           </div>
-          <div className="text-blue-600 font-bold text-xl">{flight.price} {flight.currency}</div>
+          <div className="text-right flex flex-col items-end justify-center">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">
+                  {isOutbound ? "Est. Total" : "Total Price"}
+              </span>
+              <div className="text-blue-600 font-bold text-2xl leading-none">{flight.price} <span className="text-lg">{flight.currency}</span></div>
+          </div>
         </div>
 
         {/* Flight Timeline */}
