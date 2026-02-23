@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { setTokens } from "../authService";
 import toast, { Toaster } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 export default function Register() {
   const [form, setForm] = useState({ email: "", password: "", confirm_password: "" });
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+  const navigate = useNavigate();
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -16,32 +17,25 @@ export default function Register() {
       return;
     }
     
-    const res = await fetch("http://localhost:5000/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+    try {
+      const res = await fetch("http://localhost:5000/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
 
-    if (res.ok) {
-      toast.success('Registration successful! Logging you in...');
-      setTimeout(async () => {
-        const loginRes = await fetch("http://localhost:5000/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include", // Add this for cookie support
-          body: JSON.stringify({ email: form.email, password: form.password }),
-        });
-        if (loginRes.ok) {
-          const response = await loginRes.json();
-          setTokens(response.access_token);
-          window.location.href = "/";
-        } else {
-          toast.error("There was an error logging in after registration.");
-          window.location.href = "/login";
-        }
-      }, 2000);
-    } else {
-      toast.error("Registration failed. Please try again.");
+      if (res.ok) {
+        toast.success('Registration successful! Please check your email.');
+        
+        setTimeout(() => {
+          navigate("/check-email");
+        }, 1500);
+      } else {
+        const errorData = await res.json();
+        toast.error(errorData.detail || "Registration failed. Please try again.");
+      }
+    } catch (error) {
+      toast.error("Network error. Could not reach the server.");
     }
   };
 

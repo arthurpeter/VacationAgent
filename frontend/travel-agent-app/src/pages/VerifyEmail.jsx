@@ -1,12 +1,10 @@
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AuthContext } from '../contexts/AuthContext';
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
   const navigate = useNavigate();
-  const { login } = useContext(AuthContext);
   const [status, setStatus] = useState("Verifying your email...");
 
   useEffect(() => {
@@ -24,11 +22,9 @@ export default function VerifyEmail() {
         const data = await response.json();
 
         if (response.ok) {
-          setStatus("Email verified! Logging you in...");
+          setStatus("Email verified! Redirecting to login...");
           
-          localStorage.setItem('access_token', data.access_token); 
-          
-          setTimeout(() => navigate('/dashboard'), 1500);
+          setTimeout(() => navigate('/login'), 1200);
         } else {
           setStatus(data.detail || "Verification failed. The link may have expired.");
         }
@@ -38,7 +34,7 @@ export default function VerifyEmail() {
     };
 
     verify();
-  }, [token, navigate, login]);
+  }, [token, navigate]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">

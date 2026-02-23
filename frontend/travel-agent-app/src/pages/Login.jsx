@@ -12,23 +12,28 @@ export default function Login() {
 
   const handleSubmit = async e => {
     e.preventDefault();
-    const res = await fetch("http://localhost:5000/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include", // This is REQUIRED for cookies!
-      body: JSON.stringify(form),
-    });
+    try {
+      const res = await fetch("http://localhost:5000/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", 
+        body: JSON.stringify(form),
+      });
 
-    if (res.ok) {
-      toast.success("Login successful!");
-      // wait a bit so the toast actually shows
-      setTimeout(async () => {
+      if (res.ok) {
+        toast.success("Login successful!");
         const response = await res.json();
-        auth.login(response.access_token); // Update global state
-        navigate('/');
-      }, 1200); // 1.2 seconds
-    } else {
-      toast.error("Login failed. Please check your credentials.");
+        
+        setTimeout(() => {
+          auth.login(response.access_token);
+          navigate('/');
+        }, 1200); 
+      } else {
+        const errorData = await res.json();
+        toast.error(errorData.detail || "Login failed. Please check your credentials.");
+      }
+    } catch (err) {
+      toast.error("Network error. Could not reach the server.");
     }
   };
 
