@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; 
 import VacationCard from '../components/VacationCard';
 import { fetchWithAuth } from '../authService';
+import { API_BASE_URL } from '../config';
 
 export default function Dashboard() {
   const [vacations, setVacations] = useState([]);
@@ -10,7 +11,7 @@ export default function Dashboard() {
   // 1. Helper to fetch a single session's details (used for resume)
   const getSession = async (sessionId) => {
     try {
-      const res = await fetchWithAuth(`http://localhost:5000/session/${sessionId}`, {}, "GET");
+      const res = await fetchWithAuth(`${API_BASE_URL}/session/${sessionId}`, {}, "GET");
       if (res && res.ok) {
         return await res.json();
       }
@@ -24,14 +25,14 @@ export default function Dashboard() {
   useEffect(() => {
     const loadSessions = async () => {
         try {
-            const res = await fetchWithAuth("http://localhost:5000/session/getSessions", {}, "GET");
+            const res = await fetchWithAuth(`${API_BASE_URL}/session/getSessions`, {}, "GET");
             if (res.ok) {
                 const data = await res.json();
                 const ids = data.session_ids || [];
 
                 // Fetch details for each ID in parallel
                 const sessionPromises = ids.map(id => 
-                    fetchWithAuth(`http://localhost:5000/session/${id}`, {}, "GET")
+                    fetchWithAuth(`${API_BASE_URL}/session/${id}`, {}, "GET")
                         .then(r => r.json())
                 );
                 
@@ -91,7 +92,7 @@ export default function Dashboard() {
   // 4. Create New Session Handler
   const handleCreateNew = async () => {
     try {
-      const res = await fetchWithAuth("http://localhost:5000/session/create", {}, "POST");
+      const res = await fetchWithAuth(`${API_BASE_URL}/session/create`, {}, "POST");
       
       if (res && res.ok) {
         const data = await res.json();

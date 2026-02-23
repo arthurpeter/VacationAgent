@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchWithAuth } from '../authService';
+import { API_BASE_URL } from '../config';
 
 const getStageFromPath = (pathname) => {
   if (pathname.includes('/discovery')) return 'discovery';
@@ -13,7 +14,7 @@ const getStageFromPath = (pathname) => {
 
 const updateSessionStage = async (sessionId, stage) => {
   try {
-    await fetchWithAuth(`http://localhost:5000/session/${sessionId}/stage`, {
+    await fetchWithAuth(`${API_BASE_URL}/session/${sessionId}/stage`, {
       stage: stage 
     }, "PATCH");
   } catch (error) {
@@ -30,7 +31,7 @@ export default function VacationLayout() {
   // This function allows child components to refresh the shared state
   const refreshContext = async () => {
     try {
-      const res = await fetchWithAuth(`http://localhost:5000/session/${id}`, {}, "GET");
+      const res = await fetchWithAuth(`${API_BASE_URL}/session/${id}`, {}, "GET");
       if (res.ok) {
         const data = await res.json();
         setSessionData(data);

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { API_BASE_URL } from '../../config';
 
 export default function DiscoveryStage() {
   const { sessionData, refreshContext } = useOutletContext();

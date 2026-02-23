@@ -15,7 +15,11 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 async def register_user(user: schemas.UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        if not db_user.is_verified:
+            db.delete(db_user)
+            db.commit()
+        else:
+            raise HTTPException(status_code=400, detail="Email already registered")
     if user.password != user.confirm_password:
         raise HTTPException(status_code=400, detail="Passwords do not match")
     hashed_password = utils.security.get_password_hash(user.password)

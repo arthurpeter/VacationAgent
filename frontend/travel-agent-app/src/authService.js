@@ -1,3 +1,5 @@
+import { API_BASE_URL } from './config';
+
 const ACCESS_TOKEN_KEY = "access_token";
 
 let isRefreshing = false;
@@ -45,7 +47,7 @@ async function refreshAccessToken() {
         refreshHeaders["X-CSRF-TOKEN-Refresh"] = csrfToken;
       }
       
-      const refreshRes = await fetch("http://localhost:5000/auth/refresh", {
+      const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: "POST",
         headers: refreshHeaders,
         credentials: "include",

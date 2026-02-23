@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 export default function CheckEmail() {
   const location = useLocation();
@@ -9,7 +10,7 @@ export default function CheckEmail() {
   const handleResend = async () => {
     setStatus("Sending...");
     try {
-      const response = await fetch('http://localhost:5000/auth/resend-verification', {
+      const response = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

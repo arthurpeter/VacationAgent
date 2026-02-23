@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import toast, { Toaster } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 export default function Register() {
   const [form, setForm] = useState({ email: "", password: "", confirm_password: "" });
@@ -18,7 +19,7 @@ export default function Register() {
     }
     
     try {
-      const res = await fetch("http://localhost:5000/auth/register", {
+      const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

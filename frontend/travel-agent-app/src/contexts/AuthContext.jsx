@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { getAccessToken, clearTokens, setTokens, fetchWithAuth, getCSRFToken } from '../authService';
+import { API_BASE_URL } from '../config';
 
 const AuthContext = createContext(null);
 
@@ -12,7 +13,7 @@ export const AuthProvider = ({ children }) => {
       try {
         const token = getAccessToken();
         if (token) {
-          const res = await fetchWithAuth("http://localhost:5000/auth/validate", {}, "POST");
+          const res = await fetchWithAuth(`${API_BASE_URL}/auth/validate`, {}, "POST");
           if (res && res.ok) {
             setIsAuthenticated(true);
           } else {
@@ -53,7 +54,7 @@ export const AuthProvider = ({ children }) => {
     
     console.log("Logout headers:", headers);
     
-    const res = await fetch("http://localhost:5000/auth/logout", {
+    const res = await fetch(`${API_BASE_URL}/auth/logout`, {
       method: "POST",
       headers,
       credentials: "include",

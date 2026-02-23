@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { fetchWithAuth } from '../../authService';
+import { API_BASE_URL } from '../../config';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -486,7 +487,7 @@ export default function OptionsStage() {
     const fetchSessionDetails = async () => {
         if (!sessionData?.id) return;
         try {
-            const res = await fetchWithAuth(`http://localhost:5000/session/${sessionData.id}`, {}, "GET");
+            const res = await fetchWithAuth(`${API_BASE_URL}/session/${sessionData.id}`, {}, "GET");
             if (res.ok) {
                 const data = await res.json();
                 console.log("Loaded Session Data:", data);
@@ -555,19 +556,19 @@ export default function OptionsStage() {
     };
 
     try {
-    //   const [flightRes, hotelRes] = await Promise.all([
-    //     fetchWithAuth("http://localhost:5000/search/getOutboundFlights", flightsBody, "POST"),
-    //     fetchWithAuth("http://localhost:5000/search/getAccomodations", hotelsBody, "POST")
-    //   ]);
+      const [flightRes, hotelRes] = await Promise.all([
+        fetchWithAuth(`${API_BASE_URL}/search/getOutboundFlights`, flightsBody, "POST"),
+        fetchWithAuth(`${API_BASE_URL}/search/getAccomodations`, hotelsBody, "POST")
+      ]);
 
-      const flightRes = await fetchWithAuth("http://localhost:5000/search/getOutboundFlights", flightsBody, "POST");
+    //   const flightRes = await fetchWithAuth(`${API_BASE_URL}/search/getOutboundFlights`, flightsBody, "POST");
 
       if (flightRes.ok) {
         setOutboundFlights(await flightRes.json());
       }
-    //   if (hotelRes.ok) {
-    //     setHotels(await hotelRes.json());
-    //   }
+      if (hotelRes.ok) {
+        setHotels(await hotelRes.json());
+      }
     } catch (err) {
       console.error(err);
       setError("Failed to fetch search results. Please try again.");
@@ -595,7 +596,7 @@ export default function OptionsStage() {
     };
 
     try {
-      const res = await fetchWithAuth("http://localhost:5000/search/getInboundFlights", flightsBody, "POST");
+      const res = await fetchWithAuth(`${API_BASE_URL}/search/getInboundFlights`, flightsBody, "POST");
       if (res.ok) {
         setInboundFlights(await res.json());
         setStep('SELECT_INBOUND');
@@ -635,7 +636,7 @@ export default function OptionsStage() {
     };
 
     try {
-        const res = await fetchWithAuth("http://localhost:5000/search/getHotelDetails", detailsBody, "POST");
+        const res = await fetchWithAuth(`${API_BASE_URL}/search/getHotelDetails`, detailsBody, "POST");
         if (res.ok) {
             const data = await res.json();
             setSelectedHotelDetails(data);
@@ -665,7 +666,7 @@ export default function OptionsStage() {
 
         if (needsFlight) {
             bookingPromises.push(
-                fetchWithAuth("http://localhost:5000/search/bookFlight", {
+                fetchWithAuth(`${API_BASE_URL}/search/bookFlight`, {
                     session_id: parseInt(sessionData?.id) || 0,
                     token: selectedInbound.token,
                     departure: origin,
@@ -680,7 +681,7 @@ export default function OptionsStage() {
         // UPDATED: Simplified Hotel Booking using the URL we got from Details
         if (needsHotel && selectedHotel.booking_url) {
             bookingPromises.push(
-                fetchWithAuth("http://localhost:5000/search/bookAccomodation", {
+                fetchWithAuth(`${API_BASE_URL}/search/bookAccomodation`, {
                     session_id: parseInt(sessionData?.id),
                     booking_url: selectedHotel.booking_url 
                 }, "POST").then(res => ({ type: 'hotel', res }))
