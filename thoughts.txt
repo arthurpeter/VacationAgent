@@ -86,3 +86,70 @@ Phase 5: Production Prep (The Future)
     Stage 2: Use Nginx to serve that dist/ folder.
 
     Nginx Config: Create frontend/travel-agent-app/nginx.conf to ensure React Router works inside the container.
+
+Game Plan: Frontend Skeleton & Supporting Screens
+    Goal: Build out the remaining static screens and UX polish (empty states, loading, layout) so the entire frontend flow is clickable and looks like a finished product. No backend or database changes yet—just React, Tailwind, and React Router.
+
+    Phase 1: Completing the Global Layout
+        Before I make the static pages, they need a place to live in the UI. The Navbar handles the top, but I need a Footer for the bottom.
+
+        [ ] Create <Footer /> component: * Path: src/components/Footer.jsx
+
+        Action: Build a simple footer with links to "Terms of Service", "Privacy Policy", and "Contact Support". Drop this at the bottom of VacationLayout.jsx so it appears on all protected pages.
+
+        [ ] Create Terms & Privacy Page:
+
+        Path: src/pages/Terms.jsx
+
+        Action: Dump standard boilerplate legal text here. Add a <Link> on the Login.jsx and Register.jsx pages ("By continuing, you agree...").
+
+    Phase 2: User Support & Settings (The Navbar Links)
+        Now that the Navbar buttons are wired up to dummy routes, I need to replace those routes with actual UI skeletons.
+
+        [ ] Create FAQ / Help Center:
+
+        Path: src/pages/FAQ.jsx
+
+        Entry point: User clicks "Help" in the Navbar.
+
+        Action: Build a static accordion UI explaining how the AI works, why prices fluctuate, and how to use the drag-and-drop itinerary.
+
+        [ ] Create Profile Settings Skeleton:
+
+        Path: src/pages/Profile.jsx
+
+        Entry point: User clicks the "ME" avatar in the Navbar.
+
+        Action: Build a static layout with tabs or sections for:
+
+        Account Details (Email, Password reset).
+
+        Travel Preferences (Default home airport, preferred currency).
+
+        Saved Travelers (A vault for passport/frequent flyer info).
+
+        Note: I will just map out the UI and input fields for now. I'll wire them up to FastAPI/Postgres later.
+
+    Phase 3: Dashboard UX (The "Unhappy" Paths)
+        The app needs to handle states where the user has no data or is waiting for data.
+
+        [ ] Dashboard Empty State:
+
+        Path: src/pages/Dashboard.jsx
+
+        Action: Add conditional logic. If the user has 0 saved trips, hide the standard table/list. Show a nice illustration (like an empty suitcase) and a prominent "Start Your First Trip" button that routes directly to the AI Discovery chat.
+
+        [ ] Global AI Loading Experience:
+
+        Path: src/components/TripLoader.jsx (Reusable component)
+
+        Action: The AI and SerpAPI calls will take time. Instead of a spinner, build a full-screen loading overlay that cycles through text like "Scouting flights...", "Reviewing hotels...", "Building your itinerary...".
+
+    Phase 4: Post-Completion (Save for last)
+        I will only build this after my main AI chat -> flights -> drag-and-drop itinerary flow is 100% bug-free.
+
+        [ ] Public / Shared View:
+
+        Path: src/pages/SharedItinerary.jsx (e.g., route /shared/:tripId)
+
+        Action: Duplicate the ItineraryStage.jsx UI but strip out all the interactive bits (no editing, no drag-and-drop, no API calls). It should look like a clean, read-only digital brochure for users to send to friends.

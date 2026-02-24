@@ -9,6 +9,7 @@ import VacationLayout from "./layouts/VacationLayout";
 import DiscoveryStage from "./pages/stages/DiscoveryStage";
 import OptionsStage from "./pages/stages/OptionsStage";
 import ItineraryStage from "./pages/stages/ItineraryStage";
+import NotFound from './pages/NotFound';
 import './App.css'
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
           <Route path="options" element={<OptionsStage />} />
           <Route path="itinerary" element={<ItineraryStage />} />
         </Route>
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );
