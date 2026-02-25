@@ -1,6 +1,6 @@
 """User model for AuthX authentication."""
 import uuid
-from sqlalchemy import Column, String, DateTime, Boolean
+from sqlalchemy import Column, String, DateTime, Boolean, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -21,7 +21,8 @@ class User(Base):
     date_of_birth = Column(DateTime(timezone=True), nullable=True)
     location = Column(String, nullable=True)
     user_description = Column(String, nullable=True)
-    currency_preference = Column(String, nullable=True, default="EUR")
+    currency_preference = Column(String, nullable=True)
+    home_airports = Column(JSON, nullable=True, default=list)
 
     # finalized vacations
     vacations = relationship(
