@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import toast, { Toaster } from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
 
 export default function Register() {
   const [form, setForm] = useState({ email: "", password: "", confirm_password: "" });
+  
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
   const navigate = useNavigate();
@@ -12,7 +14,6 @@ export default function Register() {
   const handleSubmit = async e => {
     e.preventDefault();
     
-    // Frontend password validation
     if (form.password !== form.confirm_password) {
       toast.error("Passwords do not match!");
       return;
@@ -69,13 +70,46 @@ export default function Register() {
           placeholder="Confirm Password"
           onChange={handleChange}
           required
-          className="w-full px-4 py-3 mb-6 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
+          className="w-full px-4 py-3 mb-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
         />
-        <button className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 shadow-lg transition">
+
+        <div className="flex items-start mb-6">
+          <div className="flex items-center h-5">
+            <input
+              id="terms"
+              type="checkbox"
+              required
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+              className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300 cursor-pointer accent-blue-600"
+            />
+          </div>
+          <label htmlFor="terms" className="ml-2 text-sm font-medium text-gray-600 text-left">
+            I agree to the{' '}
+            <Link to="/terms" className="text-blue-600 hover:underline hover:text-blue-700">
+              Terms of Service
+            </Link>{' '}
+            and{' '}
+            <Link to="/privacy" className="text-blue-600 hover:underline hover:text-blue-700">
+              Privacy Policy
+            </Link>.
+          </label>
+        </div>
+
+        <button 
+          type="submit" 
+          disabled={!agreedToTerms}
+          className={`w-full py-3 rounded-xl font-semibold shadow-lg transition-all duration-200 
+            ${!agreedToTerms 
+              ? 'bg-blue-400 text-white opacity-70 cursor-not-allowed' 
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+        >
           Sign Up
         </button>
+
         <p className="mt-6 text-center text-gray-500 text-sm">
-          Already have an account? <a href="/login" className="text-blue-600 hover:underline">Login</a>
+          Already have an account? <Link to="/login" className="text-blue-600 hover:underline">Login</Link>
         </p>
       </form>
     </div>
