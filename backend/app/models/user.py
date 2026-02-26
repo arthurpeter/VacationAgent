@@ -39,3 +39,10 @@ class User(Base):
         cascade="all, delete-orphan",
         lazy="selectin"
     )
+
+    companions = relationship(
+        "TravelCompanion",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin"
+    )

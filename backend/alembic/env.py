@@ -12,9 +12,11 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from app.core.config import settings
 from app.core.database import Base
 # Import ALL your models here so Alembic sees them
-from app.models.user import User 
+from app.models.user import User
 from app.models.vacation import Vacation
 from app.models.vacation_session import VacationSession
+from app.models.blacklist_token import BlacklistToken
+from app.models.companion import TravelCompanion
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

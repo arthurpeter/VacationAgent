@@ -1,71 +1,85 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { fetchWithAuth } from '../authService'; // <-- Import your custom fetch function
+import { API_BASE_URL } from '../config'; // Using your config if you have it, else fallback to import.meta.env
 
-// --- MOCK DATA FOR THE SKELETON ---
+// --- MOCK DATA FOR SKELETON (Keep your external API logic later) ---
 const ALL_CURRENCIES = [
   { code: 'EUR', name: 'Euro' },
   { code: 'USD', name: 'US Dollar' },
   { code: 'GBP', name: 'British Pound' },
   { code: 'RON', name: 'Romanian Leu' },
-  { code: 'JPY', name: 'Japanese Yen' },
-  { code: 'AUD', name: 'Australian Dollar' },
-  { code: 'CAD', name: 'Canadian Dollar' },
-  { code: 'CHF', name: 'Swiss Franc' },
 ];
 
-// Mock API response for airport search (simulating your OptionsStage logic)
 const MOCK_AIRPORTS_DB = [
   { code: 'OTP', city: 'Bucharest', name: 'Henri Coandă' },
-  { code: 'BBU', city: 'Bucharest', name: 'Băneasa' },
-  { code: 'LHR', city: 'London', name: 'Heathrow' },
-  { code: 'LGW', city: 'London', name: 'Gatwick' },
   { code: 'JFK', city: 'New York', name: 'John F. Kennedy' },
+  { code: 'LHR', city: 'London', name: 'Heathrow' },
 ];
 
 export default function Profile() {
+  const { isAuthenticated } = useAuth(); 
   const [activeTab, setActiveTab] = useState('preferences');
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState({ type: '', text: '' }); // For success/error toasts
 
-  // --- CURRENCY STATE ---
-  const [currencySearch, setCurrencySearch] = useState('EUR');
+  // --- USER PROFILE STATE ---
+  const [email, setEmail] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [userDescription, setUserDescription] = useState('');
+  
+  // --- PREFERENCES STATE ---
+  const [airports, setAirports] = useState([]);
+  const [currencySearch, setCurrencySearch] = useState('');
+  
+  // --- VAULT STATE ---
+  const [companions, setCompanions] = useState([]);
+  const [newCompanion, setNewCompanion] = useState({
+    name: '',
+    date_of_birth: '',
+    description: '',
+    is_infant_on_lap: false
+  });
+
+  // --- UI TOGGLE STATE ---
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
-  const currencyRef = useRef(null);
-
-  // Filter currencies based on input
-  const filteredCurrencies = ALL_CURRENCIES.filter(c => 
-    c.code.toLowerCase().startsWith(currencySearch.toLowerCase()) || 
-    c.name.toLowerCase().startsWith(currencySearch.toLowerCase())
-  );
-
-  // --- AIRPORT STATE ---
-  const [airports, setAirports] = useState(['OTP']); 
-  const [airportSearch, setAirportSearch] = useState('');
   const [showAirportDropdown, setShowAirportDropdown] = useState(false);
+  const [airportSearch, setAirportSearch] = useState('');
+  
+  const currencyRef = useRef(null);
   const airportRef = useRef(null);
 
-  // Filter airports based on city or code
-  const filteredAirports = MOCK_AIRPORTS_DB.filter(a => 
-    a.city.toLowerCase().includes(airportSearch.toLowerCase()) ||
-    a.code.toLowerCase().includes(airportSearch.toLowerCase())
-  );
+  // Fallback to your env if API_BASE_URL isn't set in config
+  const API_URL = API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-  const handleAddAirport = (airportCode) => {
-    if (!airports.includes(airportCode)) {
-      setAirports([...airports, airportCode]);
-    }
-    setAirportSearch('');
-    setShowAirportDropdown(false);
-  };
+  // --- 1. FETCH PROFILE DATA ON MOUNT ---
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        // Using fetchWithAuth - no need to pass headers manually!
+        const response = await fetchWithAuth(`${API_URL}/users/me`);
+        
+        if (response && response.ok) {
+          const data = await response.json();
+          setEmail(data.email || '');
+          setDateOfBirth(data.date_of_birth ? data.date_of_birth.split('T')[0] : '');
+          setUserDescription(data.user_description || '');
+          setAirports(data.home_airports || []);
+          setCurrencySearch(data.currency_preference || '');
+          setCompanions(data.companions || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch profile", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    // Only fetch if authenticated (or let fetchWithAuth handle the redirect)
+    fetchProfile();
+  }, [API_URL]);
 
-  const removeAirport = (codeToRemove) => {
-    setAirports(airports.filter(code => code !== codeToRemove));
-  };
-
-  // --- TRAVELER VAULT STATE ---
-  const [companions, setCompanions] = useState([
-    { id: 1, name: 'Jane Doe', dob: '1992-05-14' }
-  ]);
-
-  // Click outside listener to close custom dropdowns
+  // Click outside listeners for custom dropdowns
   useEffect(() => {
     function handleClickOutside(event) {
       if (currencyRef.current && !currencyRef.current.contains(event.target)) setShowCurrencyDropdown(false);
@@ -75,38 +89,118 @@ export default function Profile() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // --- 2. UPDATE PROFILE (PATCH /users/me) ---
+  const saveProfileUpdates = async (updateData) => {
+    setMessage({ type: '', text: '' });
+    try {
+      // Using fetchWithAuth with PATCH method
+      const response = await fetchWithAuth(`${API_URL}/users/me`, {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      }, "PATCH");
+      
+      if (response && response.ok) {
+        setMessage({ type: 'success', text: 'Profile updated successfully!' });
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      } else {
+        setMessage({ type: 'error', text: 'Failed to update profile.' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Network error occurred.' });
+    }
+  };
+
+  // --- 3. ADD COMPANION (POST /users/me/companions) ---
+  const handleAddCompanion = async () => {
+    if (!newCompanion.name || !newCompanion.date_of_birth) return;
+
+    const payload = {
+      ...newCompanion,
+      date_of_birth: new Date(newCompanion.date_of_birth).toISOString()
+    };
+
+    try {
+      // Using fetchWithAuth with POST method
+      const response = await fetchWithAuth(`${API_URL}/users/me/companions`, {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }, "POST");
+      
+      if (response && response.ok) {
+        const addedCompanion = await response.json();
+        addedCompanion.date_of_birth = addedCompanion.date_of_birth.split('T')[0];
+        
+        setCompanions([...companions, addedCompanion]);
+        setNewCompanion({ name: '', date_of_birth: '', description: '', is_infant_on_lap: false });
+        setMessage({ type: 'success', text: 'Companion added to vault!' });
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to add companion.' });
+    }
+  };
+
+  // --- 4. REMOVE COMPANION (DELETE /users/me/companions/{id}) ---
+  const handleRemoveCompanion = async (companionId) => {
+    try {
+      // Using fetchWithAuth with DELETE method
+      const response = await fetchWithAuth(`${API_URL}/users/me/companions/${companionId}`, {}, "DELETE");
+      
+      if (response && response.ok) {
+        setCompanions(companions.filter(c => c.id !== companionId));
+      }
+    } catch (error) {
+      console.error("Failed to remove companion", error);
+    }
+  };
+
+  // --- HELPERS ---
+  const handleAddAirport = (code) => {
+    if (!airports.includes(code)) setAirports([...airports, code]);
+    setAirportSearch('');
+    setShowAirportDropdown(false);
+  };
+
+  const removeAirport = (code) => {
+    setAirports(airports.filter(a => a !== code));
+  };
+
+  const isInfant = (dobString) => {
+    if (!dobString) return false;
+    const diff = Date.now() - new Date(dobString).getTime();
+    const ageDate = new Date(diff); 
+    return Math.abs(ageDate.getUTCFullYear() - 1970) < 2;
+  };
+
+  const filteredCurrencies = ALL_CURRENCIES.filter(c => c.code.toLowerCase().startsWith(currencySearch.toLowerCase()));
+  const filteredAirports = MOCK_AIRPORTS_DB.filter(a => a.city.toLowerCase().includes(airportSearch.toLowerCase()) || a.code.toLowerCase().includes(airportSearch.toLowerCase()));
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading profile...</div>;
+
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-extrabold text-gray-900">Your Profile</h1>
-          <p className="text-gray-500 mt-2">Manage your account and teach the AI how you like to travel.</p>
+        {/* Header & Notifications */}
+        <div className="mb-8 flex justify-between items-end">
+          <div>
+            <h1 className="text-3xl font-extrabold text-gray-900">Your Profile</h1>
+            <p className="text-gray-500 mt-2">Manage your account and teach the AI how you like to travel.</p>
+          </div>
+          {message.text && (
+            <div className={`px-4 py-2 rounded-lg text-sm font-medium ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+              {message.text}
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col md:flex-row">
           
           {/* Sidebar Navigation */}
           <div className="w-full md:w-64 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-100 p-6 space-y-2">
-            <button 
-              onClick={() => setActiveTab('preferences')}
-              className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${activeTab === 'preferences' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}
-            >
-              Travel Preferences
-            </button>
-            <button 
-              onClick={() => setActiveTab('account')}
-              className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${activeTab === 'account' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}
-            >
-              Account Details
-            </button>
-            <button 
-              onClick={() => setActiveTab('vault')}
-              className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${activeTab === 'vault' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}
-            >
-              Traveler Vault
-            </button>
+            <button onClick={() => setActiveTab('preferences')} className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${activeTab === 'preferences' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>Travel Preferences</button>
+            <button onClick={() => setActiveTab('account')} className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${activeTab === 'account' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>Account Details</button>
+            <button onClick={() => setActiveTab('vault')} className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${activeTab === 'vault' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>Traveler Vault</button>
           </div>
 
           {/* Content Area */}
@@ -117,105 +211,63 @@ export default function Profile() {
               <div className="space-y-8 animate-fadeIn">
                 <h2 className="text-xl font-bold text-gray-900 border-b pb-4">AI Travel Preferences</h2>
                 
-                {/* Searchable Currency Dropdown */}
+                {/* Currency */}
                 <div className="relative w-full md:w-1/2" ref={currencyRef}>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Default Currency</label>
                   <input
                     type="text"
                     value={currencySearch}
-                    onChange={(e) => {
-                      setCurrencySearch(e.target.value);
-                      setShowCurrencyDropdown(true);
-                    }}
+                    onChange={(e) => { setCurrencySearch(e.target.value); setShowCurrencyDropdown(true); }}
                     onFocus={() => setShowCurrencyDropdown(true)}
                     placeholder="Search currency (e.g., EUR)"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none uppercase"
                   />
                   {showCurrencyDropdown && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      {filteredCurrencies.length > 0 ? (
-                        filteredCurrencies.map(c => (
-                          <div 
-                            key={c.code} 
-                            onClick={() => {
-                              setCurrencySearch(c.code);
-                              setShowCurrencyDropdown(false);
-                            }}
-                            className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm"
-                          >
-                            <span className="font-bold text-gray-800 mr-2">{c.code}</span>
-                            <span className="text-gray-500">{c.name}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="px-4 py-2 text-sm text-gray-500">No currencies found</div>
-                      )}
+                      {filteredCurrencies.map(c => (
+                        <div key={c.code} onClick={() => { setCurrencySearch(c.code); setShowCurrencyDropdown(false); }} className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm">
+                          <span className="font-bold text-gray-800 mr-2">{c.code}</span><span className="text-gray-500">{c.name}</span>
+                        </div>
+                      ))}
                     </div>
                   )}
-                  <p className="text-xs text-gray-500 mt-2">The AI will use this to calculate your trip budgets.</p>
                 </div>
 
-                {/* Searchable Multi-Airport Selection */}
+                {/* Airports */}
                 <div className="relative" ref={airportRef}>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Preferred Departure Airports</label>
-                  
-                  {/* Airport Tags */}
                   <div className="flex flex-wrap gap-2 mb-3">
                     {airports.map(code => (
                       <span key={code} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                        ✈️ {code}
-                        <button onClick={() => removeAirport(code)} className="ml-2 text-blue-400 hover:text-blue-600 focus:outline-none">
-                          &times;
-                        </button>
+                        ✈️ {code} <button onClick={() => removeAirport(code)} className="ml-2 text-blue-400 hover:text-blue-600">&times;</button>
                       </span>
                     ))}
-                    {airports.length === 0 && <span className="text-sm text-gray-400 italic">No airports added yet.</span>}
                   </div>
-
-                  {/* Airport Search Input */}
                   <input 
-                    type="text" 
-                    value={airportSearch}
-                    onChange={(e) => {
-                      setAirportSearch(e.target.value);
-                      setShowAirportDropdown(true);
-                    }}
+                    type="text" value={airportSearch}
+                    onChange={(e) => { setAirportSearch(e.target.value); setShowAirportDropdown(true); }}
                     onFocus={() => setShowAirportDropdown(true)}
                     placeholder="Search by city (e.g., Bucharest) or code"
                     className="w-full md:w-2/3 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"
                   />
-                  
-                  {/* Airport Dropdown Results */}
-                  {showAirportDropdown && airportSearch.trim() !== '' && (
+                  {showAirportDropdown && airportSearch && (
                     <div className="absolute z-10 w-full md:w-2/3 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      {filteredAirports.length > 0 ? (
-                        filteredAirports.map(a => (
-                          <div 
-                            key={a.code} 
-                            onClick={() => handleAddAirport(a.code)}
-                            className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b last:border-0"
-                          >
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <p className="text-sm font-bold text-gray-800">{a.city}</p>
-                                <p className="text-xs text-gray-500">{a.name} Airport</p>
-                              </div>
-                              <span className="bg-gray-100 text-gray-700 text-xs font-bold px-2 py-1 rounded">{a.code}</span>
-                            </div>
+                      {filteredAirports.map(a => (
+                        <div key={a.code} onClick={() => handleAddAirport(a.code)} className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b">
+                          <div className="flex justify-between items-center">
+                            <div><p className="text-sm font-bold text-gray-800">{a.city}</p><p className="text-xs text-gray-500">{a.name} Airport</p></div>
+                            <span className="bg-gray-100 text-gray-700 text-xs font-bold px-2 py-1 rounded">{a.code}</span>
                           </div>
-                        ))
-                      ) : (
-                        <div className="px-4 py-3 text-sm text-gray-500">
-                          Press Enter to search external API for "{airportSearch}"...
                         </div>
-                      )}
+                      ))}
                     </div>
                   )}
-                  <p className="text-xs text-gray-500 mt-2">Add all the airport codes in your city you are willing to fly from.</p>
                 </div>
 
                 <div className="pt-4 border-t">
-                  <button className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition">Save Preferences</button>
+                  <button onClick={() => saveProfileUpdates({ currency_preference: currencySearch, home_airports: airports })} className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition">
+                    Save Preferences
+                  </button>
                 </div>
               </div>
             )}
@@ -227,23 +279,41 @@ export default function Profile() {
                 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
-                  <input type="email" disabled value="user@example.com" className="w-full md:w-2/3 px-4 py-2 border border-gray-200 bg-gray-50 rounded-lg text-gray-500 cursor-not-allowed" />
+                  <input type="email" disabled value={email} className="w-full md:w-2/3 px-4 py-2 border border-gray-200 bg-gray-50 rounded-lg text-gray-500 cursor-not-allowed" />
                 </div>
 
-                {/* Added User DOB */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Your Date of Birth</label>
-                  <input type="date" className="w-full md:w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none text-gray-700" />
-                  <p className="text-xs text-gray-500 mt-1">Required to accurately calculate your traveler type (Adult, Child, etc.) for bookings.</p>
+                  <input 
+                    type="date" 
+                    value={dateOfBirth} 
+                    onChange={(e) => setDateOfBirth(e.target.value)}
+                    className="w-full md:w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none text-gray-700" 
+                  />
                 </div>
 
                 <div>
-                  <button className="text-blue-600 font-medium hover:underline mt-2">Change Password</button>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">About You (For the AI)</label>
+                  <textarea 
+                    rows="3" 
+                    value={userDescription}
+                    onChange={(e) => setUserDescription(e.target.value)}
+                    placeholder="E.g., I love history, avoiding crowded tourist traps, and I'm a vegetarian."
+                    className="w-full md:w-2/3 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none text-gray-700 resize-none"
+                  ></textarea>
+                  <p className="text-xs text-gray-500 mt-1">Describe your travel style. The AI uses this to personalize your trips.</p>
                 </div>
                 
                 <div className="pt-8 border-t mt-8">
-                  <button className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition mb-6 block">Save Account Details</button>
-                  <button className="text-red-500 font-medium hover:text-red-700 transition text-sm">Delete Account</button>
+                  <button 
+                    onClick={() => saveProfileUpdates({ 
+                      date_of_birth: dateOfBirth ? new Date(dateOfBirth).toISOString() : null, 
+                      user_description: userDescription 
+                    })} 
+                    className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition mb-6 block"
+                  >
+                    Save Account Details
+                  </button>
                 </div>
               </div>
             )}
@@ -252,32 +322,82 @@ export default function Profile() {
             {activeTab === 'vault' && (
               <div className="space-y-6 animate-fadeIn">
                 <h2 className="text-xl font-bold text-gray-900 border-b pb-4">Traveler Vault</h2>
-                <p className="text-gray-600 text-sm mb-4">
-                  Save the dates of birth for the people you travel with frequently. This allows the AI to automatically secure the correct pricing for adults, children, and infants.
-                </p>
+                <p className="text-gray-600 text-sm mb-4">Save details for the people you travel with frequently.</p>
                 
                 {/* Companions List */}
-                <div className="space-y-3 mb-6">
+                <div className="space-y-4 mb-8">
                   {companions.map(comp => (
-                    <div key={comp.id} className="flex justify-between items-center p-4 border border-gray-200 rounded-xl bg-gray-50">
+                    <div key={comp.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border border-gray-200 rounded-xl bg-gray-50">
                       <div>
-                        <p className="font-semibold text-gray-900">{comp.name}</p>
-                        <p className="text-sm text-gray-500">DOB: {comp.dob}</p>
+                        <p className="font-bold text-gray-900">{comp.name}</p>
+                        <p className="text-sm text-gray-500">
+                          DOB: {comp.date_of_birth ? comp.date_of_birth.split('T')[0] : ''} 
+                          {comp.is_infant_on_lap ? ' (Infant on Lap)' : ''}
+                        </p>
+                        {comp.description && <p className="text-sm text-gray-600 mt-1 italic">"{comp.description}"</p>}
                       </div>
-                      <button className="text-gray-400 hover:text-red-500 transition">
-                        {/* Trash Icon */}
+                      <button onClick={() => handleRemoveCompanion(comp.id)} className="mt-2 sm:mt-0 text-gray-400 hover:text-red-500 transition">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                       </button>
                     </div>
                   ))}
+                  {companions.length === 0 && <p className="text-sm text-gray-400 italic">No companions added yet.</p>}
                 </div>
 
-                <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:bg-gray-50 transition cursor-pointer">
-                  <h3 className="text-sm font-semibold text-blue-600">+ Add New Companion</h3>
+                {/* Add New Companion Form */}
+                <div className="border border-gray-200 rounded-xl p-6 bg-white shadow-sm">
+                  <h3 className="text-md font-semibold text-gray-800 mb-4">Add New Companion</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Name / Alias *</label>
+                      <input 
+                        type="text" placeholder="e.g., Wife, Timmy" 
+                        value={newCompanion.name} onChange={e => setNewCompanion({...newCompanion, name: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-400 focus:outline-none text-sm" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Date of Birth *</label>
+                      <input 
+                        type="date" 
+                        value={newCompanion.date_of_birth} onChange={e => setNewCompanion({...newCompanion, date_of_birth: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-400 focus:outline-none text-sm" 
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Preferences / Description (Optional)</label>
+                    <input 
+                      type="text" placeholder="e.g., Loves museums, allergic to nuts" 
+                      value={newCompanion.description} onChange={e => setNewCompanion({...newCompanion, description: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-400 focus:outline-none text-sm" 
+                    />
+                  </div>
+
+                  {/* Smart Infant Checkbox */}
+                  {isInfant(newCompanion.date_of_birth) && (
+                    <div className="mb-4 flex items-center gap-2 bg-yellow-50 p-3 rounded-md border border-yellow-100">
+                      <input 
+                        type="checkbox" id="lap-infant" 
+                        checked={newCompanion.is_infant_on_lap} 
+                        onChange={e => setNewCompanion({...newCompanion, is_infant_on_lap: e.target.checked})}
+                        className="w-4 h-4 text-blue-600 rounded" 
+                      />
+                      <label htmlFor="lap-infant" className="text-sm text-yellow-800">This traveler is an infant. Will they travel on your lap?</label>
+                    </div>
+                  )}
+
+                  <button 
+                    onClick={handleAddCompanion}
+                    disabled={!newCompanion.name || !newCompanion.date_of_birth}
+                    className="bg-gray-900 text-white px-4 py-2 rounded-md font-medium hover:bg-gray-800 transition text-sm disabled:opacity-50"
+                  >
+                    Save Companion
+                  </button>
                 </div>
               </div>
             )}
-
           </div>
         </div>
       </div>
