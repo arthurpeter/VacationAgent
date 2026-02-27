@@ -4,6 +4,9 @@ from app.core.auth import auth
 from app import models, schemas
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.logger import get_logger
+
+log = get_logger(__name__)
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -13,8 +16,11 @@ async def read_current_user(
     token: RequestToken = Depends(auth.access_token_required)
 ):
     user = db.query(models.User).filter(models.User.id == token.sub).first()
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    user_data = schemas.User.model_validate(user).model_dump_json(indent=2)
+    log.info(f"User Response Data: {user_data}")
     return user
 
 @router.patch("/me", response_model=schemas.User)

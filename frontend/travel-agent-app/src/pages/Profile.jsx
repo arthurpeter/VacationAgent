@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchWithAuth } from '../authService'; // <-- Import your custom fetch function
-import { API_BASE_URL } from '../config'; // Using your config if you have it, else fallback to import.meta.env
+import { fetchWithAuth } from '../authService'; 
+import { API_BASE_URL } from '../config'; 
+import { toast, Toaster } from 'react-hot-toast'; // <-- 1. Import toast
 
-// --- MOCK DATA FOR SKELETON (Keep your external API logic later) ---
+// --- MOCK DATA FOR SKELETON ---
 const ALL_CURRENCIES = [
   { code: 'EUR', name: 'Euro' },
   { code: 'USD', name: 'US Dollar' },
@@ -21,7 +22,6 @@ export default function Profile() {
   const { isAuthenticated } = useAuth(); 
   const [activeTab, setActiveTab] = useState('preferences');
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState({ type: '', text: '' }); // For success/error toasts
 
   // --- USER PROFILE STATE ---
   const [email, setEmail] = useState('');
@@ -49,22 +49,20 @@ export default function Profile() {
   const currencyRef = useRef(null);
   const airportRef = useRef(null);
 
-  // Fallback to your env if API_BASE_URL isn't set in config
   const API_URL = API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
   // --- 1. FETCH PROFILE DATA ON MOUNT ---
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        // Using fetchWithAuth - no need to pass headers manually!
-        const response = await fetchWithAuth(`${API_URL}/users/me`);
+        const response = await fetchWithAuth(`${API_URL}/users/me`, {}, 'GET');
         
         if (response && response.ok) {
           const data = await response.json();
           setEmail(data.email || '');
           setDateOfBirth(data.date_of_birth ? data.date_of_birth.split('T')[0] : '');
           setUserDescription(data.user_description || '');
-          setAirports(data.home_airports || []);
+          setAirports(data.home_airports || []); 
           setCurrencySearch(data.currency_preference || '');
           setCompanions(data.companions || []);
         }
@@ -75,9 +73,12 @@ export default function Profile() {
       }
     };
     
-    // Only fetch if authenticated (or let fetchWithAuth handle the redirect)
-    fetchProfile();
-  }, [API_URL]);
+    if (isAuthenticated) {
+      fetchProfile();
+    } else {
+      setLoading(false);
+    }
+  }, [API_URL, isAuthenticated]);
 
   // Click outside listeners for custom dropdowns
   useEffect(() => {
@@ -91,22 +92,19 @@ export default function Profile() {
 
   // --- 2. UPDATE PROFILE (PATCH /users/me) ---
   const saveProfileUpdates = async (updateData) => {
-    setMessage({ type: '', text: '' });
+    // 2. Use toast.promise or just simple toasts!
+    const loadingToast = toast.loading('Saving updates...');
+    
     try {
-      // Using fetchWithAuth with PATCH method
-      const response = await fetchWithAuth(`${API_URL}/users/me`, {
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateData)
-      }, "PATCH");
+      const response = await fetchWithAuth(`${API_URL}/users/me`, updateData, 'PATCH');
       
       if (response && response.ok) {
-        setMessage({ type: 'success', text: 'Profile updated successfully!' });
-        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+        toast.success('Profile updated successfully!', { id: loadingToast });
       } else {
-        setMessage({ type: 'error', text: 'Failed to update profile.' });
+        toast.error('Failed to update profile.', { id: loadingToast });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Network error occurred.' });
+      toast.error('Network error occurred.', { id: loadingToast });
     }
   };
 
@@ -115,16 +113,16 @@ export default function Profile() {
     if (!newCompanion.name || !newCompanion.date_of_birth) return;
 
     const payload = {
-      ...newCompanion,
-      date_of_birth: new Date(newCompanion.date_of_birth).toISOString()
+      name: newCompanion.name.trim(),
+      date_of_birth: new Date(newCompanion.date_of_birth).toISOString(),
+      description: newCompanion.description.trim() ? newCompanion.description.trim() : null,
+      is_infant_on_lap: Boolean(newCompanion.is_infant_on_lap)
     };
 
+    const loadingToast = toast.loading('Adding companion...');
+
     try {
-      // Using fetchWithAuth with POST method
-      const response = await fetchWithAuth(`${API_URL}/users/me/companions`, {
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }, "POST");
+      const response = await fetchWithAuth(`${API_URL}/users/me/companions`, payload, 'POST');
       
       if (response && response.ok) {
         const addedCompanion = await response.json();
@@ -132,25 +130,29 @@ export default function Profile() {
         
         setCompanions([...companions, addedCompanion]);
         setNewCompanion({ name: '', date_of_birth: '', description: '', is_infant_on_lap: false });
-        setMessage({ type: 'success', text: 'Companion added to vault!' });
-        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+        toast.success('Companion added to vault!', { id: loadingToast });
+      } else {
+        toast.error('Failed to add companion. Please check details.', { id: loadingToast });
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to add companion.' });
+      toast.error('Failed to add companion.', { id: loadingToast });
     }
   };
 
   // --- 4. REMOVE COMPANION (DELETE /users/me/companions/{id}) ---
   const handleRemoveCompanion = async (companionId) => {
     try {
-      // Using fetchWithAuth with DELETE method
-      const response = await fetchWithAuth(`${API_URL}/users/me/companions/${companionId}`, {}, "DELETE");
+      const response = await fetchWithAuth(`${API_URL}/users/me/companions/${companionId}`, {}, 'DELETE');
       
       if (response && response.ok) {
         setCompanions(companions.filter(c => c.id !== companionId));
+        toast.success('Companion removed!');
+      } else {
+        toast.error('Failed to remove companion.');
       }
     } catch (error) {
       console.error("Failed to remove companion", error);
+      toast.error('Network error occurred.');
     }
   };
 
@@ -179,19 +181,16 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+      <Toaster position="bottom-right" /> 
+
       <div className="max-w-4xl mx-auto">
         
-        {/* Header & Notifications */}
+        {/* Header */}
         <div className="mb-8 flex justify-between items-end">
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900">Your Profile</h1>
             <p className="text-gray-500 mt-2">Manage your account and teach the AI how you like to travel.</p>
           </div>
-          {message.text && (
-            <div className={`px-4 py-2 rounded-lg text-sm font-medium ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-              {message.text}
-            </div>
-          )}
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col md:flex-row">
