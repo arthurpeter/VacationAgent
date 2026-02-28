@@ -117,7 +117,19 @@ export default function Profile() {
       if (response && response.ok) {
         toast.success('Profile updated successfully!', { id: loadingToast });
       } else {
-        toast.error('Failed to update profile.', { id: loadingToast });
+        let errorMessage = 'Failed to update profile.';
+        if (response) {
+          try {
+            const errorData = await response.json();
+            if (errorData.detail) {
+              errorMessage = errorData.detail;
+            }
+          } catch (e) {
+            console.error("Could not parse error response");
+          }
+        }
+        
+        toast.error(errorMessage, { id: loadingToast });
       }
     } catch (error) {
       toast.error('Network error occurred.', { id: loadingToast });

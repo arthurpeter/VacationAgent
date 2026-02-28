@@ -20,7 +20,7 @@ async def read_current_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user_data = schemas.User.model_validate(user).model_dump_json(indent=2)
-    log.info(f"User Response Data: {user_data}")
+    log.debug(f"User Response Data: {user_data}")
     return user
 
 @router.patch("/me", response_model=schemas.User)
@@ -35,8 +35,14 @@ async def update_current_user(
         raise HTTPException(status_code=404, detail="User not found")
     
     update_dict = update_data.model_dump(exclude_unset=True)
+    has_changes = False
     for key, value in update_dict.items():
-        setattr(user, key, value)
+        if getattr(user, key) != value:
+            has_changes = True
+            setattr(user, key, value)
+
+    if not has_changes:
+        raise HTTPException(status_code=400, detail="No changes detected. Your profile is already up to date.")
         
     db.commit()
     db.refresh(user)
