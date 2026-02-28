@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchWithAuth } from '../authService'; 
 import { API_BASE_URL } from '../config'; 
-import { toast, Toaster } from 'react-hot-toast'; // <-- 1. Import toast
+import { toast, Toaster } from 'react-hot-toast';
 
 // --- MOCK DATA FOR SKELETON ---
 const ALL_CURRENCIES = [
@@ -10,12 +10,6 @@ const ALL_CURRENCIES = [
   { code: 'USD', name: 'US Dollar' },
   { code: 'GBP', name: 'British Pound' },
   { code: 'RON', name: 'Romanian Leu' },
-];
-
-const MOCK_AIRPORTS_DB = [
-  { code: 'OTP', city: 'Bucharest', name: 'Henri Coandă' },
-  { code: 'JFK', city: 'New York', name: 'John F. Kennedy' },
-  { code: 'LHR', city: 'London', name: 'Heathrow' },
 ];
 
 export default function Profile() {
@@ -45,6 +39,10 @@ export default function Profile() {
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [showAirportDropdown, setShowAirportDropdown] = useState(false);
   const [airportSearch, setAirportSearch] = useState('');
+  
+  // --- DYNAMIC AIRPORT SEARCH STATE ---
+  const [airportOptions, setAirportOptions] = useState([]);
+  const [isSearchingAirports, setIsSearchingAirports] = useState(false);
   
   const currencyRef = useRef(null);
   const airportRef = useRef(null);
@@ -90,9 +88,34 @@ export default function Profile() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // --- DEBOUNCED AIRPORT SEARCH ---
+  useEffect(() => {
+    if (airportSearch.trim().length < 2) {
+      setAirportOptions([]);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      setIsSearchingAirports(true);
+      try {
+        const response = await fetchWithAuth(`${API_URL}/search/airports/autocomplete?q=${encodeURIComponent(airportSearch)}`, {}, 'GET');
+        
+        if (response && response.ok) {
+          const data = await response.json();
+          setAirportOptions(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch airports", error);
+      } finally {
+        setIsSearchingAirports(false);
+      }
+    }, 300); // Wait 300ms before calling API
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [airportSearch, API_URL]);
+
   // --- 2. UPDATE PROFILE (PATCH /users/me) ---
   const saveProfileUpdates = async (updateData) => {
-    // 2. Use toast.promise or just simple toasts!
     const loadingToast = toast.loading('Saving updates...');
     
     try {
@@ -158,9 +181,12 @@ export default function Profile() {
 
   // --- HELPERS ---
   const handleAddAirport = (code) => {
-    if (!airports.includes(code)) setAirports([...airports, code]);
-    setAirportSearch('');
-    setShowAirportDropdown(false);
+    // Only add it if it's not already in the array
+    if (!airports.includes(code)) {
+      setAirports([...airports, code]);
+    }
+    // Deliberately not clearing the search or closing the dropdown
+    // so users can select multiple airports in one go.
   };
 
   const removeAirport = (code) => {
@@ -175,7 +201,6 @@ export default function Profile() {
   };
 
   const filteredCurrencies = ALL_CURRENCIES.filter(c => c.code.toLowerCase().startsWith(currencySearch.toLowerCase()));
-  const filteredAirports = MOCK_AIRPORTS_DB.filter(a => a.city.toLowerCase().includes(airportSearch.toLowerCase()) || a.code.toLowerCase().includes(airportSearch.toLowerCase()));
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading profile...</div>;
 
@@ -243,22 +268,52 @@ export default function Profile() {
                     ))}
                   </div>
                   <input 
-                    type="text" value={airportSearch}
+                    type="text" 
+                    value={airportSearch}
                     onChange={(e) => { setAirportSearch(e.target.value); setShowAirportDropdown(true); }}
                     onFocus={() => setShowAirportDropdown(true)}
                     placeholder="Search by city (e.g., Bucharest) or code"
                     className="w-full md:w-2/3 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"
                   />
-                  {showAirportDropdown && airportSearch && (
+                  {/* Dynamic Dropdown */}
+                  {showAirportDropdown && airportSearch.trim().length >= 2 && (
                     <div className="absolute z-10 w-full md:w-2/3 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      {filteredAirports.map(a => (
-                        <div key={a.code} onClick={() => handleAddAirport(a.code)} className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b">
-                          <div className="flex justify-between items-center">
-                            <div><p className="text-sm font-bold text-gray-800">{a.city}</p><p className="text-xs text-gray-500">{a.name} Airport</p></div>
-                            <span className="bg-gray-100 text-gray-700 text-xs font-bold px-2 py-1 rounded">{a.code}</span>
-                          </div>
+                      {isSearchingAirports ? (
+                        <div className="px-4 py-3 text-sm text-gray-500 font-medium animate-pulse">
+                          Searching airports...
                         </div>
-                      ))}
+                      ) : airportOptions.length > 0 ? (
+                        airportOptions.map(a => {
+                          const isSelected = airports.includes(a.code);
+                          
+                          return (
+                            <div 
+                              key={a.code} 
+                              onClick={() => handleAddAirport(a.code)} 
+                              className={`px-4 py-3 border-b last:border-0 transition-colors ${
+                                isSelected ? 'bg-gray-50 opacity-60 cursor-default' : 'hover:bg-blue-50 cursor-pointer'
+                              }`}
+                            >
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <p className="text-sm font-bold text-gray-800">{a.city}</p>
+                                  <p className="text-xs text-gray-500">{a.name} Airport</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {isSelected && <span className="text-xs text-green-600 font-bold">Added ✓</span>}
+                                  <span className="bg-white text-gray-700 text-xs font-bold px-2 py-1 rounded border border-gray-200 shadow-sm">
+                                    {a.code}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-gray-500">
+                          No airports found. Try a different city or code.
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

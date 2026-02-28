@@ -1,10 +1,11 @@
 import os
-from serpapi import GoogleSearch  # Import the official library
+from serpapi import GoogleSearch
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 import airportsdata
 from babel import numbers, core
 import sys
+from app.core.airport_data import AIRPORTS_DB
 from app.core.cache import redis_cache
 
 load_dotenv()
@@ -27,7 +28,7 @@ def get_location_data(area_input: str, country_filter: str = None):
             "currency": "EUR"               # Currency parameter
         }
     """
-    airports = airportsdata.load('IATA')
+    airports = AIRPORTS_DB
     area_clean = area_input.strip()
 
     found_airports = []

@@ -1,17 +1,40 @@
 from app.services.search import flights, accomodations_v2, explore
 from app.core.database import get_db
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from app import schemas, models
 from app.core.logger import get_logger
 from sqlalchemy.orm import Session
 from authx import TokenPayload
 from app.core.auth import auth
 from datetime import datetime
+from app.core.airport_data import AIRPORTS_DB
 
 
 log = get_logger(__name__)
 
 router = APIRouter(prefix="/search", tags=["Search"])
+
+@router.get("/airports/autocomplete")
+def search_airports_autocomplete(q: str = Query(..., min_length=2)):
+    query = q.lower().strip()
+    results = []
+    
+    # It instantly searches the RAM without reloading anything
+    for code, data in AIRPORTS_DB.items():
+        city = data.get('city', '').lower()
+        name = data.get('name', '').lower()
+        
+        if query in city or query in name or query == code.lower():
+            results.append({
+                "code": code,
+                "city": data.get('city', ''),
+                "name": data.get('name', ''),
+                "country": data.get('country', '')
+            })
+            if len(results) >= 15:
+                break
+                
+    return results
 
 # example usage of the explore api - currently disabled
 # @router.post("/exploreDestinations", response_model=schemas.ExploreResponse)
