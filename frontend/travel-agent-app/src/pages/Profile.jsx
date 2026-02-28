@@ -3,14 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { fetchWithAuth } from '../authService'; 
 import { API_BASE_URL } from '../config'; 
 import { toast, Toaster } from 'react-hot-toast';
-
-// --- MOCK DATA FOR SKELETON ---
-const ALL_CURRENCIES = [
-  { code: 'EUR', name: 'Euro' },
-  { code: 'USD', name: 'US Dollar' },
-  { code: 'GBP', name: 'British Pound' },
-  { code: 'RON', name: 'Romanian Leu' },
-];
+import { ALL_CURRENCIES } from '../utils/currencies';
 
 export default function Profile() {
   const { isAuthenticated } = useAuth(); 
