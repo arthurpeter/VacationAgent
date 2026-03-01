@@ -17,23 +17,51 @@ router = APIRouter(prefix="/search", tags=["Search"])
 @router.get("/airports/autocomplete")
 def search_airports_autocomplete(q: str = Query(..., min_length=2)):
     query = q.lower().strip()
-    results = []
+    matches = []
     
-    # It instantly searches the RAM without reloading anything
     for code, data in AIRPORTS_DB.items():
         city = data.get('city', '').lower()
         name = data.get('name', '').lower()
+        code_lower = code.lower()
         
-        if query in city or query in name or query == code.lower():
-            results.append({
+        if query in city or query in name or query in code_lower:
+            
+            if code_lower.startswith(query):
+                score = 0
+                
+            elif query == city:
+                if "international" in name or "intl" in name:
+                    score = 10
+                elif "municipal" in name or "county" in name or "field" in name:
+                    score = 30
+                else:
+                    score = 20
+                    
+            elif city.startswith(query):
+                score = 40
+                
+            elif name.startswith(query):
+                score = 50
+                
+            elif query in city:
+                score = 60
+                
+            else:
+                score = 70
+                
+            matches.append((score, {
                 "code": code,
                 "city": data.get('city', ''),
                 "name": data.get('name', ''),
                 "country": data.get('country', '')
-            })
-            if len(results) >= 15:
-                break
-                
+            }))
+            
+    matches.sort(key=lambda x: (x[0], x[1]['country'], x[1]['city']))
+
+    # log.debug(f"Autocomplete search for '{q}' found {len(matches)} matches. Returning top 15.")
+    
+    results = [m[1] for m in matches[:15]]
+            
     return results
 
 # example usage of the explore api - currently disabled

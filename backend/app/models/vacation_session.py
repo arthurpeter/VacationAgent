@@ -54,6 +54,5 @@ class VacationSession(Base):
     user = relationship("User", back_populates="sessions", lazy="joined")
     
     def __repr__(self):
-        # Note: current_step was in your repr but not in the model columns provided
         return f"<VacationSession id={self.id} user_id={self.user_id}>"
     

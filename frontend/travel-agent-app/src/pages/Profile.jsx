@@ -186,12 +186,9 @@ export default function Profile() {
 
   // --- HELPERS ---
   const handleAddAirport = (code) => {
-    // Only add it if it's not already in the array
     if (!airports.includes(code)) {
       setAirports([...airports, code]);
     }
-    // Deliberately not clearing the search or closing the dropdown
-    // so users can select multiple airports in one go.
   };
 
   const removeAirport = (code) => {
@@ -301,7 +298,8 @@ export default function Profile() {
                             >
                               <div className="flex justify-between items-center">
                                 <div>
-                                  <p className="text-sm font-bold text-gray-800">{a.city}</p>
+                                  {/* Added ", {a.country}" below */}
+                                  <p className="text-sm font-bold text-gray-800">{a.city}, {a.country}</p>
                                   <p className="text-xs text-gray-500">{a.name} Airport</p>
                                 </div>
                                 <div className="flex items-center gap-2">
