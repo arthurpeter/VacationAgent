@@ -107,7 +107,8 @@ function LocationAutocomplete({ label, value, onChange, placeholder }) {
 
     const handleInput = (e) => {
         isSelectionEvent.current = false; 
-        onChange(e.target.value);
+        // Pass false to indicate this is just typing, not a final selection
+        onChange(e.target.value, false);
     };
 
     const selectSuggestion = (item) => {
@@ -117,7 +118,8 @@ function LocationAutocomplete({ label, value, onChange, placeholder }) {
         
         isSelectionEvent.current = true;
         
-        onChange(formatted);
+        // Pass true to indicate a final selection that should be saved
+        onChange(formatted, true);
         setShowSuggestions(false);
     };
 
@@ -161,9 +163,12 @@ function LocationAutocomplete({ label, value, onChange, placeholder }) {
 }
 
 // --- Helper: Travelers Popover Component ---
-function TravelersInput({ counts, setCounts, childAges, setChildAges }) {
+function TravelersInput({ counts, setCounts, childAges, setChildAges, onSave }) {
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef(null);
+
+    // Ref for debouncing age typing
+    const ageSaveTimer = useRef(null);
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -183,24 +188,43 @@ function TravelersInput({ counts, setCounts, childAges, setChildAges }) {
         
         if (type === 'adults' && newVal < 1) return;
         
+        let newAges = [...childAges];
+
         if (type === 'children' || type === 'infantsSeat' || type === 'infantsLap') {
             const currentTotalKids = counts.children + counts.infantsSeat + counts.infantsLap;
             const newTotalKids = currentTotalKids + (newVal - currentVal);
             
             if (newTotalKids > currentTotalKids) {
-                setChildAges(prev => [...prev, "5"]);
+                newAges = [...newAges, "5"];
             } else if (newTotalKids < currentTotalKids) {
-                setChildAges(prev => prev.slice(0, -1));
+                newAges = newAges.slice(0, -1);
             }
         }
 
-        setCounts(prev => ({ ...prev, [type]: newVal }));
+        const newCounts = { ...counts, [type]: newVal };
+        setCounts(newCounts);
+        setChildAges(newAges);
+
+        // Save immediately when button clicked
+        onSave({
+            adults: newCounts.adults,
+            children: newCounts.children,
+            infants_in_seat: newCounts.infantsSeat,
+            infants_on_lap: newCounts.infantsLap,
+            children_ages: newAges.join(',')
+        });
     };
 
     const updateAge = (index, val) => {
         const newAges = [...childAges];
         newAges[index] = val;
         setChildAges(newAges);
+        
+        // Debounce saving the age string
+        if (ageSaveTimer.current) clearTimeout(ageSaveTimer.current);
+        ageSaveTimer.current = setTimeout(() => {
+            onSave({ children_ages: newAges.join(',') });
+        }, 500);
     };
 
     return (
@@ -468,10 +492,10 @@ export default function OptionsStage() {
   const [roomQty, setRoomQty] = useState(1);
   const [booked, setBooked] = useState({ flights: false, hotel: false });
 
-  // --- NEW: State for Hotel Details Flow ---
-  const [viewingHotel, setViewingHotel] = useState(null); // Which hotel is open in modal
-  const [selectedHotelDetails, setSelectedHotelDetails] = useState(null); // Deep data for modal
-  const [loadingDetails, setLoadingDetails] = useState(false); // Spinner for modal
+  // --- Modal State ---
+  const [viewingHotel, setViewingHotel] = useState(null); 
+  const [selectedHotelDetails, setSelectedHotelDetails] = useState(null); 
+  const [loadingDetails, setLoadingDetails] = useState(false); 
   
   // --- Selection State ---
   const [outboundFlights, setOutboundFlights] = useState([]);
@@ -482,6 +506,17 @@ export default function OptionsStage() {
   const [selectedInbound, setSelectedInbound] = useState(null);
   const [selectedHotel, setSelectedHotel] = useState(null);
 
+  // --- NEW: Session Saving Helper ---
+  const saveToSession = async (payload) => {
+    if (!sessionData?.id) return;
+    try {
+        await fetchWithAuth(`${API_BASE_URL}/session/${sessionData.id}/details`, payload, 'PATCH');
+        console.log("Auto-saved to session:", payload);
+    } catch (err) {
+        console.error("Failed to auto-save session data", err);
+    }
+  };
+
   // Sync from DB
   useEffect(() => {
     const fetchSessionDetails = async () => {
@@ -491,8 +526,12 @@ export default function OptionsStage() {
             if (res.ok) {
                 const data = await res.json();
                 console.log("Loaded Session Data:", data);
+                
+                // Locations
                 if (data.departure) setOrigin(data.departure);
                 if (data.destination) setDestination(data.destination);
+                
+                // Dates
                 const formatForInput = (isoString) => {
                     if (!isoString) return "";
                     return isoString.split("T")[0];
@@ -501,6 +540,26 @@ export default function OptionsStage() {
                     start: formatForInput(data.from_date),
                     end: formatForInput(data.to_date)
                 });
+
+                // Travelers
+                if (data.adults !== undefined) {
+                    setTravelerCounts({
+                        adults: data.adults || 1,
+                        children: data.children || 0,
+                        infantsSeat: data.infants_in_seat || 0,
+                        infantsLap: data.infants_on_lap || 0
+                    });
+                }
+                
+                // Child Ages
+                if (data.children_ages) {
+                    setChildAges(data.children_ages.split(',').filter(age => age !== ''));
+                }
+
+                // Rooms
+                if (data.room_qty) {
+                    setRoomQty(data.room_qty);
+                }
             }
         } catch (err) {
             console.error("Failed to load session details:", err);
@@ -515,7 +574,34 @@ export default function OptionsStage() {
       }
   }, [travelerCounts.adults, roomQty]);
 
-  // --- Handlers ---
+
+  // --- Event Handlers for Input ---
+  
+  const handleLocationChange = (type, val, isFinalSelection) => {
+      if (type === 'origin') setOrigin(val);
+      else setDestination(val);
+
+      // Only save to backend if they clicked a suggestion
+      if (isFinalSelection) {
+          saveToSession({ [type === 'origin' ? 'departure' : 'destination']: val });
+      }
+  };
+
+  const handleDateChange = (type, val) => {
+      setDates(prev => ({ ...prev, [type]: val }));
+      
+      // Save to backend if it's a complete date
+      if (val && val.length === 10) {
+          saveToSession({ [type === 'start' ? 'from_date' : 'to_date']: val });
+      }
+  };
+
+  const handleRoomChange = (val) => {
+      const qty = parseInt(val);
+      setRoomQty(qty);
+      saveToSession({ room_qty: qty });
+  };
+
 
   // 1. Initial Search
   const handleSearch = async () => {
@@ -560,8 +646,6 @@ export default function OptionsStage() {
         fetchWithAuth(`${API_BASE_URL}/search/getOutboundFlights`, flightsBody, "POST"),
         fetchWithAuth(`${API_BASE_URL}/search/getAccomodations`, hotelsBody, "POST")
       ]);
-
-    //   const flightRes = await fetchWithAuth(`${API_BASE_URL}/search/getOutboundFlights`, flightsBody, "POST");
 
       if (flightRes.ok) {
         setOutboundFlights(await flightRes.json());
@@ -614,11 +698,11 @@ export default function OptionsStage() {
     setStep('CONFIRM');
   };
 
-  // 3. View Details (Triggers Modal & Deep Fetch)
+  // 3. View Details
   const handleViewDetails = async (hotel) => {
-    setViewingHotel(hotel); // Open modal with "Teaser" data immediately
+    setViewingHotel(hotel); 
     setLoadingDetails(true);
-    setSelectedHotelDetails(null); // Reset deep data
+    setSelectedHotelDetails(null); 
 
     const childrenString = childAges.length > 0 ? childAges.join(",") : null;
     const detailsBody = {
@@ -678,7 +762,6 @@ export default function OptionsStage() {
             );
         }
 
-        // UPDATED: Simplified Hotel Booking using the URL we got from Details
         if (needsHotel && selectedHotel.booking_url) {
             bookingPromises.push(
                 fetchWithAuth(`${API_BASE_URL}/search/bookAccomodation`, {
@@ -743,7 +826,7 @@ export default function OptionsStage() {
             isLoading={loadingDetails}
             onClose={() => setViewingHotel(null)} 
             onSelect={(hotelWithUrl) => {
-                setSelectedHotel(hotelWithUrl); // Saves URL into state
+                setSelectedHotel(hotelWithUrl);
                 setViewingHotel(null);
             }}
           />
@@ -754,32 +837,50 @@ export default function OptionsStage() {
         <LocationAutocomplete 
             label="Origin"
             value={origin} 
-            onChange={setOrigin} 
+            onChange={(val, isFinal) => handleLocationChange('origin', val, isFinal)} 
             placeholder="City, Country"
         />
         <LocationAutocomplete 
             label="Destination"
             value={destination} 
-            onChange={setDestination} 
+            onChange={(val, isFinal) => handleLocationChange('destination', val, isFinal)} 
             placeholder="City, Country"
         />
         <div className="flex flex-col gap-1">
             <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Dates</label>
             <div className="flex items-center gap-2">
-                <input type="date" value={dates.start} onChange={(e) => setDates(p => ({...p, start: e.target.value}))} className="border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-700"/>
-                <input type="date" value={dates.end} onChange={(e) => setDates(p => ({...p, end: e.target.value}))} className="border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-700"/>
+                <input 
+                    type="date" 
+                    value={dates.start} 
+                    onChange={(e) => handleDateChange('start', e.target.value)} 
+                    className="border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-700"
+                />
+                <input 
+                    type="date" 
+                    value={dates.end} 
+                    onChange={(e) => handleDateChange('end', e.target.value)} 
+                    className="border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-700"
+                />
             </div>
         </div>
+        
+        {/* UPDATED: Pass the saveToSession callback to travelers */}
         <TravelersInput 
             counts={travelerCounts} 
             setCounts={setTravelerCounts} 
             childAges={childAges} 
             setChildAges={setChildAges} 
+            onSave={saveToSession}
         />
+
         <div className="flex flex-col gap-1 w-20">
             <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Rooms</label>
-            <select value={roomQty} onChange={(e) => setRoomQty(parseInt(e.target.value))} className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                {Array.from({ length: travelerCounts.adults }, (_, i) => i + 1).map(num => (
+            <select 
+                value={roomQty} 
+                onChange={(e) => handleRoomChange(e.target.value)} 
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            >
+                {Array.from({ length: Math.max(1, travelerCounts.adults) }, (_, i) => i + 1).map(num => (
                     <option key={num} value={num}>{num}</option>
                 ))}
             </select>
@@ -881,7 +982,7 @@ export default function OptionsStage() {
                         key={hotel.hotel_id} 
                         hotel={hotel} 
                         isSelected={selectedHotel?.hotel_id === hotel.hotel_id}
-                        onSelect={() => handleViewDetails(hotel)} // UPDATED: Calls the fetcher
+                        onSelect={() => handleViewDetails(hotel)} 
                     />
                 ))}
                 {hotels.length === 0 && !loading && <div className="col-span-full text-center py-10 text-gray-400 border-2 border-dashed rounded-xl">No hotels found.</div>}
@@ -1049,7 +1150,6 @@ function HotelCard({ hotel, onSelect, isSelected }) {
           <div className="mt-auto pt-3 border-t border-gray-100 flex justify-between items-center">
               <div><div className="text-[10px] text-gray-400">Total Price</div><div className="text-lg font-bold text-blue-700">{hotel.price} {hotel.currency}</div></div>
               
-              {/* FIXED: Button now triggers the click event properly */}
               <button 
                 onClick={(e) => {
                     e.stopPropagation();
@@ -1057,7 +1157,7 @@ function HotelCard({ hotel, onSelect, isSelected }) {
                 }}
                 className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-600 hover:text-white transition"
               >
-                  View Details
+                 View Details
               </button>
           </div>
         </div>

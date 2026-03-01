@@ -143,39 +143,6 @@ async def search_outbound_flights(
         log.error(f"Error getting flight parameters: {e}")
         raise HTTPException(status_code=400, detail="Invalid location format")
 
-    # UPDATE session currency preference, DATES, DESTINATION
-    try:
-        fmt = "%Y-%m-%d"
-        dt_outbound = datetime.strptime(data.outbound_date, fmt)
-        dt_return = datetime.strptime(data.return_date, fmt) if data.return_date else None
-    except ValueError:
-        log.error("Date format error")
-        # Handle error or keep as None
-        dt_outbound = None
-        dt_return = None
-
-    try:
-        db.query(models.VacationSession).filter(
-            models.VacationSession.id == data.session_id,
-            models.VacationSession.user_id == access_token.sub
-        ).update(
-            {
-                "currency": results.get("currency"),
-                "from_date": dt_outbound,
-                "to_date": dt_return,
-                "departure": data.departure,
-                "destination": data.arrival,
-                "adults": data.adults,
-                "children": data.children,
-                "infants_in_seat": data.infants_in_seat,
-                "infants_on_lap": data.infants_on_lap
-            }
-        )
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        log.error(f"Error updating session currency: {e}")
-
     log.info("Searching for outbound flights...")
     flight_results = flights.call_flights_api(
         departure_id=results.get("departure_id"),
