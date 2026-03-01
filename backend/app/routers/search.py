@@ -160,11 +160,15 @@ async def search_outbound_flights(
             models.VacationSession.user_id == access_token.sub
         ).update(
             {
-            "currency": results.get("currency"),
-            "from_date": dt_outbound,
-            "to_date": dt_return,
-            "departure": data.departure,
-            "destination": data.arrival
+                "currency": results.get("currency"),
+                "from_date": dt_outbound,
+                "to_date": dt_return,
+                "departure": data.departure,
+                "destination": data.arrival,
+                "adults": data.adults,
+                "children": data.children,
+                "infants_in_seat": data.infants_in_seat,
+                "infants_on_lap": data.infants_on_lap
             }
         )
         db.commit()

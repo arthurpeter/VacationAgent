@@ -35,6 +35,12 @@ class VacationSession(Base):
     to_date = Column(DateTime, nullable=True)
     departure = Column(String, nullable=True)
     destination = Column(String, nullable=True)
+    adults = Column(Integer, nullable=True, default=1)
+    children = Column(Integer, nullable=True, default=0)
+    infants_in_seat = Column(Integer, nullable=True, default=0)
+    infants_on_lap = Column(Integer, nullable=True, default=0)
+    children_ages = Column(String, nullable=True)
+    
     flights_url = Column(Text, nullable=True)
     accomodation_url = Column(Text, nullable=True)
 

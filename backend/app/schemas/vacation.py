@@ -3,6 +3,18 @@
 from typing import Optional
 from pydantic import BaseModel
 
+class SessionDataUpdate(BaseModel):
+    currency: Optional[str] = None
+    from_date: Optional[str] = None
+    to_date: Optional[str] = None
+    departure: Optional[str] = None
+    destination: Optional[str] = None
+    adults: Optional[int] = None
+    children: Optional[int] = None
+    infants_in_seat: Optional[int] = None
+    infants_on_lap: Optional[int] = None
+    children_ages: Optional[str] = None
+
 class Flight(BaseModel):
     """Schema for individual flight details."""
     airline: str
