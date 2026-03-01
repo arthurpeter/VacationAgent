@@ -6,8 +6,10 @@ from app.core.auth import auth
 from app.core.database import get_db
 from app import models, schemas, utils
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone
 
 from app.services.email.confirm_email import send_verification_email, decode_verification_token
+from app.services.email.password_reset import send_password_reset_email, decode_password_reset_token
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -72,6 +74,57 @@ async def verify_email(token: str, response: Response, db: Session = Depends(get
     auth.set_refresh_cookies(refresh, response, max_age=60 * 60 * 24 * 30)
     
     return {"access_token": access, "message": "Email verified successfully"}
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+@router.post("/forgot-password")
+async def forgot_password(
+    data: ForgotPasswordRequest, 
+    background_tasks: BackgroundTasks, 
+    db: Session = Depends(get_db)
+):
+    user = db.query(models.User).filter(models.User.email == data.email).first()
+    
+    if user:
+        background_tasks.add_task(send_password_reset_email, user.email)
+        
+    return {"message": "If that email is in our system, we have sent a password reset link."}
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+    confirm_password: str
+
+@router.post("/reset-password")
+async def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
+    if data.new_password != data.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+        
+    payload = decode_password_reset_token(data.token)
+    if not payload:
+        raise HTTPException(status_code=400, detail="Invalid, expired, or already used password reset link")
+        
+    email = payload.get("sub")
+        
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    if utils.security.verify_password(data.new_password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Your new password cannot be the same as your old password.")
+        
+    user.hashed_password = utils.security.get_password_hash(data.new_password)
+    
+    exp_timestamp = payload.get("exp")
+    jti = payload.get("jti")
+    if jti and exp_timestamp:
+        expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc).replace(tzinfo=None)
+        utils.security.blacklist_token(db=db, token=jti, expires_at=expires_at)
+
+    db.commit()
+    
+    return {"message": "Password has been reset successfully. You can now log in."}
 
 class LoginForm(BaseModel):
     email: str

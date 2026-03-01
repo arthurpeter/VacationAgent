@@ -22,7 +22,6 @@ def is_token_revoked(token: str) -> bool:
     """Check if a JWT token is blacklisted"""
     db = SessionLocal()
     try:
-        # Decode the JWT token to get the JTI (without verifying signature)
         payload = jwt.decode(
             token, 
             options={"verify_signature": False, "verify_exp": False}

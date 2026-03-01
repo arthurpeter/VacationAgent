@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { API_BASE_URL } from '../config';
 
@@ -62,9 +62,24 @@ export default function Login() {
         <button className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 shadow-lg transition">
           Sign In
         </button>
-        <p className="mt-6 text-center text-gray-500 text-sm">
-          Don't have an account? <a href="/register" className="text-blue-600 hover:underline">Register</a>
-        </p>
+        <div className="mt-6 flex flex-col items-center space-y-3 text-sm">
+          <Link 
+            to="/forgot-password" 
+            className="text-blue-600 font-medium hover:text-blue-800 hover:underline transition"
+          >
+            Forgot your password?
+          </Link>
+          
+          <p className="text-gray-500">
+            Don't have an account?{' '}
+            <Link 
+              to="/register" 
+              className="text-blue-600 font-medium hover:text-blue-800 hover:underline transition"
+            >
+              Register
+            </Link>
+          </p>
+        </div>
       </form>
     </div>
   );
