@@ -31,10 +31,8 @@ async def update_session_details(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # Only update the fields that were actually sent in the request
     update_data = data.model_dump(exclude_unset=True)
     
-    # Handle date conversions if they are present
     fmt = "%Y-%m-%d"
     if "from_date" in update_data and update_data["from_date"]:
         update_data["from_date"] = datetime.strptime(update_data["from_date"], fmt)

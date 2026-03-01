@@ -40,7 +40,8 @@ class VacationSession(Base):
     infants_in_seat = Column(Integer, nullable=True, default=0)
     infants_on_lap = Column(Integer, nullable=True, default=0)
     children_ages = Column(String, nullable=True)
-    
+    room_qty = Column(Integer, nullable=True, default=1)
+
     flights_url = Column(Text, nullable=True)
     accomodation_url = Column(Text, nullable=True)
 
