@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import VacationCard from '../components/VacationCard';
 import { fetchWithAuth } from '../authService';
 import { API_BASE_URL } from '../config';
+import NewVacationModal from '../components/NewVacationModal';
 
 export default function Dashboard() {
   const [vacations, setVacations] = useState([]);
   const navigate = useNavigate();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // 1. Helper to fetch a single session's details (used for resume)
   const getSession = async (sessionId) => {
@@ -91,19 +94,7 @@ export default function Dashboard() {
 
   // 4. Create New Session Handler
   const handleCreateNew = async () => {
-    try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/session/create`, {}, "POST");
-      
-      if (res && res.ok) {
-        const data = await res.json();
-        // New sessions always start at discovery
-        navigate(`/plan/${data.session_id}/discovery`);
-      } else {
-        console.error("Failed to create session");
-      }
-    } catch (err) {
-      console.error("Error creating session:", err);
-    }
+    setIsModalOpen(true);
   };
 
   return (
@@ -164,6 +155,10 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+      <NewVacationModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 }

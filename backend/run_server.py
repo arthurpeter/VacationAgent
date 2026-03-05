@@ -27,6 +27,6 @@ if __name__ == "__main__":
         port=5000,
         reload=debug_mode,
         workers=optimal_workers,
-        loop="uvloop",
+        # loop="uvloop",
         log_level="debug" if debug_mode else "info"
     )

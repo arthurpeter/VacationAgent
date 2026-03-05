@@ -6,6 +6,7 @@ venv/
 *.sqlite
 *.sqlite3
 **/__pycache__/
+run_server.py
 
 # frontend
 node_modules/
