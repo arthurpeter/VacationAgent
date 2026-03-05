@@ -1,7 +1,7 @@
 from langgraph.graph import START, END, StateGraph
 from langgraph.store.memory import InMemoryStore
 from app.services.agents.memory import State
-from app.services.agents.agents import information_collector, should_get_more_info
+from backend.app.services.agents.nodes import information_collector, should_get_more_info
 
 def next_node(state):
     return state

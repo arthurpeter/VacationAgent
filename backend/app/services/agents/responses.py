@@ -1,13 +1,27 @@
-from typing import Optional
 from pydantic import BaseModel, Field
+from typing import Optional, List
 
-
-class InformationCollectorResponse(BaseModel):
-    user_description: Optional[str] = Field(None, description="A brief description of the user's personality.")
-    description: Optional[str] = Field(None, description="A description of what the user wants (the scope of the trip, types of activities, etc.).")
-    departure_date: Optional[str] = Field(None, description="The date of departure YYYY-MM-DD format.")
-    return_date: Optional[str] = Field(None, description="The date of return YYYY-MM-DD format.")
-    budget: Optional[float] = Field(None, description="The budget for the trip.")
-    adults: Optional[int] = Field(None, description="The number of adults traveling.")
-    children: Optional[int] = Field(None, description="The number of children traveling.")
-    follow_up_question: Optional[str] = Field(None, description="Follow-up question to get information from the user.")
+class ExtractionResult(BaseModel):
+    """Reflects all mandatory and optional slots in VacationSession."""
+    
+    departure: Optional[str] = Field(None, description="IATA codes or 'city, country_code' for departure")
+    destination: Optional[str] = Field(None, description="IATA codes or 'city, country_code' for arrival")
+    from_date: Optional[str] = Field(None, description="Departure date in YYYY-MM-DD format")
+    to_date: Optional[str] = Field(None, description="Return date in YYYY-MM-DD format")
+    currency: Optional[str] = Field(None, description="ISO currency code, e.g., 'USD', 'EUR'")
+    
+    adults: Optional[int] = Field(None, description="Number of adults (12+ years old)")
+    children: Optional[int] = Field(None, description="Number of children (2-11 years old)")
+    infants_in_seat: Optional[int] = Field(None, description="Number of infants (0-2 years old) with their own seat")
+    infants_on_lap: Optional[int] = Field(None, description="Number of infants (0-2 years old) sitting on an adult's lap")
+    children_ages: Optional[str] = Field(
+        None, 
+        description="Comma-separated ages of children, e.g., '5,12'. Must match child+infant count."
+    )
+    
+    room_qty: Optional[int] = Field(None, description="Number of hotel rooms needed")
+    
+    is_change_request: bool = Field(
+        False, 
+        description="True if the user is explicitly correcting or changing existing info"
+    )

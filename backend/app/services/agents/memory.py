@@ -1,6 +1,8 @@
-from typing import Optional
+from typing import Optional, Annotated, List, Union
 from typing_extensions import TypedDict
 from pydantic import BaseModel, Field
+from langgraph.graph.message import add_messages
+
 
 
 class TripDetails(BaseModel):
@@ -27,10 +29,12 @@ class GraphMemory(TypedDict):
     trip_details: TripDetails
     user_info: UserInfo
 
-class State(TypedDict):
-    """State of the agent."""
-    user_query: str
+class DiscoveryState(TypedDict):
+    messages: Annotated[List[Union[dict, str]], add_messages]
     user_id: str
-    llm_query: str = ""
-    need_information: bool = False
-
+    session_id: int
+    
+    extracted_data: dict
+    tool_outputs: List[str]
+    is_complete: bool
+    next_step: str
