@@ -120,15 +120,38 @@ async def search_outbound_flights(
     log.info(f"Request data: {data}")
     log.info(f"Searching flights: {data.departure} -> {data.arrival}")
     try:
-        departure = data.departure.split(",")
-        city = departure[0].strip()
-        country = departure[1].strip() if len(departure) > 1 else None
-        results = flights.get_location_data(city, country)
+        departure_codes = [c.strip().upper() for c in data.departure.split(",") if c.strip()]
+        is_departure_iata = len(departure_codes) > 0 and all(len(c) == 3 and c in AIRPORTS_DB for c in departure_codes)
 
-        arrival = data.arrival.split(",")
-        city = arrival[0].strip()
-        country = arrival[1].strip() if len(arrival) > 1 else None
-        arrival_id = flights.get_location_data(city, country).get("departure_id")
+        if is_departure_iata:
+            first_airport = AIRPORTS_DB[departure_codes[0]]
+            session = db.query(models.VacationSession).filter(
+                models.VacationSession.id == data.session_id,
+                models.VacationSession.user_id == access_token.sub
+            ).first()
+            currency = (session.currency if session else "EUR") or "EUR"
+            results = {
+                "departure_id": ",".join(departure_codes),
+                "gl": first_airport.get('country', 'US').lower(),
+                "hl": "en",
+                "currency": currency
+            }
+        else:
+            departure = data.departure.split(",")
+            city = departure[0].strip()
+            country = departure[1].strip() if len(departure) > 1 else None
+            results = flights.get_location_data(city, country)
+
+        arrival_codes = [c.strip().upper() for c in data.arrival.split(",") if c.strip()]
+        is_arrival_iata = len(arrival_codes) > 0 and all(len(c) == 3 and c in AIRPORTS_DB for c in arrival_codes)
+
+        if is_arrival_iata:
+            arrival_id = ",".join(arrival_codes)
+        else:
+            arrival = data.arrival.split(",")
+            city = arrival[0].strip()
+            country = arrival[1].strip() if len(arrival) > 1 else None
+            arrival_id = flights.get_location_data(city, country).get("departure_id")
 
         log.info(f"Location data for departure {city}, {country}: {results}")
         log.info(f"Location data for arrival {city}, {country}: {arrival_id}")
@@ -206,15 +229,38 @@ async def search_inbound_flights(
     log.info(f"Request data: {data}")
     log.info(f"Searching flight: {data.departure} -> {data.arrival}")
     try:
-        departure = data.departure.split(",")
-        city = departure[0].strip()
-        country = departure[1].strip() if len(departure) > 1 else None
-        results = flights.get_location_data(city, country)
+        departure_codes = [c.strip().upper() for c in data.departure.split(",") if c.strip()]
+        is_departure_iata = len(departure_codes) > 0 and all(len(c) == 3 and c in AIRPORTS_DB for c in departure_codes)
 
-        arrival = data.arrival.split(",")
-        city = arrival[0].strip()
-        country = arrival[1].strip() if len(arrival) > 1 else None
-        arrival_id = flights.get_location_data(city, country).get("departure_id")
+        if is_departure_iata:
+            first_airport = AIRPORTS_DB[departure_codes[0]]
+            session = db.query(models.VacationSession).filter(
+                models.VacationSession.id == data.session_id,
+                models.VacationSession.user_id == access_token.sub
+            ).first()
+            currency = (session.currency if session else "EUR") or "EUR"
+            results = {
+                "departure_id": ",".join(departure_codes),
+                "gl": first_airport.get('country', 'US').lower(),
+                "hl": "en",
+                "currency": currency
+            }
+        else:
+            departure = data.departure.split(",")
+            city = departure[0].strip()
+            country = departure[1].strip() if len(departure) > 1 else None
+            results = flights.get_location_data(city, country)
+
+        arrival_codes = [c.strip().upper() for c in data.arrival.split(",") if c.strip()]
+        is_arrival_iata = len(arrival_codes) > 0 and all(len(c) == 3 and c in AIRPORTS_DB for c in arrival_codes)
+
+        if is_arrival_iata:
+            arrival_id = ",".join(arrival_codes)
+        else:
+            arrival = data.arrival.split(",")
+            city = arrival[0].strip()
+            country = arrival[1].strip() if len(arrival) > 1 else None
+            arrival_id = flights.get_location_data(city, country).get("departure_id")
 
         if not results.get("departure_id"):
              raise HTTPException(status_code=400, detail=f"Could not find airports for origin: {data.departure}")
@@ -289,15 +335,38 @@ async def book_flight(
     log.info(f"Request data: {data}")
     log.info(f"Searching flight: {data.departure} -> {data.arrival}")
     try:
-        departure = data.departure.split(",")
-        city = departure[0].strip()
-        country = departure[1].strip() if len(departure) > 1 else None
-        results = flights.get_location_data(city, country)
+        departure_codes = [c.strip().upper() for c in data.departure.split(",") if c.strip()]
+        is_departure_iata = len(departure_codes) > 0 and all(len(c) == 3 and c in AIRPORTS_DB for c in departure_codes)
 
-        arrival = data.arrival.split(",")
-        city = arrival[0].strip()
-        country = arrival[1].strip() if len(arrival) > 1 else None
-        arrival_id = flights.get_location_data(city, country).get("departure_id")
+        if is_departure_iata:
+            first_airport = AIRPORTS_DB[departure_codes[0]]
+            session = db.query(models.VacationSession).filter(
+                models.VacationSession.id == data.session_id,
+                models.VacationSession.user_id == access_token.sub
+            ).first()
+            currency = (session.currency if session else "EUR") or "EUR"
+            results = {
+                "departure_id": ",".join(departure_codes),
+                "gl": first_airport.get('country', 'US').lower(),
+                "hl": "en",
+                "currency": currency
+            }
+        else:
+            departure = data.departure.split(",")
+            city = departure[0].strip()
+            country = departure[1].strip() if len(departure) > 1 else None
+            results = flights.get_location_data(city, country)
+
+        arrival_codes = [c.strip().upper() for c in data.arrival.split(",") if c.strip()]
+        is_arrival_iata = len(arrival_codes) > 0 and all(len(c) == 3 and c in AIRPORTS_DB for c in arrival_codes)
+
+        if is_arrival_iata:
+            arrival_id = ",".join(arrival_codes)
+        else:
+            arrival = data.arrival.split(",")
+            city = arrival[0].strip()
+            country = arrival[1].strip() if len(arrival) > 1 else None
+            arrival_id = flights.get_location_data(city, country).get("departure_id")
 
         if not results.get("departure_id"):
              raise HTTPException(status_code=400, detail=f"Could not find airports for origin: {data.departure}")
