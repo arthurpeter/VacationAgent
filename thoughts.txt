@@ -153,3 +153,62 @@ Game Plan: Frontend Skeleton & Supporting Screens
         Path: src/pages/SharedItinerary.jsx (e.g., route /shared/:tripId)
 
         Action: Duplicate the ItineraryStage.jsx UI but strip out all the interactive bits (no editing, no drag-and-drop, no API calls). It should look like a clean, read-only digital brochure for users to send to friends.
+
+The proposed execution flow for the Discovery Stage is a multi-stage agentic pipeline designed to transition from raw data extraction to sophisticated user interaction. It ensures that the "memory" of the trip is systematically updated in the database before any complex conversational reasoning or tool use occurs.
+
+1. Data Extractor Node (The Collector)
+The process begins with the Collector, whose sole responsibility is to parse the user's latest message and extract specific trip parameters.
+
+Input: The latest user query and the current state of TripDetails.
+
+Logic: It uses a structured LLM output (Pydantic model) to identify new information such as IATA codes, dates (YYYY-MM-DD), budget figures, and traveler counts.
+
+Output: A structured JSON payload containing all newly discovered attributes.
+
+2. DB Updater & Validator Node
+This node acts as the system's "Ground Truth" sync, ensuring the persistent session data matches the extracted info.
+
+Input: The JSON payload from the Collector and the unique session_id.
+
+Logic:
+
+It updates the VacationSession record in the PostgreSQL database.
+
+It performs a Validation Check on mandatory slots: Departure, Destination, Dates, and Traveler count.
+
+Branching (Early Exit):
+
+If Complete: If all mandatory info is present, the graph execution routes to a specialized "Early Exit" state.
+
+If Incomplete: If info is still missing, the flow continues to the Tool Agent.
+
+3. Tool-Calling Agent Node
+This node provides the reasoning and external data capabilities required for a high-value discovery experience.
+
+Input: The last 4 messages of conversation history and the current TripDetails.
+
+Logic:
+
+It decides if calling an external tool is necessary to answer user questions or provide better recommendations (e.g., using the explore API to find cheaper dates or the airport database to resolve ambiguous locations).
+
+Output: Tool execution results or data-backed insights (e.g., "September is significantly cheaper than August for this route").
+
+4. Conversational LLM Node (Final Response)
+The final node synthesizes all available context into a polished, empathetic response.
+
+Input: The last 8 messages of history, the full GraphMemory (User & Trip details), and any tool outputs from the previous node.
+
+Logic:
+
+Generates a friendly response that addresses the user's "vibe" and preferences.
+
+Explicitly mentions what information is still needed to proceed to the search phase.
+
+Output: The final text message delivered to the UI.
+
+5. Transition & Reset Logic
+The flow handles changes in user intent dynamically.
+
+Completion Message: Once all info is gathered, the user is presented with a summary: "I've collected everything for your trip! Ready to see options, or would you like to change something?".
+
+Reset Trigger: If the Collector detects a "change request" (e.g., "Actually, I want to go to Rome instead"), the DB Updater wipes the relevant database slots, resetting the validation status and restarting the discovery loop.
