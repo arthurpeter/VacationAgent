@@ -4,37 +4,13 @@ from pydantic import BaseModel, Field
 from langgraph.graph.message import add_messages
 
 
-
-class TripDetails(BaseModel):
-    """Details of the trip."""
-    location: str = Field(..., description="The current location of the user.")
-    destination: Optional[str] = Field(..., description="The destination of the trip.")
-    departure_date: Optional[str] = Field(None, description="The date of departure.")
-    return_date: Optional[str] = Field(None, description="The date of return.")
-    budget: Optional[float] = Field(None, description="The budget for the trip.")
-    adults: Optional[int] = Field(None, description="The number of adults traveling.")
-    children: Optional[int] = Field(None, description="The number of children traveling.")
-    description: Optional[str] = Field(None, description="A description of what the user wants (the scope of the trip, types of activities, etc.).")
-
-class UserInfo(BaseModel):
-    """Information about the user."""
-    first_name: str = Field(..., description="The name of the user.")
-    email: str = Field(..., description="The email address of the user.")
-    age: Optional[int] = Field(None, description="The age of the user.")
-    user_description: Optional[str] = Field(None, description="A brief description of the user's personality.")
-    location: Optional[str] = Field(None, description="The current location of the user.")
-
-class GraphMemory(TypedDict):
-    """State of the agent."""
-    trip_details: TripDetails
-    user_info: UserInfo
-
 class DiscoveryState(TypedDict):
     messages: Annotated[List[Union[dict, str]], add_messages]
     user_id: str
     session_id: int
     
-    extracted_data: dict
-    tool_outputs: List[str]
-    is_complete: bool
-    next_step: str
+    extracted_data: Optional[dict] = None
+    tool_outputs: List[str] = []
+    vibe: Optional[str] = None
+    description: Optional[str] = None
+    is_complete: bool = False

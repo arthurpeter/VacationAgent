@@ -2,6 +2,12 @@ from langgraph.graph import START, END, StateGraph
 from langgraph.store.memory import InMemoryStore
 from app.services.agents.memory import State
 from backend.app.services.agents.nodes import information_collector, should_get_more_info
+from langgraph.checkpoint.postgres import PostgresSaver
+from psycopg_pool import ConnectionPool
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 def next_node(state):
     return state
@@ -16,9 +22,15 @@ def generate_graph(memory: InMemoryStore):
     builder.add_conditional_edges("information_collector", should_get_more_info, ["next_node", END])
     builder.add_edge("next_node", END)
 
-    graph = builder.compile(store=memory)
-
-    return graph
+    with ConnectionPool(conninfo=os.getenv("DATABASE_URL")) as pool:
+        checkpointer = PostgresSaver(pool)
+        
+        # IMPORTANT: Create the tables if they don't exist
+        # This only needs to run once at startup
+        checkpointer.setup()
+        
+        graph = builder.compile(checkpointer=checkpointer)
+        return graph
 
 if __name__ == "__main__":
     print("This module is not meant to be run directly. It provides the execution graph.\n\n")
