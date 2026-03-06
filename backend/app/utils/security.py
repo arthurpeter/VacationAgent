@@ -1,7 +1,8 @@
 from datetime import datetime
 import jwt
 from passlib.context import CryptContext
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.models.blacklist_token import BlacklistToken
 from app.core.database import SessionLocal
 
@@ -13,15 +14,14 @@ def get_password_hash(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
-def blacklist_token(db: Session, token: str, expires_at: datetime):
+async def blacklist_token(db: AsyncSession, token: str, expires_at: datetime):
     db_token = BlacklistToken(token=token, expires_at=expires_at)
     db.add(db_token)
-    db.commit()
+    await db.commit()
 
-def is_token_revoked(token: str) -> bool:
+async def is_token_revoked(token: str) -> bool:
     """Check if a JWT token is blacklisted"""
-    db = SessionLocal()
-    try:
+    async with SessionLocal() as db:
         payload = jwt.decode(
             token, 
             options={"verify_signature": False, "verify_exp": False}
@@ -30,8 +30,10 @@ def is_token_revoked(token: str) -> bool:
         
         if not jti:
             return False
-        return db.query(BlacklistToken).filter_by(token=jti).first() is not None
-    finally:
-        db.close()
+            
+        stmt = select(BlacklistToken).filter_by(token=jti)
+        result = await db.execute(stmt)
+        
+        return result.scalars().first() is not None
 
 

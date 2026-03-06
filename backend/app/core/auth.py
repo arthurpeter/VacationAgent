@@ -31,5 +31,5 @@ config = AuthXConfig(
 auth = AuthX(config=config)
 
 @auth.set_callback_token_blocklist
-def token_blocklist_callback(token: str) -> bool:
-    return is_token_revoked(token)
+async def token_blocklist_callback(token: str) -> bool:
+    return await is_token_revoked(token)

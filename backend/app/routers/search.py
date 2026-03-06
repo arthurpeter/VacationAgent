@@ -3,7 +3,8 @@ from app.core.database import get_db
 from fastapi import APIRouter, Depends, HTTPException, Query
 from app import schemas, models
 from app.core.logger import get_logger
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update
 from authx import TokenPayload
 from app.core.auth import auth
 from datetime import datetime
@@ -114,7 +115,7 @@ def search_airports_autocomplete(q: str = Query(..., min_length=2)):
 @router.post("/getOutboundFlights", response_model=list[schemas.FlightsResponse])
 async def search_outbound_flights(
     data: schemas.FlightsRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     access_token: TokenPayload = Depends(auth.access_token_required)
     ):
     log.info(f"Request data: {data}")
@@ -125,10 +126,12 @@ async def search_outbound_flights(
 
         if is_departure_iata:
             first_airport = AIRPORTS_DB[departure_codes[0]]
-            session = db.query(models.VacationSession).filter(
+            stmt = select(models.VacationSession).filter(
                 models.VacationSession.id == data.session_id,
                 models.VacationSession.user_id == access_token.sub
-            ).first()
+            )
+            result = await db.execute(stmt)
+            session = result.scalars().first()
             currency = (session.currency if session else "EUR") or "EUR"
             results = {
                 "departure_id": ",".join(departure_codes),
@@ -223,7 +226,7 @@ async def search_outbound_flights(
 @router.post("/getInboundFlights", response_model=list[schemas.FlightsResponse])
 async def search_inbound_flights(
     data: schemas.FlightsRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     access_token: TokenPayload = Depends(auth.access_token_required)
     ):
     log.info(f"Request data: {data}")
@@ -234,10 +237,12 @@ async def search_inbound_flights(
 
         if is_departure_iata:
             first_airport = AIRPORTS_DB[departure_codes[0]]
-            session = db.query(models.VacationSession).filter(
+            stmt = select(models.VacationSession).filter(
                 models.VacationSession.id == data.session_id,
                 models.VacationSession.user_id == access_token.sub
-            ).first()
+            )
+            result = await db.execute(stmt)
+            session = result.scalars().first()
             currency = (session.currency if session else "EUR") or "EUR"
             results = {
                 "departure_id": ",".join(departure_codes),
@@ -329,7 +334,7 @@ async def search_inbound_flights(
 @router.post("/bookFlight", response_model=schemas.FlightBookingResponse)
 async def book_flight(
     data: schemas.FlightsRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     access_token: TokenPayload = Depends(auth.access_token_required)
     ):
     log.info(f"Request data: {data}")
@@ -340,10 +345,12 @@ async def book_flight(
 
         if is_departure_iata:
             first_airport = AIRPORTS_DB[departure_codes[0]]
-            session = db.query(models.VacationSession).filter(
+            stmt = select(models.VacationSession).filter(
                 models.VacationSession.id == data.session_id,
                 models.VacationSession.user_id == access_token.sub
-            ).first()
+            )
+            result = await db.execute(stmt)
+            session = result.scalars().first()
             currency = (session.currency if session else "EUR") or "EUR"
             results = {
                 "departure_id": ",".join(departure_codes),
@@ -400,15 +407,19 @@ async def book_flight(
         raise HTTPException(status_code=500, detail="Booking failed")
     
     try:
-        db.query(models.VacationSession).filter(
-            models.VacationSession.id == data.session_id,
-            models.VacationSession.user_id == access_token.sub
-        ).update(
-            {"flights_url": url}
+        stmt = (
+            update(models.VacationSession)
+            .where(
+                models.VacationSession.id == data.session_id,
+                models.VacationSession.user_id == access_token.sub
+            )
+            .values(flights_url=url)
         )
-        db.commit()
+        await db.execute(stmt)
+        await db.commit()
+        
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         log.error(f"Error updating session with flight booking URL: {e}")
 
     return schemas.FlightBookingResponse(
@@ -418,7 +429,7 @@ async def book_flight(
 @router.post("/getAccomodations", response_model=list[schemas.AccomodationsResponse])
 async def get_accomodations(
     data: schemas.AccomodationsRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     access_token: TokenPayload = Depends(auth.access_token_required)
     ):
     log.info(f"Request data: {data}")
@@ -435,10 +446,14 @@ async def get_accomodations(
         log.warning("No accomodations found for the given criteria.")
         raise HTTPException(status_code=404, detail="No accomodations found")
     
-    currency_code = db.query(models.VacationSession).filter(
+    stmt = select(models.VacationSession).filter(
         models.VacationSession.id == data.session_id,
         models.VacationSession.user_id == access_token.sub
-    ).first().currency or "EUR"
+    )
+    result = await db.execute(stmt)
+    session = result.scalars().first()
+    
+    currency_code = session.currency if session and session.currency else "EUR"
     
     try:
         results = accomodations_v2.search_hotels(
@@ -492,14 +507,16 @@ async def get_accomodations(
 @router.post("/getHotelDetails", response_model=schemas.HotelDetailsResponse)
 async def get_hotel_details(
     data: schemas.AccomodationsRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     access_token: TokenPayload = Depends(auth.access_token_required)
 ):
-    session = db.query(models.VacationSession).filter(
+    stmt = select(models.VacationSession).filter(
         models.VacationSession.id == data.session_id,
         models.VacationSession.user_id == access_token.sub
-    ).first()
-    currency_code = session.currency or "EUR"
+    )
+    result = await db.execute(stmt)
+    session = result.scalars().first()
+    currency_code = session.currency if session and session.currency else "EUR"
 
     try:
         results = accomodations_v2.get_hotel_details(
@@ -575,27 +592,31 @@ async def get_hotel_details(
 @router.post("/bookAccomodation", response_model=schemas.AccomodationBookingResponse)
 async def book_accomodation(
     data: schemas.AccomodationBookingRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     access_token: TokenPayload = Depends(auth.access_token_required)
     ):
     log.info(f"Saving booking URL for session {data.session_id}")
     
     try:
-        result = db.query(models.VacationSession).filter(
-            models.VacationSession.id == data.session_id,
-            models.VacationSession.user_id == access_token.sub
-        ).update(
-            {"accomodation_url": data.booking_url}
+        stmt = (
+            update(models.VacationSession)
+            .where(
+                models.VacationSession.id == data.session_id,
+                models.VacationSession.user_id == access_token.sub
+            )
+            .values(accomodation_url=data.booking_url)
         )
         
-        if result == 0:
+        result = await db.execute(stmt)
+        
+        if result.rowcount == 0:
             raise HTTPException(status_code=404, detail="Session not found or unauthorized")
             
-        db.commit()
+        await db.commit()
         log.info(f"Successfully updated session {data.session_id} with booking URL.")
         
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         log.error(f"Error updating session with accomodation booking URL: {e}")
         raise HTTPException(status_code=500, detail="Internal server error updating booking")
 

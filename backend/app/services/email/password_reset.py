@@ -21,11 +21,11 @@ def create_password_reset_token(email: str) -> str:
     }
     return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
-def decode_password_reset_token(token: str) -> dict | None:
+async def decode_password_reset_token(token: str) -> dict | None:
     """Decodes token, checks blacklist, and returns the full payload if valid."""
     try:
         # 1. Check if the token was already used and blacklisted
-        if is_token_revoked(token):
+        if await is_token_revoked(token):
             return None
             
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])

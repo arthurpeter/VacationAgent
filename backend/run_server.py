@@ -19,14 +19,13 @@ sys.path.insert(0, app_path)
 
 if __name__ == "__main__":
     debug_mode = os.getenv("DEBUG", "false").lower() == "true"
-    cpu_cores = multiprocessing.cpu_count()
-    optimal_workers = 1 if debug_mode else (cpu_cores * 2) + 1
+    worker_count = int(os.getenv("WORKER_COUNT", 1)) if not debug_mode else 1
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
         port=5000,
         reload=debug_mode,
-        workers=optimal_workers,
+        workers=worker_count,
         # loop="uvloop",
         log_level="debug" if debug_mode else "info"
     )

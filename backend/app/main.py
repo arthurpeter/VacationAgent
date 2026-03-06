@@ -5,6 +5,7 @@ from app.core.logger import configure_logging
 # Configure logging early (console-only logger)
 configure_logging()
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
@@ -19,9 +20,6 @@ from app.routers.users import router as users_router
 from app.routers.sessions import router as sessions_router
 from app.routers.search import router as search_router
 
-# Create database tables using sync engine
-Base.metadata.create_all(bind=engine)
-
 # Start background jobs
 start_jobs()
 
@@ -30,7 +28,7 @@ app = FastAPI(
     title=settings.APP_NAME,
     version=settings.VERSION,
     debug=settings.DEBUG,
-    default_response_class=ORJSONResponse
+    default_response_class=ORJSONResponse,
 )
 
 # Add CORS middleware

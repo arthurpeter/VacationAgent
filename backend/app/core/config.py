@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL")
+    DB_MAX_CONNECTIONS: int = int(os.getenv("DB_MAX_CONNECTIONS", 100))
     SESSION_EXPIRY_DAYS: int = 30
 
     REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
@@ -33,6 +34,8 @@ class Settings(BaseSettings):
     
     JWT_SECRET_KEY: str = "your_secret_key"
     JWT_ALGORITHM: str = "HS256"
+
+    WORKER_COUNT: int = int(os.getenv("WORKER_COUNT", 1)) if os.getenv("DEBUG", "false").lower() == "false" else 1
 
     # CORS
     BACKEND_CORS_ORIGINS: list = ["http://localhost:5173", "http://127.0.0.1:5173"]

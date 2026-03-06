@@ -5,7 +5,8 @@ from pydantic import BaseModel
 from app.core.auth import auth
 from app.core.database import get_db
 from app import models, schemas, utils
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from datetime import datetime, timezone
 
 from app.services.email.confirm_email import send_verification_email, decode_verification_token
@@ -14,12 +15,14 @@ from app.services.email.password_reset import send_password_reset_email, decode_
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post("/register", response_model=schemas.User)
-async def register_user(user: schemas.UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+async def register_user(user: schemas.UserCreate, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    stmt = select(models.User).filter(models.User.email == user.email)
+    result = await db.execute(stmt)
+    db_user = result.scalars().first()
     if db_user:
         if not db_user.is_verified:
-            db.delete(db_user)
-            db.commit()
+            await db.delete(db_user)
+            await db.commit()
         else:
             raise HTTPException(status_code=400, detail="Email already registered")
     if user.password != user.confirm_password:
@@ -31,8 +34,8 @@ async def register_user(user: schemas.UserCreate, background_tasks: BackgroundTa
         hashed_password=hashed_password
     )
     db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    await db.commit()
+    await db.refresh(db_user)
     return db_user
 
 class ResendEmailRequest(BaseModel):
@@ -42,9 +45,11 @@ class ResendEmailRequest(BaseModel):
 async def resend_verification(
     data: ResendEmailRequest, 
     background_tasks: BackgroundTasks, 
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
-    user = db.query(models.User).filter(models.User.email == data.email).first()
+    stmt = select(models.User).filter(models.User.email == data.email)
+    result = await db.execute(stmt)
+    user = result.scalars().first()
     if not user:
         return {"message": "If the email is registered, a link has been sent."}
     if user.is_verified:
@@ -54,19 +59,21 @@ async def resend_verification(
     return {"message": "Verification email resent."}
 
 @router.post("/verify-email")
-async def verify_email(token: str, response: Response, db: Session = Depends(get_db)):
+async def verify_email(token: str, response: Response, db: AsyncSession = Depends(get_db)):
     """Verifies the token, marks user as verified, and logs them in."""
     email = decode_verification_token(token)
     if not email:
         raise HTTPException(status_code=400, detail="Invalid or expired verification link")
         
-    user = db.query(models.User).filter(models.User.email == email).first()
+    stmt = select(models.User).filter(models.User.email == email)
+    result = await db.execute(stmt)
+    user = result.scalars().first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
     if not user.is_verified:
         user.is_verified = True
-        db.commit()
+        await db.commit()
     
     access = auth.create_access_token(uid=user.id)
     refresh = auth.create_refresh_token(uid=user.id)
@@ -82,9 +89,11 @@ class ForgotPasswordRequest(BaseModel):
 async def forgot_password(
     data: ForgotPasswordRequest, 
     background_tasks: BackgroundTasks, 
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
-    user = db.query(models.User).filter(models.User.email == data.email).first()
+    stmt = select(models.User).filter(models.User.email == data.email)
+    result = await db.execute(stmt)
+    user = result.scalars().first()
     
     if user:
         background_tasks.add_task(send_password_reset_email, user.email)
@@ -97,17 +106,19 @@ class ResetPasswordRequest(BaseModel):
     confirm_password: str
 
 @router.post("/reset-password")
-async def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
+async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
     if data.new_password != data.confirm_password:
         raise HTTPException(status_code=400, detail="Passwords do not match")
         
-    payload = decode_password_reset_token(data.token)
+    payload = await decode_password_reset_token(data.token)
     if not payload:
         raise HTTPException(status_code=400, detail="Invalid, expired, or already used password reset link")
         
     email = payload.get("sub")
         
-    user = db.query(models.User).filter(models.User.email == email).first()
+    stmt = select(models.User).filter(models.User.email == email)
+    result = await db.execute(stmt)
+    user = result.scalars().first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
@@ -120,9 +131,9 @@ async def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_d
     jti = payload.get("jti")
     if jti and exp_timestamp:
         expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc).replace(tzinfo=None)
-        utils.security.blacklist_token(db=db, token=jti, expires_at=expires_at)
+        await utils.security.blacklist_token(db=db, token=jti, expires_at=expires_at)
 
-    db.commit()
+    await db.commit()
     
     return {"message": "Password has been reset successfully. You can now log in."}
 
@@ -131,8 +142,10 @@ class LoginForm(BaseModel):
     password: str
 
 @router.post("/login")
-async def login(data: LoginForm, response: Response, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.email == data.email).first()
+async def login(data: LoginForm, response: Response, db: AsyncSession = Depends(get_db)):
+    stmt = select(models.User).filter(models.User.email == data.email)
+    result = await db.execute(stmt)
+    user = result.scalars().first()
     if not user or not utils.security.verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Login failed. Please check your credentials.")
     
@@ -153,11 +166,11 @@ async def login(data: LoginForm, response: Response, db: Session = Depends(get_d
 async def refresh_token(
     response: Response,
     token: TokenPayload = Depends(auth.refresh_token_required),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     try:    
         # Blacklist old refresh token
-        utils.security.blacklist_token(db=db, token=token.jti, expires_at=token.exp)
+        await utils.security.blacklist_token(db=db, token=token.jti, expires_at=token.exp)
 
         auth.unset_cookies(response)
 
@@ -180,12 +193,12 @@ async def logout(
     response: Response,
     access_token: TokenPayload = Depends(auth.access_token_required),
     refresh_token: TokenPayload = Depends(auth.refresh_token_required),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     try:
-        utils.security.blacklist_token(db=db, token=access_token.jti, expires_at=access_token.exp)
+        await utils.security.blacklist_token(db=db, token=access_token.jti, expires_at=access_token.exp)
 
-        utils.security.blacklist_token(db=db, token=refresh_token.jti, expires_at=refresh_token.exp)
+        await utils.security.blacklist_token(db=db, token=refresh_token.jti, expires_at=refresh_token.exp)
 
         auth.unset_cookies(response)
 
