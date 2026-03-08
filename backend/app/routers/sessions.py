@@ -91,7 +91,7 @@ async def create_vacation_session(
 
 @router.post("/delete/{session_id}")
 async def delete_vacation_session(
-    session_id: str,
+    session_id: int,
     db: AsyncSession = Depends(get_db),
     access_token: TokenPayload = Depends(auth.access_token_required)
     ):
@@ -127,7 +127,7 @@ async def get_sessions(
 
 @router.get("/{session_id}")
 async def get_vacation_session(
-    session_id: str,
+    session_id: int,
     db: AsyncSession = Depends(get_db),
     access_token: TokenPayload = Depends(auth.access_token_required)
     ):

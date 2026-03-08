@@ -8,9 +8,12 @@ from app import models, schemas, utils
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime, timezone
+from app.core.logger import get_logger
 
 from app.services.email.confirm_email import send_verification_email, decode_verification_token
 from app.services.email.password_reset import send_password_reset_email, decode_password_reset_token
+
+log = get_logger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -27,6 +30,7 @@ async def register_user(user: schemas.UserCreate, background_tasks: BackgroundTa
             raise HTTPException(status_code=400, detail="Email already registered")
     if user.password != user.confirm_password:
         raise HTTPException(status_code=400, detail="Passwords do not match")
+    # log.debug(f"Registering user with email: {user.email} and password: {user.password}")
     hashed_password = utils.security.get_password_hash(user.password)
     background_tasks.add_task(send_verification_email, user.email)
     db_user = models.User(

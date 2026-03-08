@@ -8,7 +8,6 @@ configure_logging()
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import ORJSONResponse
 
 from app.core.config import settings
 from app.core.database import Base, engine
@@ -28,7 +27,6 @@ app = FastAPI(
     title=settings.APP_NAME,
     version=settings.VERSION,
     debug=settings.DEBUG,
-    default_response_class=ORJSONResponse,
 )
 
 # Add CORS middleware

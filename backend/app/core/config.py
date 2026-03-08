@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     SMTP_USER: Optional[str] = os.getenv("SMTP_USER")
     SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD")
     
-    JWT_SECRET_KEY: str = "your_secret_key"
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
     JWT_ALGORITHM: str = "HS256"
 
     WORKER_COUNT: int = int(os.getenv("WORKER_COUNT", 1)) if os.getenv("DEBUG", "false").lower() == "false" else 1

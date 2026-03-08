@@ -139,11 +139,14 @@ async def search_outbound_flights(
                 "hl": "en",
                 "currency": currency
             }
+            log.info(f"Location data for departure {', '.join(departure_codes)}: {results}")
         else:
             departure = data.departure.split(",")
             city = departure[0].strip()
             country = departure[1].strip() if len(departure) > 1 else None
             results = flights.get_location_data(city, country)
+
+            log.info(f"Location data for departure {city}, {country}: {results}")
 
         arrival_codes = [c.strip().upper() for c in data.arrival.split(",") if c.strip()]
         is_arrival_iata = len(arrival_codes) > 0 and all(len(c) == 3 and c in AIRPORTS_DB for c in arrival_codes)
@@ -156,7 +159,6 @@ async def search_outbound_flights(
             country = arrival[1].strip() if len(arrival) > 1 else None
             arrival_id = flights.get_location_data(city, country).get("departure_id")
 
-        log.info(f"Location data for departure {city}, {country}: {results}")
         log.info(f"Location data for arrival {city}, {country}: {arrival_id}")
 
         if not results.get("departure_id"):
