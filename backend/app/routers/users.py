@@ -1,6 +1,6 @@
 from authx import RequestToken
 from fastapi import APIRouter, Depends, HTTPException
-from app.core.auth import auth
+from app.core.auth import access_token_header
 from app import models, schemas
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 @router.get("/me", response_model=schemas.User)
 async def read_current_user(
     db: AsyncSession = Depends(get_db),
-    token: RequestToken = Depends(auth.access_token_required)
+    token: RequestToken = Depends(access_token_header)
 ):
 
     stmt = select(models.User).filter(models.User.id == token.sub)
@@ -33,7 +33,7 @@ async def read_current_user(
 async def update_current_user(
     update_data: schemas.UserUpdate,
     db: AsyncSession = Depends(get_db),
-    token: RequestToken = Depends(auth.access_token_required)
+    token: RequestToken = Depends(access_token_header)
 ):
     """Update user preferences and account details."""
     stmt = select(models.User).filter(models.User.id == token.sub)
@@ -61,7 +61,7 @@ async def update_current_user(
 async def add_travel_companion(
     companion_data: schemas.TravelCompanionCreate,
     db: AsyncSession = Depends(get_db),
-    token: RequestToken = Depends(auth.access_token_required)
+    token: RequestToken = Depends(access_token_header)
 ):
     """Add a new companion to the user's vault."""
     new_companion = models.TravelCompanion(
@@ -77,7 +77,7 @@ async def add_travel_companion(
 async def remove_travel_companion(
     companion_id: str,
     db: AsyncSession = Depends(get_db),
-    token: RequestToken = Depends(auth.access_token_required)
+    token: RequestToken = Depends(access_token_header)
 ):
     """Remove a companion from the vault."""
     stmt = select(models.TravelCompanion).filter(

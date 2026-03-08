@@ -6,7 +6,7 @@ from app.core.logger import get_logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from authx import TokenPayload
-from app.core.auth import auth
+from app.core.auth import access_token_header
 from datetime import datetime
 from app.core.airport_data import AIRPORTS_DB
 
@@ -116,7 +116,7 @@ def search_airports_autocomplete(q: str = Query(..., min_length=2)):
 async def search_outbound_flights(
     data: schemas.FlightsRequest,
     db: AsyncSession = Depends(get_db),
-    access_token: TokenPayload = Depends(auth.access_token_required)
+    access_token: TokenPayload = Depends(access_token_header)
     ):
     log.info(f"Request data: {data}")
     log.info(f"Searching flights: {data.departure} -> {data.arrival}")
@@ -229,7 +229,7 @@ async def search_outbound_flights(
 async def search_inbound_flights(
     data: schemas.FlightsRequest,
     db: AsyncSession = Depends(get_db),
-    access_token: TokenPayload = Depends(auth.access_token_required)
+    access_token: TokenPayload = Depends(access_token_header)
     ):
     log.info(f"Request data: {data}")
     log.info(f"Searching flight: {data.departure} -> {data.arrival}")
@@ -337,7 +337,7 @@ async def search_inbound_flights(
 async def book_flight(
     data: schemas.FlightsRequest,
     db: AsyncSession = Depends(get_db),
-    access_token: TokenPayload = Depends(auth.access_token_required)
+    access_token: TokenPayload = Depends(access_token_header)
     ):
     log.info(f"Request data: {data}")
     log.info(f"Searching flight: {data.departure} -> {data.arrival}")
@@ -432,7 +432,7 @@ async def book_flight(
 async def get_accomodations(
     data: schemas.AccomodationsRequest,
     db: AsyncSession = Depends(get_db),
-    access_token: TokenPayload = Depends(auth.access_token_required)
+    access_token: TokenPayload = Depends(access_token_header)
     ):
     log.info(f"Request data: {data}")
     log.info(f"Searching accomodations in {data.location}")
@@ -510,7 +510,7 @@ async def get_accomodations(
 async def get_hotel_details(
     data: schemas.AccomodationsRequest,
     db: AsyncSession = Depends(get_db),
-    access_token: TokenPayload = Depends(auth.access_token_required)
+    access_token: TokenPayload = Depends(access_token_header)
 ):
     stmt = select(models.VacationSession).filter(
         models.VacationSession.id == data.session_id,
@@ -595,7 +595,7 @@ async def get_hotel_details(
 async def book_accomodation(
     data: schemas.AccomodationBookingRequest,
     db: AsyncSession = Depends(get_db),
-    access_token: TokenPayload = Depends(auth.access_token_required)
+    access_token: TokenPayload = Depends(access_token_header)
     ):
     log.info(f"Saving booking URL for session {data.session_id}")
     

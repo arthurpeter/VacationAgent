@@ -8,7 +8,7 @@ from app.core.logger import get_logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from authx import TokenPayload
-from app.core.auth import auth
+from app.core.auth import access_token_header
 from app.models.vacation_session import SessionStage
 
 
@@ -22,7 +22,7 @@ async def update_session_details(
     session_id: int,
     data: SessionDataUpdate,
     db: AsyncSession = Depends(get_db),
-    access_token: TokenPayload = Depends(auth.access_token_required)
+    access_token: TokenPayload = Depends(access_token_header)
 ):
     """Auto-saves the user's form data as they type."""
     stmt = select(models.VacationSession).filter_by(
@@ -57,7 +57,7 @@ async def update_session_stage(
     session_id: int,
     update: StageUpdate,
     db: AsyncSession = Depends(get_db),
-    access_token: TokenPayload = Depends(auth.access_token_required)
+    access_token: TokenPayload = Depends(access_token_header)
 ):
     """Updates the user's progress stage."""
     stmt = select(models.VacationSession).filter_by(
@@ -77,7 +77,7 @@ async def update_session_stage(
 @router.post("/create")
 async def create_vacation_session(
     db: AsyncSession = Depends(get_db),
-    access_token: TokenPayload = Depends(auth.access_token_required)
+    access_token: TokenPayload = Depends(access_token_header)
     ):
     """Create a new vacation session for the authenticated user."""
     log.info(f"Creating vacation session for user: {access_token.sub}")
@@ -89,11 +89,26 @@ async def create_vacation_session(
     await db.refresh(new_session)
     return {"session_id": new_session.id}
 
-@router.post("/delete/{session_id}")
+@router.get("/getSessions")
+async def get_sessions(
+    db: AsyncSession = Depends(get_db),
+    access_token: TokenPayload = Depends(access_token_header)
+    ):
+    """Retrieve all vacation sessions for the authenticated user."""
+    log.info(f"Retrieving all vacation sessions for user: {access_token.sub}")
+    stmt = select(models.VacationSession).filter_by(
+        user_id=access_token.sub
+    )
+    result = await db.execute(stmt)
+    sessions = result.scalars().all()
+    ids = [session.id for session in sessions]
+    return {"session_ids": ids}
+
+@router.delete("/{session_id}")
 async def delete_vacation_session(
     session_id: int,
     db: AsyncSession = Depends(get_db),
-    access_token: TokenPayload = Depends(auth.access_token_required)
+    access_token: TokenPayload = Depends(access_token_header)
     ):
     """Delete an existing vacation session for the authenticated user."""
     log.info(f"Deleting vacation session {session_id} for user: {access_token.sub}")
@@ -110,26 +125,11 @@ async def delete_vacation_session(
         raise HTTPException(status_code=500, detail="Error deleting vacation session")
     return {"detail": "Vacation session deleted successfully"}
 
-@router.get("/getSessions")
-async def get_sessions(
-    db: AsyncSession = Depends(get_db),
-    access_token: TokenPayload = Depends(auth.access_token_required)
-    ):
-    """Retrieve all vacation sessions for the authenticated user."""
-    log.info(f"Retrieving all vacation sessions for user: {access_token.sub}")
-    stmt = select(models.VacationSession).filter_by(
-        user_id=access_token.sub
-    )
-    result = await db.execute(stmt)
-    sessions = result.scalars().all()
-    ids = [session.id for session in sessions]
-    return {"session_ids": ids}
-
 @router.get("/{session_id}")
 async def get_vacation_session(
     session_id: int,
     db: AsyncSession = Depends(get_db),
-    access_token: TokenPayload = Depends(auth.access_token_required)
+    access_token: TokenPayload = Depends(access_token_header)
     ):
     """Retrieve details of a vacation session for the authenticated user."""
     log.info(f"Retrieving vacation session {session_id} for user: {access_token.sub}")

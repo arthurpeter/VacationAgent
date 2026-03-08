@@ -15,7 +15,7 @@ export default function Navbar() {
 
   const handleLogout = () => {
     logout();
-    navigate("/"); // Safely redirect to the root (which handles unauthenticated users)
+    navigate('/');
   };
 
   return (

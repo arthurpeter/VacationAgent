@@ -97,6 +97,10 @@ export default function Dashboard() {
     setIsModalOpen(true);
   };
 
+  const handleDeleteFromUI = (sessionId) => {
+    setVacations(prevVacations => prevVacations.filter(v => v.id !== sessionId));
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 px-8 py-12">
       <div className="max-w-6xl mx-auto">
@@ -147,9 +151,15 @@ export default function Dashboard() {
 
             {/* Vacation Cards */}
             {vacations.map(vacation => (
-              // We wrap the card in a div to capture the click and handle the resume logic
-              <div key={vacation.id} onClick={() => handleResumeSession(vacation.id)} className="cursor-pointer">
-                 <VacationCard vacation={vacation} />
+              <div 
+                key={vacation.id} 
+                onClick={() => handleResumeSession(vacation.id)} 
+                className="cursor-pointer"
+              >
+                <VacationCard 
+                  vacation={vacation} 
+                  onDelete={handleDeleteFromUI} 
+                />
               </div>
             ))}
           </div>

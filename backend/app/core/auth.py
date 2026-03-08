@@ -1,7 +1,8 @@
 """
 Authentication configuration and setup using AuthX.
 """
-from authx import AuthX, AuthXConfig
+from authx import AuthX, AuthXConfig, TokenPayload
+from fastapi import Request
 from app.core.config import settings
 from app.utils.security import is_token_revoked
 
@@ -33,3 +34,20 @@ auth = AuthX(config=config)
 @auth.set_callback_token_blocklist
 async def token_blocklist_callback(token: str) -> bool:
     return await is_token_revoked(token)
+
+
+async def access_token_header(request: Request) -> TokenPayload:
+    """
+    Extrage și verifică Access Token-ul EXCLUSIV din Header-ul Authorization.
+    Previne coliziunea cu alte token-uri prezente în cookies.
+    """
+    token_str = await auth.get_access_token_from_request(request, locations=["headers"])
+    return auth.verify_token(token_str, verify_csrf=False)
+
+async def refresh_token_cookie(request: Request) -> TokenPayload:
+    """
+    Extrage și verifică Refresh Token-ul EXCLUSIV din Cookie-ul HttpOnly.
+    Ignoră orice token de tip Access prezent în Header-ul Authorization.
+    """
+    token_str = await auth.get_refresh_token_from_request(request, locations=["cookies"])
+    return auth.verify_token(token_str)

@@ -1,8 +1,8 @@
 """Authentication router using AuthX."""
 from authx import TokenPayload
-from fastapi import APIRouter, Depends, HTTPException, Response, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, BackgroundTasks
 from pydantic import BaseModel
-from app.core.auth import auth
+from app.core.auth import auth, refresh_token_cookie, access_token_header
 from app.core.database import get_db
 from app import models, schemas, utils
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -169,7 +169,7 @@ async def login(data: LoginForm, response: Response, db: AsyncSession = Depends(
 @router.post("/refresh")
 async def refresh_token(
     response: Response,
-    token: TokenPayload = Depends(auth.refresh_token_required),
+    token: TokenPayload = Depends(refresh_token_cookie),
     db: AsyncSession = Depends(get_db)
 ):
     try:    
@@ -189,14 +189,11 @@ async def refresh_token(
     except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid refresh token") from e
 
-class LogoutForm(BaseModel):
-    refresh_token: str
-
 @router.post("/logout")
 async def logout(
     response: Response,
-    access_token: TokenPayload = Depends(auth.access_token_required),
-    refresh_token: TokenPayload = Depends(auth.refresh_token_required),
+    refresh_token: TokenPayload = Depends(refresh_token_cookie),
+    access_token: TokenPayload = Depends(access_token_header),
     db: AsyncSession = Depends(get_db),
 ):
     try:
@@ -209,9 +206,9 @@ async def logout(
         return {"detail": "Successfully logged out"}
     
     except Exception as e:
-        print(e)
+        log.error(f"Error during logout: {e}")
         raise HTTPException(status_code=401, detail="Invalid token") from e
 
-@router.post("/validate", dependencies=[Depends(auth.access_token_required)])
+@router.post("/validate", dependencies=[Depends(access_token_header)])
 async def validate_token():
     return {"message" : "Token is valid"}

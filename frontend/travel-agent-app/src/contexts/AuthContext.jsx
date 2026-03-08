@@ -66,7 +66,6 @@ export const AuthProvider = ({ children }) => {
     
     clearTokens();
     setIsAuthenticated(false);
-    window.location.href = '/login';
   };
 
   // Don't render the app until the initial authentication check is complete
