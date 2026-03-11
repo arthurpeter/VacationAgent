@@ -15,6 +15,7 @@ class SessionDataUpdate(BaseModel):
     infants_on_lap: Optional[int] = None
     children_ages: Optional[str] = None
     room_qty: Optional[int] = None
+    companion_ids: Optional[list[str]] = None
 
 class Flight(BaseModel):
     """Schema for individual flight details."""

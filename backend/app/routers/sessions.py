@@ -10,12 +10,12 @@ from sqlalchemy import select, delete
 from authx import TokenPayload
 from app.core.auth import access_token_header
 from app.models.vacation_session import SessionStage
-
+from app.models.companion import TravelCompanion
+from sqlalchemy.orm import selectinload
 
 log = get_logger(__name__)
 
 router = APIRouter(prefix="/session", tags=["Session Management"])
-
 
 @router.patch("/{session_id}/details")
 async def update_session_details(
@@ -24,8 +24,9 @@ async def update_session_details(
     db: AsyncSession = Depends(get_db),
     access_token: TokenPayload = Depends(access_token_header)
 ):
-    """Auto-saves the user's form data as they type."""
-    stmt = select(models.VacationSession).filter_by(
+    stmt = select(models.VacationSession).options(
+        selectinload(models.VacationSession.companions)
+    ).filter_by(
         id=session_id, user_id=access_token.sub
     )
     result = await db.execute(stmt)
@@ -35,7 +36,16 @@ async def update_session_details(
         raise HTTPException(status_code=404, detail="Session not found")
 
     update_data = data.model_dump(exclude_unset=True)
-    
+
+    if "companion_ids" in update_data:
+        companion_ids = update_data.pop("companion_ids")
+        comp_stmt = select(TravelCompanion).filter(
+            TravelCompanion.id.in_(companion_ids),
+            TravelCompanion.user_id == access_token.sub
+        )
+        comp_result = await db.execute(comp_stmt)
+        session.companions = comp_result.scalars().all()
+
     fmt = "%Y-%m-%d"
     if "from_date" in update_data and update_data["from_date"]:
         update_data["from_date"] = datetime.strptime(update_data["from_date"], fmt)
@@ -46,8 +56,7 @@ async def update_session_details(
         setattr(session, key, value)
 
     await db.commit()
-
-    return {"status": "success", "message": "Session auto-saved"}
+    return {"status": "success", "message": "Session updated with companions"}
 
 class StageUpdate(BaseModel):
     stage: SessionStage

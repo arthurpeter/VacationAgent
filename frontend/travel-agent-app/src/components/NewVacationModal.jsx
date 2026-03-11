@@ -6,17 +6,14 @@ import { API_BASE_URL } from '../config';
 export default function NewVacationModal({ isOpen, onClose }) {
   const navigate = useNavigate();
   
-  // State to hold the fetched user data
   const [userProfile, setUserProfile] = useState(null);
   const [isFetchingProfile, setIsFetchingProfile] = useState(false);
 
-  // --- NEW: A single toggle for both airports and currency ---
   const [usePreferences, setUsePreferences] = useState(false);
   
   const [selectedCompanions, setSelectedCompanions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch the profile ONLY when the modal opens
   useEffect(() => {
     if (isOpen) {
       const fetchProfile = async () => {
@@ -27,7 +24,6 @@ export default function NewVacationModal({ isOpen, onClose }) {
             const data = await res.json();
             setUserProfile(data);
             
-            // Auto-check the single box if they have ANY profile data saved
             if ((data.home_airports && data.home_airports.length > 0) || data.currency_preference) {
                 setUsePreferences(true);
             }
@@ -40,7 +36,6 @@ export default function NewVacationModal({ isOpen, onClose }) {
       };
       fetchProfile();
     } else {
-      // Reset state when modal closes
       setUserProfile(null);
       setUsePreferences(false);
       setSelectedCompanions([]);
@@ -53,7 +48,6 @@ export default function NewVacationModal({ isOpen, onClose }) {
   const hasCurrency = !!userProfile?.currency_preference;
   const hasCompanions = userProfile?.companions && userProfile.companions.length > 0;
 
-  // Toggle companion selection
   const handleCompanionToggle = (companionId) => {
     setSelectedCompanions(prev => 
       prev.includes(companionId) 
@@ -62,9 +56,8 @@ export default function NewVacationModal({ isOpen, onClose }) {
     );
   };
 
-  // Calculate adults/children for the backend based on selected companions
   const calculateTravelers = () => {
-    let adults = 1; // User is always 1 adult
+    let adults = 1;
     let children = 0;
     let infants_in_seat = 0;
     let infants_on_lap = 0;
@@ -102,7 +95,6 @@ export default function NewVacationModal({ isOpen, onClose }) {
   const handleCreateSession = async () => {
     setIsLoading(true);
     try {
-      // 1. Create session
       const createRes = await fetchWithAuth(`${API_BASE_URL}/session/create`, {}, "POST");
       if (!createRes) {
         setIsLoading(false);
@@ -113,10 +105,8 @@ export default function NewVacationModal({ isOpen, onClose }) {
       const createData = await createRes.json();
       const sessionId = createData.session_id;
 
-      // 2. Build patch payload
       let patchData = {};
       
-      // --- NEW: Apply both if the single toggle is checked ---
       if (usePreferences) {
         if (hasAirports) {
             patchData.departure = userProfile.home_airports.join(',');
@@ -126,16 +116,13 @@ export default function NewVacationModal({ isOpen, onClose }) {
         }
       }
       
-      // Calculate travelers including companions
       const travelers = calculateTravelers();
-      patchData = { ...patchData, ...travelers };
+      patchData = { ...patchData, ...travelers, companion_ids: selectedCompanions };
 
-      // 3. Patch session details
       if (Object.keys(patchData).length > 0) {
         await fetchWithAuth(`${API_BASE_URL}/session/${sessionId}/details`, patchData, "PATCH");
       }
 
-      // 4. Redirect
       navigate(`/plan/${sessionId}/discovery`); 
       
     } catch (error) {
@@ -165,7 +152,6 @@ export default function NewVacationModal({ isOpen, onClose }) {
             ) : (
               <div className="mb-6 mt-4">
                 
-                {/* --- NEW: Single toggle UI --- */}
                 {(hasAirports || hasCurrency) && (
                   <label className="flex items-start space-x-3 mb-4 cursor-pointer group bg-blue-50 p-4 rounded-xl border border-blue-100">
                     <input 

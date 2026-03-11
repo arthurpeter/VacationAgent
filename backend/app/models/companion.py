@@ -16,3 +16,9 @@ class TravelCompanion(Base):
     is_infant_on_lap = Column(Boolean, default=False)
 
     user = relationship("User", back_populates="companions")
+
+    sessions = relationship(
+        "VacationSession", 
+        secondary="vacation_companions", 
+        back_populates="companions"
+    )

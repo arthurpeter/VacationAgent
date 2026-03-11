@@ -1,10 +1,9 @@
-# ...existing code...
 """Session model to store partially-collected vacation state so a user/agent can resume."""
 import uuid
 from typing import Any, Dict, Optional
 from datetime import datetime, timezone, timedelta
 
-from sqlalchemy import Column, Enum, String, DateTime, ForeignKey, JSON, Boolean, Integer, Text
+from sqlalchemy import Column, Enum, String, DateTime, ForeignKey, JSON, Boolean, Integer, Table, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -21,6 +20,13 @@ class SessionStage(str, enum.Enum):
 def get_expiry_date():
     """Helper to calculate the expiry date 30 days from now."""
     return datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=settings.SESSION_EXPIRY_DAYS)
+
+vacation_companions = Table(
+    "vacation_companions",
+    Base.metadata,
+    Column("vacation_session_id", Integer, ForeignKey("vacation_sessions.id", ondelete="CASCADE"), primary_key=True),
+    Column("companion_id", String, ForeignKey("travel_companions.id", ondelete="CASCADE"), primary_key=True)
+)
 
 class VacationSession(Base):
     __tablename__ = "vacation_sessions"
@@ -59,6 +65,13 @@ class VacationSession(Base):
     )
 
     user = relationship("User", back_populates="sessions", lazy="joined")
+
+    companions = relationship(
+        "TravelCompanion", 
+        secondary=vacation_companions, 
+        back_populates="sessions",
+        lazy="selectin" 
+    )
     
     def __repr__(self):
         return f"<VacationSession id={self.id} user_id={self.user_id}>"
