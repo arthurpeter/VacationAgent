@@ -9,6 +9,8 @@ class DiscoveryState(TypedDict):
     user_id: str
     session_id: int
     
+    persona_context: Optional[str] = None
+    newly_extracted_data: Optional[dict] = None
     extracted_data: Optional[dict] = None
     tool_outputs: List[str] = []
     vibe: Optional[str] = None
