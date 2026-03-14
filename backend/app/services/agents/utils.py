@@ -4,6 +4,8 @@ from sqlalchemy.orm import selectinload
 from app.models.vacation_session import VacationSession
 from app.services.agents.memory import DiscoveryState
 from app.utils.generic import calculate_age
+import httpx
+from typing import Optional
 
 async def get_initial_state(db: AsyncSession, session_id: int) -> DiscoveryState:
     """
@@ -53,3 +55,37 @@ async def get_initial_state(db: AsyncSession, session_id: int) -> DiscoveryState
         "newly_extracted_data": None,
         "is_complete": False
     }
+
+async def resolve_location(query: str) -> str:
+    """
+    Calls Nominatim (OSM) to turn messy user input into a 
+    standardized 'City, CC' string.
+    """
+    url = f"https://nominatim.openstreetmap.org/search?format=json&q={query}&addressdetails=1&limit=1"
+    headers = {"User-Agent": "TuRAG/1.0 (contact.turag@gmail.com)"}
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers, timeout=5.0)
+            if response.status_code == 200:
+                data = response.json()
+                if data:
+                    result = data[0]
+                    address = result.get("address", {})
+                    
+                    city = (address.get("city") or 
+                            address.get("town") or 
+                            address.get("village") or 
+                            address.get("municipality") or
+                            address.get("state"))
+                    
+                    country_code = address.get("country_code")
+                    
+                    if city and country_code:
+                        return f"{city}, {country_code.upper()}"
+                    
+                    return result.get("display_name", query)
+    except Exception as e:
+        print(f"Location resolution error: {e}")
+        
+    return query.upper()
