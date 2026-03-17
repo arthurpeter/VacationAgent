@@ -11,6 +11,7 @@ google_search_results==2.4.2
 langchain_google_genai==4.2.1
 langgraph==1.0.10
 langgraph-checkpoint-postgres==3.0.4
+psycopg-binary==3.3.3
 psycopg_pool==3.3.0
 pydantic==2.12.5
 pydantic_settings==2.13.1

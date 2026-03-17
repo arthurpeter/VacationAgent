@@ -1,7 +1,7 @@
 from typing import Literal
 from dotenv import load_dotenv
 
-from app.services.agents.memory import DiscoveryState, State
+from app.services.agents.memory import DiscoveryState
 from app.services.agents.prompts import *
 from langgraph.store.base import BaseStore
 from langgraph.graph import END

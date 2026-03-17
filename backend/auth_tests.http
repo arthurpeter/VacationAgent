@@ -46,4 +46,4 @@ Authorization: Bearer {{accessToken}}
 
 {
   "refresh_token": "{{refreshToken}}"
-}
+  }
