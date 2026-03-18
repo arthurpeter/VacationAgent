@@ -10,7 +10,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.core.database import Base, engine
+from app.core.database import Base, engine, langgraph_pool
 from app.core.auth import auth
 from app.core.jobs import start_jobs
 
@@ -22,11 +22,22 @@ from app.routers.search import router as search_router
 # Start background jobs
 start_jobs()
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await langgraph_pool.open()
+    print("LangGraph checkpointer pool opened.")
+    
+    yield
+    
+    await langgraph_pool.close()
+    print("LangGraph checkpointer pool closed.")
+
 # Create FastAPI app
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.VERSION,
     debug=settings.DEBUG,
+    lifespan=lifespan
 )
 
 # Add CORS middleware

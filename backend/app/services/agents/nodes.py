@@ -29,7 +29,10 @@ async def information_collector(state: DiscoveryState) -> dict:
         f"- {k}: {v}" for k, v in state.get("extracted_data", {}).items() if v is not None
     ]) if state.get("extracted_data") else "No information collected yet."
 
+    today_str = datetime.now().strftime("%A, %B %d, %Y")
+
     instructions = information_collector_prompt.format(
+        current_date=today_str,
         persona=state.get("persona_context", "None"),
         current_knowledge=current_knowledge,
         user_query=state["messages"][-1].content
@@ -89,11 +92,12 @@ async def db_validator(state: DiscoveryState) -> dict:
         "infants_on_lap": session.infants_on_lap,
         "children_ages": session.children_ages,
         "room_qty": session.room_qty,
-        "currency": session.currency
+        "currency": session.currency,
+        "budget": session.budget
     }
 
     is_valid = False
-    mandatory = ["departure", "destination", "from_date", "to_date"]
+    mandatory = ["departure", "destination", "from_date", "to_date", "adults", "currency", "room_qty"]
     
     if all(refreshed_data.get(f) for f in mandatory):
         d1 = datetime.fromisoformat(refreshed_data["from_date"]).replace(tzinfo=None)

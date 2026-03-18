@@ -52,6 +52,7 @@ class FlightsRequest(BaseModel):
     infants_on_lap: Optional[int] = 0
     sort_by: Optional[int] = 2
     stops: Optional[int] = 0
+    price: Optional[float] = None
 
 class AccomodationsRequest(BaseModel):
     """Schema for accomodations search request."""
@@ -103,6 +104,7 @@ class AccomodationBookingRequest(BaseModel):
     """Simplified schema for booking an accomodation."""
     session_id: int
     booking_url: str
+    price: Optional[float] = None
 
 class AccomodationBookingResponse(BaseModel):
     """Schema for accomodation booking response."""

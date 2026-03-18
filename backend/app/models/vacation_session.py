@@ -3,7 +3,7 @@ import uuid
 from typing import Any, Dict, Optional
 from datetime import datetime, timezone, timedelta
 
-from sqlalchemy import Column, Enum, String, DateTime, ForeignKey, JSON, Boolean, Integer, Table, Text
+from sqlalchemy import Column, Enum, Float, String, DateTime, ForeignKey, JSON, Boolean, Integer, Table, Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -47,9 +47,12 @@ class VacationSession(Base):
     infants_on_lap = Column(Integer, nullable=True, default=0)
     children_ages = Column(String, nullable=True)
     room_qty = Column(Integer, nullable=True, default=1)
+    budget = Column(Integer, nullable=True)
 
     flights_url = Column(Text, nullable=True)
+    flight_price = Column(Float, nullable=True)
     accomodation_url = Column(Text, nullable=True)
+    accomodation_price = Column(Float, nullable=True)
 
     is_active = Column(Boolean, default=True, nullable=False)
     

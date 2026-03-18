@@ -9,6 +9,7 @@ class ExtractionResult(BaseModel):
     from_date: Optional[str] = Field(None, description="Departure date in YYYY-MM-DD format")
     to_date: Optional[str] = Field(None, description="Return date in YYYY-MM-DD format")
     currency: Optional[str] = Field(None, description="ISO currency code, e.g., 'USD', 'EUR'")
+    budget: Optional[int] = Field(None, description="The maximum total budget the user wants to spend for the trip, as an integer (e.g., 5000)")
     
     adults: Optional[int] = Field(None, description="Number of adults (12+ years old)")
     children: Optional[int] = Field(None, description="Number of children (2-11 years old)")

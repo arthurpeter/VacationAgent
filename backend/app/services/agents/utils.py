@@ -50,7 +50,8 @@ async def get_initial_state(db: AsyncSession, session_id: int) -> DiscoveryState
             "infants_on_lap": session.infants_on_lap,
             "children_ages": session.children_ages,
             "room_qty": session.room_qty,
-            "currency": session.currency
+            "currency": session.currency,
+            "budget": session.budget
         },
         "newly_extracted_data": None,
         "is_complete": False

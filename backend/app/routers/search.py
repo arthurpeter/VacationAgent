@@ -415,7 +415,10 @@ async def book_flight(
                 models.VacationSession.id == data.session_id,
                 models.VacationSession.user_id == access_token.sub
             )
-            .values(flights_url=url)
+            .values(
+                flights_url=url,
+                flight_price=data.price
+                )
         )
         await db.execute(stmt)
         await db.commit()
@@ -606,7 +609,10 @@ async def book_accomodation(
                 models.VacationSession.id == data.session_id,
                 models.VacationSession.user_id == access_token.sub
             )
-            .values(accomodation_url=data.booking_url)
+            .values(
+                accomodation_url=data.booking_url,
+                accomodation_price=data.price
+            )
         )
         
         result = await db.execute(stmt)

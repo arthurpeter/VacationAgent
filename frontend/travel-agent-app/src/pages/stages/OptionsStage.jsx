@@ -758,6 +758,7 @@ export default function OptionsStage() {
                     outbound_date: dates.start,
                     return_date: dates.end,
                     adults: travelerCounts.adults,
+                    price: selectedInbound.price
                 }, "POST").then(res => ({ type: 'flights', res }))
             );
         }
@@ -766,7 +767,8 @@ export default function OptionsStage() {
             bookingPromises.push(
                 fetchWithAuth(`${API_BASE_URL}/search/bookAccomodation`, {
                     session_id: parseInt(sessionData?.id),
-                    booking_url: selectedHotel.booking_url 
+                    booking_url: selectedHotel.booking_url,
+                    price: selectedHotel.price
                 }, "POST").then(res => ({ type: 'hotel', res }))
             );
         } else if (needsHotel) {
