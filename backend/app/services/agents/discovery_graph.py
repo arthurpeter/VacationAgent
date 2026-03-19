@@ -1,105 +1,102 @@
+import orjson
 import sys
+import asyncio
+import os
+from dotenv import load_dotenv
 
 from langgraph.graph import START, END, StateGraph
-from langgraph.store.memory import InMemoryStore
-from app.services.agents.memory import DiscoveryState
-from app.services.agents.nodes import information_collector, should_get_more_info
+from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from psycopg_pool import ConnectionPool
-from dotenv import load_dotenv
-import os
-from sqlalchemy.ext.asyncio import AsyncSession
-from psycopg_pool import AsyncConnectionPool
-import asyncio
 from langchain_core.messages import HumanMessage
-from app.core.database import SessionLocal
+from psycopg_pool import AsyncConnectionPool
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.services.agents.memory import DiscoveryState
+from app.services.agents.nodes import information_collector, db_validator, responder
 from app.services.agents.utils import get_initial_state
-from app.core.database import SessionLocal
-from app.core.config import settings
+from app.services.agents.tools import responder_tools
+from app.core.database import SessionLocal, langgraph_pool
+from app.core.logger import get_logger
 
 load_dotenv()
+
+log = get_logger(__name__)
 
 def generate_graph(checkpointer=None):
     
     builder = StateGraph(DiscoveryState)
     builder.add_node("information_collector", information_collector)
+    builder.add_node("db_validator", db_validator)
+    builder.add_node("responder", responder)
+    builder.add_node("tools", ToolNode(responder_tools))
 
     builder.add_edge(START, "information_collector")
-    builder.add_edge("information_collector", END)
+    builder.add_edge("information_collector", "db_validator")
+    builder.add_edge("db_validator", "responder")
+    builder.add_conditional_edges(
+        "responder", 
+        tools_condition 
+    )
+    builder.add_edge("tools", "responder")
 
     return builder.compile(checkpointer=checkpointer)
 
-async def process_discovery_message(
+async def stream_discovery_message(
     session_id: int, 
     user_message: str, 
     db: AsyncSession, 
-    db_pool: AsyncConnectionPool
+    checkpointer: AsyncPostgresSaver
 ):
-    """
-    Dynamically routes the request.
-    If no checkpoint exists, it builds the state from the DB.
-    If a checkpoint exists, it appends the new message to memory.
-    """
-    checkpointer = AsyncPostgresSaver(db_pool)
-    
     graph = generate_graph(checkpointer) 
-
     config = {"configurable": {"thread_id": str(session_id)}}
 
     current_state = await graph.aget_state(config)
 
     if not current_state.values:
-        print(f"Starting new LangGraph thread for session {session_id}...")
-        
-        state = await get_initial_state(db, session_id)
-        
-        state["messages"].append(HumanMessage(content=user_message))
-        
-        result = await graph.ainvoke(state, config=config)
-        
+        log.info(f"Starting new LangGraph thread for session {session_id}...")
+        input_data = await get_initial_state(db, session_id)
+        input_data["messages"].append(HumanMessage(content=user_message))
     else:
-        print(f"Resuming existing thread for session {session_id}...")
-        
-        new_input = {"messages": [HumanMessage(content=user_message)]}
-        
-        result = await graph.ainvoke(new_input, config=config)
+        log.info(f"Resuming existing thread for session {session_id}...")
+        input_data = {"messages": [HumanMessage(content=user_message)]}
 
-    return result
+    final_ai_text = ""
+
+    async for event in graph.astream(input_data, config=config, stream_mode="updates"):
+        for node_name, node_updates in event.items():
+            
+            new_messages = node_updates.get("messages", [])
+            if new_messages:
+                last_msg = new_messages[-1] if isinstance(new_messages, list) else new_messages
+                if getattr(last_msg, "type", "") == "ai":
+                    final_ai_text = last_msg.content
+            
+            state_changes = node_updates.get("extracted_data", {})
+            
+            payload = {
+                "status": "processing",
+                "current_node": node_name,
+                "extracted_data": state_changes,
+            }
+            
+            yield f"data: {orjson.dumps(payload).decode()}\n\n"
+
+    final_payload = {
+        "status": "complete", 
+        "ai_message": final_ai_text
+    }
+    yield f"data: {orjson.dumps(final_payload).decode()}\n\n"
+
 
 
 if __name__ == "__main__":
     print("This module is not meant to be run directly. It provides the execution graph.\n\n")
     print("Test\n\n")
-
-    async def main_test():
-        print("=======================================================================")
-        print("Test: Information Collector Node")
-        print("=======================================================================\n")
+    my_graph = generate_graph()
+    
+    png_bytes = my_graph.get_graph(xray=True).draw_mermaid_png()
+    
+    with open("discovery_graph_v1.png", "wb") as f:
+        f.write(png_bytes)
         
-        raw_db_url = settings.DATABASE_URL.replace("+asyncpg", "").replace("+psycopg", "")
-
-        async with AsyncConnectionPool(raw_db_url) as pool:
-            
-            async with SessionLocal() as db_session:
-                
-                result = await process_discovery_message(
-                    session_id=1, 
-                    user_message="I want to go to Paris from New York between September 10 and September 20. There will be 2 adults and 1 child. My budget is around $3000.",
-                    db=db_session,
-                    db_pool=pool
-                )
-
-                print("=== EXTRACTED DATA OUTPUT ===")
-                new_data = result.get("newly_extracted_data", {})
-                if new_data:
-                    for key, value in new_data.items():
-                        if value is not None:
-                            print(f"- {key}: {value}")
-                else:
-                    print("No new data extracted.")
-                print("\n=======================================================================\n")
-
-    if sys.platform.startswith('win'):
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-    asyncio.run(main_test())
+    print("Graph saved successfully to discovery_graph_v1.png!")

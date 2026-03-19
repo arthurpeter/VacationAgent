@@ -13,7 +13,10 @@ from datetime import datetime
 from sqlalchemy import update, select
 from app.core.database import SessionLocal
 from app.models.vacation_session import VacationSession
-from app.services.agents.utils import resolve_location
+from app.services.agents.utils import is_llm_null, resolve_location
+from langchain_core.messages import SystemMessage
+from app.services.agents.prompts import responder_prompt
+from app.services.agents.tools import responder_tools
 
 
 load_dotenv()
@@ -31,11 +34,18 @@ async def information_collector(state: DiscoveryState) -> dict:
 
     today_str = datetime.now().strftime("%A, %B %d, %Y")
 
+    messages = state.get("messages", [])
+    recent_msgs = messages[-2:] if len(messages) >= 2 else messages
+    chat_context = ""
+    for msg in recent_msgs:
+        role = "User" if msg.type == "human" else "Assistant"
+        chat_context += f"{role}: {msg.content}\n"
+
     instructions = information_collector_prompt.format(
         current_date=today_str,
         persona=state.get("persona_context", "None"),
         current_knowledge=current_knowledge,
-        user_query=state["messages"][-1].content
+        recent_chat_history=chat_context.strip()
     )
 
     structured_llm = llm.with_structured_output(ExtractionResult)
@@ -46,7 +56,7 @@ async def information_collector(state: DiscoveryState) -> dict:
 
 async def db_validator(state: DiscoveryState) -> dict:
     """
-    Node 3: Validates the extracted trip parameters and adds them to the database.
+    Node 2: Validates the extracted trip parameters and adds them to the database.
     """
     new_info = state.get("newly_extracted_data") or {}
     session_id = state.get("session_id")
@@ -55,7 +65,7 @@ async def db_validator(state: DiscoveryState) -> dict:
     if new_info:
         update_values = {}
         for k, v in new_info.items():
-            if v is None or k == "is_change_request": continue
+            if is_llm_null(v) or k == "is_change_request": continue
             
             if k in ["departure", "destination"]:
                 if not v or len(v) < 3: continue
@@ -129,10 +139,21 @@ async def db_validator(state: DiscoveryState) -> dict:
         "is_complete": is_valid
     }
 
-def should_get_more_info(state: DiscoveryState) -> Literal["next_node", "other_node"]:
-    if state["need_information"]:
-        return "other_node"
-    return "next_node"
+async def responder(state: DiscoveryState) -> dict:
+    """
+    Node 3: Formulates the final response to the user and can call tools.
+    """
+    is_complete = state.get("is_complete", False)
+    current_data = state.get("extracted_data", {})
+    messages = state.get("messages", [])
+    
+    system_instructions = responder_prompt
+    
+    llm_with_tools = llm.bind_tools(responder_tools)
+    
+    response = await llm_with_tools.ainvoke([SystemMessage(content=system_instructions)] + messages)
+    
+    return {"messages": [response]}
 
 if __name__ == "__main__":
     print("This module is not meant to be run directly. It provides the agent nodes and decisional edges.")

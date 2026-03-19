@@ -90,3 +90,19 @@ async def resolve_location(query: str) -> str:
         print(f"Location resolution error: {e}")
         
     return query.upper()
+
+
+def is_llm_null(value) -> bool:
+    """
+    Catches actual None types and LLM-hallucinated string versions of null.
+    Intentionally allows empty strings ("") and 0 to pass through.
+    """
+    if value is None:
+        return True
+        
+    if isinstance(value, str):
+        cleaned_val = value.strip().lower()
+        if cleaned_val in {"null", "none", "undefined"}:
+            return True
+            
+    return False

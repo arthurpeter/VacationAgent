@@ -18,6 +18,7 @@ from app.routers.auth import router as auth_router
 from app.routers.users import router as users_router
 from app.routers.sessions import router as sessions_router
 from app.routers.search import router as search_router
+from app.routers.chat import router as chat_router
 
 # Start background jobs
 start_jobs()
@@ -54,6 +55,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(sessions_router)
 app.include_router(search_router)
+app.include_router(chat_router)
 
 # Configure AuthX error handling
 auth.handle_errors(app)
