@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app import schemas, models
 from app.core.logger import get_logger
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
 from authx import TokenPayload
 from app.core.auth import access_token_header
 from datetime import datetime
@@ -51,3 +51,29 @@ async def chat_discovery(
         ),
         media_type="text/event-stream"
     )
+
+@router.delete("/discovery/{session_id}")
+async def reset_discovery_chat(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+):   
+    thread_id = str(session_id)
+    
+    await db.execute(
+        text("DELETE FROM checkpoint_writes WHERE thread_id = :thread_id"), 
+        {"thread_id": thread_id}
+    )
+    await db.execute(
+        text("DELETE FROM checkpoint_blobs WHERE thread_id = :thread_id"), 
+        {"thread_id": thread_id}
+    )
+    await db.execute(
+        text("DELETE FROM checkpoints WHERE thread_id = :thread_id"), 
+        {"thread_id": thread_id}
+    )
+    
+    await db.commit()
+    
+    log.info(f"Successfully wiped LangGraph memory for session {session_id}")
+    
+    return {"status": "success", "message": "Conversation memory wiped successfully."}
