@@ -52,7 +52,7 @@ async def chat_discovery(
         media_type="text/event-stream"
     )
 
-#     curl --location 'http://127.0.0.1:5000/chat/discovery/1' \
+# curl --location 'http://127.0.0.1:5000/chat/discovery/1' \
 # --header 'Content-Type: application/json' \
 # --data '{"message": "We will buy a seat for the 1 year old to sit on the plane"}'
 
@@ -81,3 +81,7 @@ async def reset_discovery_chat(
     log.info(f"Successfully wiped LangGraph memory for session {session_id}")
     
     return {"status": "success", "message": "Conversation memory wiped successfully."}
+
+# curl --location --request DELETE 'http://127.0.0.1:5000/chat/discovery/1' \
+# --header 'Content-Type: application/json' \
+# --data '{"message": "We will buy a seat for the 1 year old to sit on the plane"}'
