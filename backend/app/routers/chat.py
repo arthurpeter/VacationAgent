@@ -52,6 +52,10 @@ async def chat_discovery(
         media_type="text/event-stream"
     )
 
+#     curl --location 'http://127.0.0.1:5000/chat/discovery/1' \
+# --header 'Content-Type: application/json' \
+# --data '{"message": "We will buy a seat for the 1 year old to sit on the plane"}'
+
 @router.delete("/discovery/{session_id}")
 async def reset_discovery_chat(
     session_id: int,
