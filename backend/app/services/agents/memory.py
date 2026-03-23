@@ -16,3 +16,4 @@ class DiscoveryState(TypedDict):
     vibe: Optional[str] = None
     description: Optional[str] = None
     is_complete: bool = False
+    passengers_confirmed: bool = False

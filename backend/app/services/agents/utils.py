@@ -7,6 +7,37 @@ from app.utils.generic import calculate_age
 import httpx
 from typing import Optional
 
+
+def format_extracted_data(session: VacationSession) -> dict:
+    """Formats the session DB model into the standard extracted_data dictionary."""
+    return {
+        "departure": session.departure,
+        "destination": session.destination,
+        "from_date": session.from_date.isoformat() if session.from_date else None,
+        "to_date": session.to_date.isoformat() if session.to_date else None,
+        "adults": session.adults,
+        "children": session.children,
+        "infants_in_seat": session.infants_in_seat,
+        "infants_on_lap": session.infants_on_lap,
+        "children_ages": session.children_ages,
+        "room_qty": session.room_qty,
+        "currency": session.currency,
+        "budget": session.budget
+    }
+
+async def get_resumed_state(db: AsyncSession, session_id: int) -> dict:
+    """
+    Performs a fast, single-table query to fetch the latest trip parameters.
+    Used to sync UI changes into the graph when resuming an existing session.
+    """
+    result = await db.execute(select(VacationSession).filter_by(id=session_id))
+    session = result.scalars().first()
+    
+    if not session:
+        raise ValueError(f"Session {session_id} not found")
+        
+    return format_extracted_data(session)
+
 async def get_initial_state(db: AsyncSession, session_id: int) -> DiscoveryState:
     """
     Fetches session data and returns a DiscoveryState object 

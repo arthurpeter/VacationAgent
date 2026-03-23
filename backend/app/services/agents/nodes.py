@@ -13,7 +13,7 @@ from datetime import datetime
 from sqlalchemy import update, select
 from app.core.database import SessionLocal
 from app.models.vacation_session import VacationSession
-from app.services.agents.utils import is_llm_null, resolve_location
+from app.services.agents.utils import is_llm_null, resolve_location, get_resumed_state
 from langchain_core.messages import SystemMessage
 from app.services.agents.prompts import responder_prompt
 from app.services.agents.tools import responder_tools
@@ -62,10 +62,14 @@ async def db_validator(state: DiscoveryState) -> dict:
     session_id = state.get("session_id")
     user_id = state.get("user_id")
 
+    passengers_confirmed = state.get("passengers_confirmed", False)
+    if new_info.get("passengers_confirmed") is True:
+        passengers_confirmed = True
+
     if new_info:
         update_values = {}
         for k, v in new_info.items():
-            if is_llm_null(v) or k == "is_change_request": continue
+            if is_llm_null(v) or k == "is_change_request" or k == "passengers_confirmed": continue
             
             if k in ["departure", "destination"]:
                 if not v or len(v) < 3: continue
@@ -88,23 +92,7 @@ async def db_validator(state: DiscoveryState) -> dict:
                 await db.commit()
 
     async with SessionLocal() as db:
-        result = await db.execute(select(VacationSession).filter_by(id=session_id))
-        session = result.scalars().first()
-
-    refreshed_data = {
-        "departure": session.departure,
-        "destination": session.destination,
-        "from_date": session.from_date.isoformat() if session.from_date else None,
-        "to_date": session.to_date.isoformat() if session.to_date else None,
-        "adults": session.adults,
-        "children": session.children,
-        "infants_in_seat": session.infants_in_seat,
-        "infants_on_lap": session.infants_on_lap,
-        "children_ages": session.children_ages,
-        "room_qty": session.room_qty,
-        "currency": session.currency,
-        "budget": session.budget
-    }
+        refreshed_data = await get_resumed_state(db, session_id)
 
     is_valid = False
     mandatory = ["departure", "destination", "from_date", "to_date", "adults", "currency", "room_qty"]
@@ -136,7 +124,8 @@ async def db_validator(state: DiscoveryState) -> dict:
 
     return {
         "extracted_data": refreshed_data,
-        "is_complete": is_valid
+        "is_complete": is_valid,
+        "passengers_confirmed": passengers_confirmed
     }
 
 async def responder(state: DiscoveryState) -> dict:
@@ -145,13 +134,31 @@ async def responder(state: DiscoveryState) -> dict:
     """
     is_complete = state.get("is_complete", False)
     current_data = state.get("extracted_data", {})
-    messages = state.get("messages", [])
+    all_messages = state.get("messages", [])
     
-    system_instructions = responder_prompt
+    persona = state.get("persona", "Unknown traveler.")
+    passengers_confirmed = state.get("passengers_confirmed", False)
     
+    required_keys = ["origin", "destination", "from_date", "to_date", "adults"]
+    missing_fields = [k for k in required_keys if not current_data.get(k)]
+    
+    system_instructions = responder_prompt.format(
+        persona=persona,
+        current_data=current_data,
+        missing_fields=missing_fields,
+        is_complete=is_complete,
+        passengers_confirmed=passengers_confirmed
+    )
+    
+    recent_messages = all_messages[-8:] if len(all_messages) > 8 else all_messages
+    
+    if all_messages and len(all_messages) > 8:
+        if getattr(recent_messages[0], "type", "") == "tool":
+            recent_messages = all_messages[-9:]
+
     llm_with_tools = llm.bind_tools(responder_tools)
     
-    response = await llm_with_tools.ainvoke([SystemMessage(content=system_instructions)] + messages)
+    response = await llm_with_tools.ainvoke([SystemMessage(content=system_instructions)] + recent_messages)
     
     return {"messages": [response]}
 

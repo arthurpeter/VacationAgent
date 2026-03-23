@@ -35,14 +35,6 @@ SessionLocal = async_sessionmaker(
     expire_on_commit=False
 )
 
-SessionLocal = async_sessionmaker(
-    autocommit=False, 
-    autoflush=False, 
-    bind=engine, 
-    class_=AsyncSession,
-    expire_on_commit=False
-)
-
 Base = declarative_base()
 
 raw_db_url = settings.DATABASE_URL.replace("+asyncpg", "").replace("+psycopg", "")
@@ -62,5 +54,4 @@ async def get_db():
             await db.close()
 
 async def get_checkpointer():
-    """New: Yields the configured LangGraph Checkpointer."""
     yield AsyncPostgresSaver(langgraph_pool)

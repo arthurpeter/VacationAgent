@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.agents.memory import DiscoveryState
 from app.services.agents.nodes import information_collector, db_validator, responder
-from app.services.agents.utils import get_initial_state
+from app.services.agents.utils import get_initial_state, get_resumed_state
 from app.services.agents.tools import responder_tools
 from app.core.database import SessionLocal, langgraph_pool
 from app.core.logger import get_logger
@@ -58,7 +58,11 @@ async def stream_discovery_message(
         input_data["messages"].append(HumanMessage(content=user_message))
     else:
         log.info(f"Resuming existing thread for session {session_id}...")
-        input_data = {"messages": [HumanMessage(content=user_message)]}
+        fresh_extracted_data = await get_resumed_state(db, session_id)
+        input_data = {
+            "messages": [HumanMessage(content=user_message)],
+            "extracted_data": fresh_extracted_data
+        }
 
     final_ai_text = ""
 

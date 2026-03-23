@@ -4,8 +4,8 @@ from typing import Optional, List
 class ExtractionResult(BaseModel):
     """Reflects all mandatory and optional slots in VacationSession."""
     
-    departure: Optional[str] = Field(None, description="'City, country_code' for departure")
-    destination: Optional[str] = Field(None, description="'City, country_code' for arrival")
+    departure: Optional[str] = Field(None, description="'City, country_code' for departure, translate to english if needed")
+    destination: Optional[str] = Field(None, description="'City, country_code' for arrival, translate to english if needed")
     from_date: Optional[str] = Field(None, description="Departure date in YYYY-MM-DD format")
     to_date: Optional[str] = Field(None, description="Return date in YYYY-MM-DD format")
     currency: Optional[str] = Field(None, description="ISO currency code, e.g., 'USD', 'EUR'")
@@ -21,6 +21,11 @@ class ExtractionResult(BaseModel):
     )
     
     room_qty: Optional[int] = Field(None, description="Number of hotel rooms needed")
+
+    passengers_confirmed: Optional[bool] = Field(
+        default=None, 
+        description="Set to True if the user confirms with the assistant that the passanger counts are correct, even if they haven't explicitly mentioned them in the chat. This helps us avoid relying on system defaults without user confirmation."
+    )
     
     is_change_request: bool = Field(
         False,
