@@ -82,8 +82,8 @@ async def db_validator(state: DiscoveryState) -> dict:
             
             update_values[k] = v
 
-        if update_values:
-            async with SessionLocal() as db:
+        async with SessionLocal() as db:
+            if update_values:
                 await db.execute(
                     update(VacationSession)
                     .where(VacationSession.id == session_id, VacationSession.user_id == user_id)
@@ -91,8 +91,7 @@ async def db_validator(state: DiscoveryState) -> dict:
                 )
                 await db.commit()
 
-    async with SessionLocal() as db:
-        refreshed_data = await get_resumed_state(db, session_id)
+            refreshed_data = await get_resumed_state(db, session_id)
 
     is_valid = False
     mandatory = ["departure", "destination", "from_date", "to_date", "adults", "currency", "room_qty"]
