@@ -94,7 +94,10 @@ async def resolve_location(query: str) -> str:
     standardized 'City, CC' string.
     """
     url = f"https://nominatim.openstreetmap.org/search?format=json&q={query}&addressdetails=1&limit=1"
-    headers = {"User-Agent": "TuRAG/1.0 (contact.turag@gmail.com)"}
+    headers = {
+        "User-Agent": "TuRAG/1.0 (contact.turag@gmail.com)",
+        "Accept-Language": "en"
+    }
 
     try:
         async with httpx.AsyncClient() as client:
@@ -114,12 +117,14 @@ async def resolve_location(query: str) -> str:
                     country_code = address.get("country_code")
                     
                     if city and country_code:
+                        print(f"Resolved '{query}' to '{city}, {country_code.upper()}'")
                         return f"{city}, {country_code.upper()}"
                     
                     return result.get("display_name", query)
     except Exception as e:
         print(f"Location resolution error: {e}")
-        
+
+
     return query.upper()
 
 

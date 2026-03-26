@@ -71,7 +71,7 @@ function LocationAutocomplete({ label, value, onChange, placeholder }) {
             
             try {
                 const res = await fetch(
-                    `https://nominatim.openstreetmap.org/search?format=json&q=${query}&addressdetails=1&limit=5`,
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${query}&addressdetails=1&limit=5&accept-language=en`,
                     { signal: controller.signal }
                 );
                 

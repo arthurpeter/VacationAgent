@@ -49,8 +49,7 @@ async def information_collector(state: DiscoveryState) -> dict:
     )
 
     structured_llm = llm.with_structured_output(ExtractionResult)
-    response = await structured_llm.ainvoke(instructions)
-    
+    response = await structured_llm.ainvoke(instructions)    
     return {"newly_extracted_data": response.model_dump()}
 
 
@@ -154,6 +153,8 @@ async def responder(state: DiscoveryState) -> dict:
     if all_messages and len(all_messages) > 8:
         if getattr(recent_messages[0], "type", "") == "tool":
             recent_messages = all_messages[-9:]
+
+    # print(recent_messages)
 
     llm_with_tools = llm.bind_tools(responder_tools)
     

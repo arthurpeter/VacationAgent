@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     REDIS_PORT: Optional[int] = None
     
     # LLM Configuration
-    LLM_MODEL: str = "gemini-3.1-flash-lite-preview"
+    LLM_MODEL: str = "gemini-2.5-flash"
     LLM_TEMPERATURE: float = 0.0
     
     @property
