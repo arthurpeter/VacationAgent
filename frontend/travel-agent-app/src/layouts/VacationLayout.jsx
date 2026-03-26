@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useParams, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import { fetchWithAuth } from '../authService';
 import { API_BASE_URL } from '../config';
 
@@ -56,30 +55,45 @@ export default function VacationLayout() {
 
   if (loading) return <div className="p-10 text-center">Loading your trip...</div>;
 
+  // FIX: Create a unified session variable that handles both nested and unnested API responses
+  const session = sessionData?.data || sessionData;
+
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-gray-50 font-sans">
       {/* 1. Persistent Top Bar */}
-      <header className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between shrink-0">
-        <div>
-          <h1 className="text-xl font-bold text-gray-800">
-            {sessionData?.data?.destination || "New Vacation Plan"}
+      <header className="bg-white border-b border-gray-200 px-8 py-4 flex items-center shrink-0">
+        
+        {/* LEFT SIDE: Given flex-1 so it takes equal space as the right side */}
+        <div className="flex-1">
+          <h1 className="text-xl font-bold text-gray-800 line-clamp-1 pr-4">
+            {session?.destination || "New Vacation Plan"}
           </h1>
           <p className="text-xs text-gray-500">ID: {id}</p>
         </div>
         
-        {/* The 3-Stage Stepper Navigation */}
-        <nav className="flex bg-gray-100 p-1 rounded-lg">
+        {/* CENTER: The 3-Stage Stepper Navigation */}
+        <nav className="flex bg-gray-100 p-1 rounded-lg shrink-0">
           <StageLink to="discovery" label="1. Discovery" />
           <StageLink to="options" label="2. Options" />
           <StageLink to="itinerary" label="3. Itinerary" />
         </nav>
 
-        <div className="w-32 text-right">
-            {/* Save/Exit buttons could go here */}
-            <span className="text-sm font-semibold text-green-600">
-                {sessionData?.data?.budget ? `Budget: $${sessionData.data.budget}` : 'No Budget Set'}
-            </span>
+        {/* RIGHT SIDE: Also given flex-1 to perfectly balance the left side */}
+        <div className="flex-1 flex flex-col justify-center items-end pl-4">
+            {session?.budget ? (
+              <>
+                <span className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-0.5">Target Budget</span>
+                <span className="text-lg font-black text-green-600 leading-none">
+                  {session.budget.toLocaleString()} <span className="text-sm">{session.currency || ''}</span>
+                </span>
+              </>
+            ) : (
+              <span className="text-sm font-semibold text-gray-400 border border-gray-200 px-3 py-1 rounded-full">
+                No Budget Set
+              </span>
+            )}
         </div>
+        
       </header>
 
       {/* 2. Main Stage Area */}
@@ -100,7 +114,7 @@ function StageLink({ to, label }) {
         `px-4 py-2 text-sm font-medium rounded-md transition ${
           isActive
             ? "bg-white text-blue-600 shadow-sm"
-            : "text-gray-500 hover:text-gray-700"
+            : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
         }`
       }
     >

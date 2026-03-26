@@ -1,96 +1,331 @@
-import React, { useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useOutletContext, useNavigate } from 'react-router-dom'; // IMPORT useNavigate
 import { API_BASE_URL } from '../../config';
+import { fetchWithAuth } from '../../authService';
 
-export default function DiscoveryStage() {
+const DiscoveryStage = () => {
   const { sessionData, refreshContext } = useOutletContext();
-  const [input, setInput] = useState("");
-  // In a real app, messages would come from sessionData.messages
-  const [messages, setMessages] = useState(sessionData?.messages || []);
+  const navigate = useNavigate(); // Initialize navigation
+  
+  const session = sessionData?.data || sessionData;
+  const sessionId = session?.id || sessionData?.id;
+  
+  const [messages, setMessages] = useState([]);
+  const [inputValue, setInputValue] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [agentStatus, setAgentStatus] = useState(null);
+  
+  const [tripData, setTripData] = useState({
+    departure: null, destination: null, from_date: null, to_date: null,
+    adults: null, children: null, budget: null, currency: null, room_qty: null
+  });
 
-  const handleSend = async () => {
-    // 1. Optimistic UI update
-    const newMsg = { role: 'user', content: input };
-    setMessages(prev => [...prev, newMsg]);
-    setInput("");
+  const messagesEndRef = useRef(null);
 
-    // 2. Call your agent API
-    // const res = await fetchWithAuth(...)
-    
-    // 3. Refresh context to update the Sidebar with new extracted info
-    // await refreshContext();
+  useEffect(() => {
+    if (session) {
+      setTripData({
+        departure: session.departure || null,
+        destination: session.destination || null,
+        from_date: session.from_date ? session.from_date.split('T')[0] : null,
+        to_date: session.to_date ? session.to_date.split('T')[0] : null,
+        adults: session.adults || null,
+        children: session.children || null,
+        budget: session.budget || null,
+        currency: session.currency || null,
+        room_qty: session.room_qty || null
+      });
+    }
+  }, [sessionData]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, agentStatus]);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (!sessionId) return;
+      try {
+        const response = await fetchWithAuth(`${API_BASE_URL}/chat/discovery/messages/${sessionId}`, null, 'GET');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.messages && data.messages.length > 0) {
+            setMessages(data.messages);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load chat history:", err);
+      }
+    };
+    fetchHistory();
+  }, [sessionId]);
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!inputValue.trim() || isProcessing || !sessionId) return;
+
+    const userMsg = inputValue.trim();
+    setInputValue("");
+    setMessages(prev => [...prev, { sender: 'user', text: userMsg }]);
+    setIsProcessing(true);
+    setAgentStatus("Reading message...");
+
+    try {
+      const response = await fetchWithAuth(
+        `${API_BASE_URL}/chat/discovery/${sessionId}`, 
+        { message: userMsg }, 
+        'POST'
+      );
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      
+      let done = false;
+      let buffer = ""; 
+      
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        
+        if (value) {
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); 
+          
+          for (let line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.substring(6).trim();
+              if (dataStr) {
+                try {
+                  const data = JSON.parse(dataStr);
+                  handleStreamEvent(data);
+                } catch (err) {
+                  console.error("Error parsing stream JSON chunk:", err);
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Chat error:", error);
+      setMessages(prev => [...prev, { sender: 'ai', text: "Sorry, I encountered an error connecting to the server." }]);
+    } finally {
+      setIsProcessing(false);
+      setAgentStatus(null);
+    }
   };
 
-  // Extracted "Memory" from the database (VacationSession.data)
-  const memory = sessionData?.data || {};
+  const handleStreamEvent = (data) => {
+    if (data.status === "processing") {
+      if (data.current_node === "information_collector") setAgentStatus("Extracting trip details...");
+      else if (data.current_node === "db_validator") setAgentStatus("Validating requirements...");
+      else if (data.current_node === "responder") setAgentStatus("Formulating response...");
+      else if (data.current_node === "tools") setAgentStatus("Searching the web for info...");
+
+      if (data.extracted_data && Object.keys(data.extracted_data).length > 0) {
+        setTripData(prev => ({ ...prev, ...data.extracted_data }));
+        if (refreshContext) refreshContext();
+      }
+    } else if (data.status === "complete") {
+      let finalString = "";
+      try {
+        const parsedMsg = typeof data.ai_message === 'string' ? JSON.parse(data.ai_message) : data.ai_message;
+        if (Array.isArray(parsedMsg)) {
+          finalString = parsedMsg.map(block => block.text || block.content || "").join("");
+        } else if (parsedMsg && typeof parsedMsg === 'object') {
+          finalString = parsedMsg.text || parsedMsg.content || "";
+        }
+      } catch (e) {
+        finalString = data.ai_message;
+      }
+      if (!finalString) {
+        finalString = typeof data.ai_message === 'string' ? data.ai_message : JSON.stringify(data.ai_message);
+      }
+      setMessages(prev => [...prev, { sender: 'ai', text: finalString }]);
+    }
+  };
+
+  // --- NEW: Calculate Progress ---
+  // These are the 7 fields required by your backend validator
+  const requiredFields = ['departure', 'destination', 'from_date', 'to_date', 'adults', 'currency', 'room_qty'];
+  const filledCount = requiredFields.filter(field => tripData[field]).length;
+  const progressPercent = Math.round((filledCount / requiredFields.length) * 100);
 
   return (
-    <div className="flex w-full h-full">
-      {/* Left: Chat Interface */}
-      <div className="w-2/3 flex flex-col border-r border-gray-200 bg-white">
-        <div className="flex-grow overflow-y-auto p-6 space-y-4">
+    // CHANGE: Added flex-col md:flex-row so it stacks on mobile
+    <div className="flex flex-col md:flex-row w-full h-full bg-white overflow-hidden font-sans">
+      
+      {/* LEFT PANEL: Chat Interface */}
+      {/* CHANGE: Added min-h-0 so flex-1 scrolls properly on mobile */}
+      <div className="flex-1 flex flex-col relative bg-gray-50/50 min-h-0">
+        
+        <div className="px-8 py-4 border-b border-gray-200 bg-white z-10 flex justify-between items-center shadow-sm">
+          <div>
+            <h2 className="text-xl font-black text-gray-800">Trip Discovery</h2>
+            <p className="text-sm text-gray-500 font-medium hidden sm:block">Chat with your AI agent to build your perfect itinerary.</p>
+          </div>
+        </div>
+
+        {/* Chat Messages Area */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+          {messages.length === 0 && (
+            <div className="text-center text-gray-400 mt-10 md:mt-20 flex flex-col items-center">
+              <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-50 rounded-full flex items-center justify-center mb-4 border border-blue-100">
+                <span className="text-3xl md:text-4xl">✈️</span>
+              </div>
+              <h3 className="text-lg font-bold text-gray-700">Where are we going?</h3>
+              <p className="text-sm mt-2 max-w-sm px-4">Tell me about your dream trip, your available budget, or who you're traveling with.</p>
+            </div>
+          )}
+          
           {messages.map((msg, idx) => (
-            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] p-4 rounded-2xl ${
-                msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-tl-none'
-              }`}>
-                {msg.content}
+            <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div 
+                className={`max-w-[90%] lg:max-w-[65%] px-5 py-3.5 shadow-sm text-[15px] leading-relaxed whitespace-pre-wrap ${
+                  msg.sender === 'user' 
+                    ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm' 
+                    : 'bg-white border border-gray-200 text-gray-800 rounded-2xl rounded-tl-sm'
+                }`}
+              >
+                {msg.text}
               </div>
             </div>
           ))}
+
+          {agentStatus && (
+            <div className="flex justify-start">
+              <div className="bg-white border border-blue-100 text-blue-700 text-sm font-medium rounded-2xl rounded-tl-sm px-5 py-3 shadow-sm flex items-center gap-3">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                </div>
+                <span className="animate-pulse">{agentStatus}</span>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
         </div>
-        <div className="p-4 border-t border-gray-100">
-          <div className="flex gap-2">
+
+        {/* Input Area */}
+        <div className="p-3 md:p-4 bg-white border-t border-gray-200 shrink-0">
+          <form onSubmit={handleSendMessage} className="flex gap-2 md:gap-3 relative max-w-4xl mx-auto">
             <input
-              className="flex-grow border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Tell me about your dream trip..."
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSend()}
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              disabled={isProcessing || !sessionId}
+              placeholder="E.g., I want to go to Paris next week..."
+              className="flex-1 rounded-2xl border border-gray-300 pl-4 md:pl-6 pr-24 md:pr-32 py-3 md:py-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:bg-gray-50 disabled:text-gray-400 text-sm md:text-base"
             />
-            <button onClick={handleSend} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition">
+            <button 
+              type="submit" 
+              disabled={isProcessing || !inputValue.trim() || !sessionId}
+              className="absolute right-1.5 md:right-2 top-1.5 md:top-2 bottom-1.5 md:bottom-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-xl px-4 md:px-8 font-bold transition-all flex items-center justify-center text-sm md:text-base"
+            >
               Send
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* RIGHT PANEL: Live Trip Summary */}
+      {/* CHANGE: Removed hidden/md:flex. Replaced with w-full md:w-80. Added fixed height for mobile h-[40vh] */}
+      <div className="w-full md:w-80 lg:w-96 bg-gray-50 border-t md:border-t-0 md:border-l border-gray-200 overflow-y-auto flex flex-col p-5 md:p-6 shadow-inner h-[40vh] md:h-auto shrink-0">
+        
+        {/* --- PROGRESS BAR SECTION --- */}
+        <div className="mb-6">
+          <div className="flex justify-between items-end mb-2">
+             <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Plan Progress</h3>
+             <span className="text-xs font-bold text-gray-500">{progressPercent}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-3 overflow-hidden">
+            <div 
+              className={`h-2 rounded-full transition-all duration-700 ease-out ${progressPercent === 100 ? 'bg-green-500' : 'bg-blue-500'}`} 
+              style={{ width: `${progressPercent}%` }}
+            ></div>
+          </div>
+          
+          {/* Animated "Proceed" Button that appears at 100% */}
+          <div className={`transition-all duration-500 overflow-hidden ${progressPercent === 100 ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
+            <button 
+              onClick={() => navigate(`/plan/${sessionId}/options`)}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all flex justify-center items-center gap-2 transform hover:-translate-y-0.5 mt-1"
+            >
+              See Flight & Hotel Options <span>➔</span>
             </button>
           </div>
         </div>
-      </div>
-
-      {/* Right: Live Context Panel (The "Brain") */}
-      <div className="w-1/3 bg-gray-50 p-6 overflow-y-auto">
-        <h3 className="text-gray-400 font-bold text-xs uppercase tracking-wider mb-4">Trip Parameters</h3>
         
         <div className="space-y-4">
-          <ParameterCard label="Destination" value={memory.destination} icon="📍" />
-          <ParameterCard label="Dates" value={memory.departure_date ? `${memory.departure_date} - ${memory.return_date}` : null} icon="jq" />
-          <ParameterCard label="Budget" value={memory.budget ? `$${memory.budget}` : null} icon="💰" />
-          <ParameterCard label="Travelers" value={memory.adults ? `${memory.adults} Adults, ${memory.children || 0} Kids` : null} icon="yw" />
           
-          <div className="mt-8">
-            <h4 className="text-sm font-bold text-gray-700 mb-2">Vibe & Activities</h4>
-            <div className="flex flex-wrap gap-2">
-               {/* This would come from memory.description analysis */}
-               <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-xs font-semibold">Relaxing</span>
-               <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold">Beach</span>
+          <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-200">
+            <h4 className="text-blue-600 text-[10px] font-black uppercase mb-3 tracking-widest">Locations</h4>
+            <div className="space-y-4">
+              <div>
+                <p className="text-[10px] uppercase text-gray-400 font-bold mb-1">Departure</p>
+                <p className="font-bold text-gray-800 text-sm">{tripData.departure || <span className="text-gray-300 italic">Thinking...</span>}</p>
+              </div>
+              <div className="w-full h-px bg-gray-100 relative">
+                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-gray-300 text-xs">✈️</span>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase text-gray-400 font-bold mb-1">Destination</p>
+                <p className="font-bold text-gray-800 text-sm">{tripData.destination || <span className="text-gray-300 italic">Thinking...</span>}</p>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
-function ParameterCard({ label, value, icon }) {
-  return (
-    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3">
-      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-xl">
-        {icon}
-      </div>
-      <div>
-        <div className="text-xs text-gray-500 font-medium">{label}</div>
-        <div className={`text-sm font-bold ${value ? 'text-gray-900' : 'text-gray-300 italic'}`}>
-          {value || "Pending..."}
+          <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-200">
+            <h4 className="text-blue-600 text-[10px] font-black uppercase mb-3 tracking-widest">Timeline</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-[10px] uppercase text-gray-400 font-bold mb-1">Check-in</p>
+                <p className="font-bold text-gray-800 text-sm">{tripData.from_date || <span className="text-gray-300 italic">TBD</span>}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase text-gray-400 font-bold mb-1">Check-out</p>
+                <p className="font-bold text-gray-800 text-sm">{tripData.to_date || <span className="text-gray-300 italic">TBD</span>}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-gray-200">
+            <h4 className="text-blue-600 text-[10px] font-black uppercase mb-3 tracking-widest">Travel Party</h4>
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-gray-500 text-sm font-medium">Adults</span>
+              <span className="font-bold text-gray-800">{tripData.adults ?? '-'}</span>
+            </div>
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-gray-500 text-sm font-medium">Children</span>
+              <span className="font-bold text-gray-800">{tripData.children ?? '-'}</span>
+            </div>
+            <div className="flex justify-between items-center pt-3 border-t border-gray-50">
+              <span className="text-gray-500 text-sm font-medium">Hotel Rooms</span>
+              <span className="font-bold text-gray-800">{tripData.room_qty ?? '-'}</span>
+            </div>
+          </div>
+
+          <div className={`rounded-2xl p-4 md:p-5 shadow-sm border transition-colors duration-500 ${tripData.budget ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+             <h4 className={`${tripData.budget ? 'text-green-700' : 'text-gray-500'} text-[10px] font-black uppercase mb-3 tracking-widest`}>Target Budget</h4>
+             <div className="flex items-baseline gap-1">
+                <span className={`text-3xl font-black ${tripData.budget ? 'text-green-700' : 'text-gray-400'}`}>
+                  {tripData.budget ? tripData.budget.toLocaleString() : '--'}
+                </span>
+                <span className={`text-sm font-bold ${tripData.budget ? 'text-green-600' : 'text-gray-400'}`}>
+                  {tripData.currency || ''}
+                </span>
+             </div>
+          </div>
+
         </div>
       </div>
+      
     </div>
   );
-}
+};
+
+export default DiscoveryStage;

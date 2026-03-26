@@ -471,7 +471,7 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
 
 // --- Main Component ---
 export default function OptionsStage() {
-  const { sessionData } = useOutletContext();
+  const { sessionData, refreshContext } = useOutletContext();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -506,12 +506,15 @@ export default function OptionsStage() {
   const [selectedInbound, setSelectedInbound] = useState(null);
   const [selectedHotel, setSelectedHotel] = useState(null);
 
-  // --- NEW: Session Saving Helper ---
   const saveToSession = async (payload) => {
     if (!sessionData?.id) return;
     try {
         await fetchWithAuth(`${API_BASE_URL}/session/${sessionData.id}/details`, payload, 'PATCH');
         console.log("Auto-saved to session:", payload);
+
+        if (refreshContext) {
+            refreshContext();
+        }
     } catch (err) {
         console.error("Failed to auto-save session data", err);
     }

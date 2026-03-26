@@ -10,6 +10,8 @@ from datetime import datetime
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
+from langchain_core.messages import HumanMessage, AIMessage
+from app.services.agents.discovery_graph import generate_graph
 
 from app.services.agents.discovery_graph import stream_discovery_message
 
@@ -17,6 +19,58 @@ from app.services.agents.discovery_graph import stream_discovery_message
 log = get_logger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
+
+@router.get("/discovery/messages/{session_id}")
+async def get_discovery_messages(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
+    token: TokenPayload = Depends(access_token_header)
+):
+    stmt = select(models.VacationSession).where(
+        models.VacationSession.id == session_id,
+        models.VacationSession.user_id == token.sub
+    )
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
+
+    if not session:
+        log.warning(f"Unauthorized access attempt to session {session_id} by user {token.sub}")
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    log.info(f"User {token.sub} requested discovery messages for session {session_id}")
+
+    graph = generate_graph(checkpointer)
+    config = {"configurable": {"thread_id": str(session_id)}}
+    
+    current_state = await graph.aget_state(config)
+    
+    if not current_state.values:
+        return {"messages": []}
+        
+    raw_messages = current_state.values.get("messages", [])
+    formatted_messages = []
+    
+    for msg in raw_messages:
+        if isinstance(msg, HumanMessage):
+            formatted_messages.append({
+                "sender": "user", 
+                "text": msg.content
+            })
+        elif isinstance(msg, AIMessage):
+            if msg.content:
+                text_content = msg.content
+                if isinstance(text_content, list):
+                    text_content = "".join([block.get("text", "") for block in text_content if isinstance(block, dict)])
+                
+                formatted_messages.append({
+                    "sender": "ai", 
+                    "text": text_content
+                })
+                
+    return {"messages": formatted_messages}
+    
+
 
 class ChatRequest(BaseModel):
     message: str
@@ -27,20 +81,20 @@ async def chat_discovery(
     request: ChatRequest,
     db: AsyncSession = Depends(get_db),
     checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
-    # token: TokenPayload = Depends(access_token_header)
+    token: TokenPayload = Depends(access_token_header)
 ):
-    # stmt = select(models.VacationSession).where(
-    #     models.VacationSession.id == session_id,
-    #     models.VacationSession.user_id == token.sub
-    # )
-    # result = await db.execute(stmt)
-    # session = result.scalar_one_or_none()
+    stmt = select(models.VacationSession).where(
+        models.VacationSession.id == session_id,
+        models.VacationSession.user_id == token.sub
+    )
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
 
-    # if not session:
-    #     log.warning(f"Unauthorized access attempt to session {session_id} by user {token.sub}")
-    #     raise HTTPException(status_code=404, detail="Session not found")
+    if not session:
+        log.warning(f"Unauthorized access attempt to session {session_id} by user {token.sub}")
+        raise HTTPException(status_code=404, detail="Session not found")
     
-    # log.info(f"User {token.sub} initiated discovery chat for session {session_id}")
+    log.info(f"User {token.sub} initiated discovery chat for session {session_id}")
     
     return StreamingResponse(
         stream_discovery_message(

@@ -71,7 +71,7 @@ if not GoogleSearch.SERP_API_KEY:
     raise ValueError("SERPAPI_API_KEY environment variable is required")
 
 # change to 3 - 15 minutes in prod
-@redis_cache(expire_time=3600 * 24)
+@redis_cache(expire_time=900)
 def call_flights_api(
     departure_id: Optional[str] = None,
     arrival_id: Optional[str] = None,

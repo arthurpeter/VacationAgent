@@ -11,7 +11,7 @@ load_dotenv()
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
 RAPIDAPI_HOST = "booking-com15.p.rapidapi.com"
 
-REQUEST_TIMEOUT = 30 # seconds
+REQUEST_TIMEOUT = 60 # seconds
 
 if not RAPIDAPI_KEY:
     print("Error: RAPIDAPI_KEY not found. Please create a .env file with your key.")
@@ -55,7 +55,7 @@ def get_destination_id(location_name: str) -> dict:
         return None
 
 # change to 5 - 15 minutes in prod
-@redis_cache(expire_time=3600 * 24)
+@redis_cache(expire_time=900)
 def search_hotels(
         dest_id: str,
         search_type: str,
@@ -124,7 +124,7 @@ def search_hotels(
         return {}
 
  # change to 5 - 15 minutes in prod 
-@redis_cache(expire_time=3600 * 24)
+@redis_cache(expire_time=900)
 def get_hotel_details(
         hotel_id: str,
         arrival_date: str,

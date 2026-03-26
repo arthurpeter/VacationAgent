@@ -62,7 +62,8 @@ class Settings(BaseSettings):
     def llm(self):
         """Get the configured LLM instance."""
         return ChatGoogleGenerativeAI(
-            model=self.LLM_MODEL, 
+            model=self.LLM_MODEL,
+            max_retries=2,
             temperature=self.LLM_TEMPERATURE
         )
     
