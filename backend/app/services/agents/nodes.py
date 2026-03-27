@@ -1,5 +1,4 @@
 from typing import Literal
-from dotenv import load_dotenv
 
 from app.services.agents.memory import DiscoveryState
 from app.services.agents.prompts import *
@@ -18,8 +17,6 @@ from langchain_core.messages import SystemMessage
 from app.services.agents.prompts import responder_prompt
 from app.services.agents.tools import responder_tools
 
-
-load_dotenv()
 
 llm = settings.llm
 
@@ -147,7 +144,7 @@ async def responder(state: DiscoveryState) -> dict:
             break
 
     if last_human_idx != -1:
-        start_idx = max(0, last_human_idx - 8)
+        start_idx = max(0, last_human_idx - 10)
         older_messages = all_messages[start_idx:last_human_idx]
         current_messages = all_messages[last_human_idx:]
     else:
