@@ -1,14 +1,11 @@
-import os
 from serpapi import GoogleSearch
 from typing import Dict, Any, Optional
-from dotenv import load_dotenv
-import airportsdata
 from babel import numbers, core
 import sys
+from app.core.config import settings
 from app.core.airport_data import AIRPORTS_DB
 from app.core.cache import redis_cache
 
-load_dotenv()
 
 @redis_cache(expire_time=3600 * 24 * 7)
 def get_location_data(area_input: str, country_filter: str = None):
@@ -66,7 +63,7 @@ def get_location_data(area_input: str, country_filter: str = None):
         "currency": currency_code.upper()
     }
 
-GoogleSearch.SERP_API_KEY = os.getenv('SERPAPI_API_KEY')
+GoogleSearch.SERP_API_KEY = settings.SERPAPI_API_KEY
 if not GoogleSearch.SERP_API_KEY:
     raise ValueError("SERPAPI_API_KEY environment variable is required")
 

@@ -1,13 +1,10 @@
-import os
 from serpapi import GoogleSearch  # Import the official library
 from typing import Dict, Any, Optional
-from dotenv import load_dotenv
-
-load_dotenv()
+from app.core.config import settings
 
 # Set your API key globally from the .env file
 # The GoogleSearch class will automatically use this.
-GoogleSearch.SERP_API_KEY = os.getenv('SERPAPI_API_KEY')
+GoogleSearch.SERP_API_KEY = settings.SERPAPI_API_KEY
 if not GoogleSearch.SERP_API_KEY:
     raise ValueError("SERPAPI_API_KEY environment variable is required")
 

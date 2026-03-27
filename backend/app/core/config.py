@@ -1,15 +1,19 @@
 """
 Core application configuration.
 """
-import os
+from functools import lru_cache
 from pathlib import Path
-from typing import Optional
-from pydantic_settings import BaseSettings
-from langchain_google_genai import ChatGoogleGenerativeAI
-from dotenv import load_dotenv
+from typing import Type, Tuple
 
-ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
-load_dotenv(ROOT_ENV, override=True)
+from pydantic_settings import (
+    BaseSettings, 
+    SettingsConfigDict, 
+    PydanticBaseSettingsSource
+)
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+ENV_FILE_PATH = BASE_DIR / ".env"
 
 class Settings(BaseSettings):
     """Application settings."""
@@ -17,46 +21,47 @@ class Settings(BaseSettings):
     # App
     APP_NAME: str = "Vacation Agent API"
     VERSION: str = "1.0.0"
-    DEBUG: bool = False
+    DEBUG: bool
     
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL")
-    DB_MAX_CONNECTIONS: int = int(os.getenv("DB_MAX_CONNECTIONS", 100))
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_DB: str
+    DATABASE_URL: str
+    DB_MAX_CONNECTIONS: int
     SESSION_EXPIRY_DAYS: int = 30
 
-    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
-    REDIS_PORT: int = int(os.getenv("REDIS_PORT", 6379))
+    REDIS_HOST: str
+    REDIS_PORT: int
 
-    SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
-    SMTP_PORT: int = int(os.getenv("SMTP_PORT", 587))
-    SMTP_USER: Optional[str] = os.getenv("SMTP_USER")
-    SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD")
+    SMTP_HOST: str
+    SMTP_PORT: int
+    SMTP_USER: str
+    SMTP_PASSWORD: str
     
-    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
+    JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
 
-    WORKER_COUNT: int = int(os.getenv("WORKER_COUNT", 1)) if os.getenv("DEBUG", "false").lower() == "false" else 1
+    WORKER_COUNT: int
 
     # CORS
     BACKEND_CORS_ORIGINS: list = ["http://localhost:5173", "http://127.0.0.1:5173"]
     
     # External APIs
-    OPENAI_API_KEY: Optional[str] = None
-    GOOGLE_API_KEY: Optional[str] = os.getenv("GOOGLE_API_KEY")
-    SERPAPI_API_KEY: Optional[str] = None
-    RAPIDAPI_KEY: Optional[str] = None
+    GOOGLE_API_KEY: str
+    SERPAPI_API_KEY: str
+    RAPIDAPI_KEY: str
 
-    # Other env variables
-    POSTGRES_USER: Optional[str] = None
-    POSTGRES_PASSWORD: Optional[str] = None
-    POSTGRES_DB: Optional[str] = None
-    DATABASE_URL: Optional[str] = None
-    REDIS_HOST: Optional[str] = None
-    REDIS_PORT: Optional[int] = None
-    
     # LLM Configuration
     LLM_MODEL: str = "gemini-2.5-flash"
     LLM_TEMPERATURE: float = 0.0
+    
+    model_config = SettingsConfigDict(
+        env_file=str(ENV_FILE_PATH),
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore"
+    )
     
     @property
     def llm(self):
@@ -68,9 +73,20 @@ class Settings(BaseSettings):
             api_key=self.GOOGLE_API_KEY
         )
     
-    class Config:
-        env_file = str(ROOT_ENV)
-        case_sensitive = True
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        return (init_settings, dotenv_settings, env_settings, file_secret_settings)
 
 
-settings = Settings()
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+settings = get_settings()

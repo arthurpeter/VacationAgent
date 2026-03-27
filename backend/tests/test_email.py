@@ -3,11 +3,11 @@ from email.message import EmailMessage
 from dotenv import load_dotenv
 import os
 
-load_dotenv()  # Load environment variables from .env file
+load_dotenv()
 
 SENDER_EMAIL = os.getenv("SMTP_USER")
 APP_PASSWORD = os.getenv("SMTP_PASSWORD")
-RECEIVER_EMAIL = "arthurcristian.peter@gmail.com" # Where to send the test email
+RECEIVER_EMAIL = "arthurcristian.peter@gmail.com"
 # --------------------------------
 
 def test_smtp():

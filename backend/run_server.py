@@ -6,9 +6,7 @@ import sys
 import os
 import uvicorn
 import multiprocessing
-from dotenv import load_dotenv
-
-load_dotenv()
+from app.core.config import settings
 
 # Change to the directory containing this script
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -17,15 +15,16 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 app_path = os.path.join(os.path.dirname(__file__), 'app')
 sys.path.insert(0, app_path)
 
+
+
 if __name__ == "__main__":
-    debug_mode = os.getenv("DEBUG", "false").lower() == "true"
-    worker_count = int(os.getenv("WORKER_COUNT", 1)) if not debug_mode else 1
+    debug_mode = settings.DEBUG
+    worker_count = settings.WORKER_COUNT if not debug_mode else 1
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
         port=5000,
         reload=debug_mode,
         workers=worker_count,
-        # loop="uvloop",
         log_level="debug" if debug_mode else "info"
     )

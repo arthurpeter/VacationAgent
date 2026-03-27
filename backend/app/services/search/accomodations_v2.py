@@ -1,14 +1,12 @@
 from typing import Optional
 import requests
-import os
-from dotenv import load_dotenv
+from app.core.config import settings
 import json
 from app.core.cache import redis_cache
 
-load_dotenv()
 
 # --- API Configuration ---
-RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
+RAPIDAPI_KEY = settings.RAPIDAPI_KEY
 RAPIDAPI_HOST = "booking-com15.p.rapidapi.com"
 
 REQUEST_TIMEOUT = 60 # seconds
