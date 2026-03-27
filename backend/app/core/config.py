@@ -9,7 +9,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 
 ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
-load_dotenv(ROOT_ENV)
+load_dotenv(ROOT_ENV, override=True)
 
 class Settings(BaseSettings):
     """Application settings."""
@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     
     # External APIs
     OPENAI_API_KEY: Optional[str] = None
-    GOOGLE_API_KEY: Optional[str] = None
+    GOOGLE_API_KEY: Optional[str] = os.getenv("GOOGLE_API_KEY")
     SERPAPI_API_KEY: Optional[str] = None
     RAPIDAPI_KEY: Optional[str] = None
 
@@ -64,7 +64,8 @@ class Settings(BaseSettings):
         return ChatGoogleGenerativeAI(
             model=self.LLM_MODEL,
             max_retries=2,
-            temperature=self.LLM_TEMPERATURE
+            temperature=self.LLM_TEMPERATURE,
+            api_key=self.GOOGLE_API_KEY
         )
     
     class Config:

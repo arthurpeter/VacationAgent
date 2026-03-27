@@ -139,26 +139,51 @@ async def responder(state: DiscoveryState) -> dict:
     
     required_keys = ["origin", "destination", "from_date", "to_date", "adults"]
     missing_fields = [k for k in required_keys if not current_data.get(k)]
+
+    last_human_idx = -1
+    for i in range(len(all_messages) - 1, -1, -1):
+        if all_messages[i].type == "human":
+            last_human_idx = i
+            break
+
+    if last_human_idx != -1:
+        start_idx = max(0, last_human_idx - 8)
+        older_messages = all_messages[start_idx:last_human_idx]
+        current_messages = all_messages[last_human_idx:]
+    else:
+        older_messages = []
+        current_messages = all_messages
+
+    history_str = ""
+    for msg in older_messages:
+        if msg.type == "human":
+            history_str += f"Human: {msg.content}\n"
+        elif msg.type == "ai":
+            if hasattr(msg, "tool_calls") and msg.tool_calls:
+                tools_used = ", ".join([tc["name"] for tc in msg.tool_calls])
+                history_str += f"Assistant (Action): Used tool [{tools_used}]\n"
+            elif msg.content:
+                history_str += f"Assistant: {msg.content}\n"
+        elif msg.type == "tool":
+            content_str = str(msg.content)
+            short_content = content_str if len(content_str) < 300 else content_str[:300] + "..."
+            history_str += f"Tool Result ({msg.name}): {short_content}\n"
+            
+    if not history_str:
+        history_str = "No previous conversation history."
     
     system_instructions = responder_prompt.format(
         persona=persona,
         current_data=current_data,
         missing_fields=missing_fields,
         is_complete=is_complete,
-        passengers_confirmed=passengers_confirmed
+        passengers_confirmed=passengers_confirmed,
+        history=history_str
     )
-    
-    recent_messages = all_messages[-8:] if len(all_messages) > 8 else all_messages
-    
-    if all_messages and len(all_messages) > 8:
-        if getattr(recent_messages[0], "type", "") == "tool":
-            recent_messages = all_messages[-9:]
-
-    # print(recent_messages)
 
     llm_with_tools = llm.bind_tools(responder_tools)
     
-    response = await llm_with_tools.ainvoke([SystemMessage(content=system_instructions)] + recent_messages)
+    response = await llm_with_tools.ainvoke([SystemMessage(content=system_instructions)] + current_messages)
     
     return {"messages": [response]}
 
