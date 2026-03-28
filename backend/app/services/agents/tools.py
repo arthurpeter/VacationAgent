@@ -1,5 +1,5 @@
 from langchain_core.tools import tool
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 
 from app.core.logger import get_logger
 
@@ -27,6 +27,8 @@ def web_search_tool(query: str) -> str:
         combined_text = " ".join(snippets)
         
         safe_result = combined_text[:1000] 
+
+        log.info(f"Web search successful. Returning combined snippets: {safe_result[:100]}")
         
         return safe_result
         

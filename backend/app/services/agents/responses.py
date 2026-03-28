@@ -4,8 +4,8 @@ from typing import Optional, List
 class ExtractionResult(BaseModel):
     """Reflects all mandatory and optional slots in VacationSession."""
     
-    departure: Optional[str] = Field(None, description="'City, country_code' for departure, translate to english if needed")
-    destination: Optional[str] = Field(None, description="'City, country_code' for arrival, translate to english if needed")
+    departure: Optional[str] = Field(None, description="'City, country_code' for departure, e.g., 'New York, US'")
+    destination: Optional[str] = Field(None, description="'City, country_code' for arrival, e.g., 'Paris, FR'")
     from_date: Optional[str] = Field(None, description="Departure date in YYYY-MM-DD format")
     to_date: Optional[str] = Field(None, description="Return date in YYYY-MM-DD format")
     currency: Optional[str] = Field(None, description="ISO currency code, e.g., 'USD', 'EUR'")
