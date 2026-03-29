@@ -14,3 +14,9 @@ uv run run_server.py
 npm run dev
 ```
 
+### Delete volumes and restart
+```bash
+docker compose down -v
+docker compose up -d --build
+```
+
