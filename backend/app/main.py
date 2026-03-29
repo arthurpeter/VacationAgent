@@ -12,16 +12,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import Base, engine, langgraph_pool
 from app.core.auth import auth
-from app.core.jobs import start_jobs
 
 from app.routers.auth import router as auth_router
 from app.routers.users import router as users_router
 from app.routers.sessions import router as sessions_router
 from app.routers.search import router as search_router
 from app.routers.chat import router as chat_router
-
-# Start background jobs
-start_jobs()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

@@ -1,6 +1,5 @@
 airportsdata==20250909
 alembic==1.18.4
-APScheduler==3.11.0
 asyncpg==0.31.0
 authx==1.5.1
 Babel==2.18.0
