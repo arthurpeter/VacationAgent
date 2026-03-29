@@ -1,8 +1,6 @@
 import orjson
 import sys
 import asyncio
-import os
-from dotenv import load_dotenv
 
 from langgraph.graph import START, END, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
@@ -17,8 +15,6 @@ from app.services.agents.utils import get_initial_state, get_resumed_state
 from app.services.agents.tools import responder_tools
 from app.core.database import SessionLocal, langgraph_pool
 from app.core.logger import get_logger
-
-load_dotenv()
 
 log = get_logger(__name__)
 

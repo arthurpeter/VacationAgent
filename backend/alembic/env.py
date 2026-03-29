@@ -19,6 +19,7 @@ from app.models.vacation import Vacation
 from app.models.vacation_session import VacationSession
 from app.models.blacklist_token import BlacklistToken
 from app.models.companion import TravelCompanion
+from app.models.notifications import Notification
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
