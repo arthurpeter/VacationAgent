@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
+import PageTransition from "../components/PageTransition";
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <PageTransition className="flex flex-col min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Hero Section */}
       <header className="flex flex-col items-center justify-center flex-grow text-center p-8">
         <h1 className="text-5xl font-extrabold text-gray-900 mb-4">
@@ -58,6 +59,6 @@ export default function Home() {
       <footer className="mt-auto p-6 text-center text-gray-500 text-sm">
         © {new Date().getFullYear()} Travel Agent. All rights reserved.
       </footer>
-    </div>
+    </PageTransition>
   );
 }

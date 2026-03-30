@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { API_BASE_URL } from '../config';
+import PageTransition from "../components/PageTransition";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -39,7 +40,7 @@ export default function Login() {
   };
 
   return (
-    <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <PageTransition className="relative flex items-center justify-center min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <Toaster position="top-center" reverseOrder={false} />
       <form onSubmit={handleSubmit} className="bg-white p-10 rounded-2xl shadow-xl w-full max-w-md">
         <h2 className="text-3xl font-extrabold mb-8 text-center text-blue-600">Login</h2>
@@ -81,6 +82,6 @@ export default function Login() {
           </p>
         </div>
       </form>
-    </div>
+    </PageTransition>
   );
 }

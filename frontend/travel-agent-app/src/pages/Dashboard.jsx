@@ -4,9 +4,12 @@ import VacationCard from '../components/VacationCard';
 import { fetchWithAuth } from '../authService';
 import { API_BASE_URL } from '../config';
 import NewVacationModal from '../components/NewVacationModal';
+import { motion, AnimatePresence } from 'framer-motion';
+import PageTransition from '../components/PageTransition';
 
 export default function Dashboard() {
   const [vacations, setVacations] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,7 +36,6 @@ export default function Dashboard() {
                 const data = await res.json();
                 const ids = data.session_ids || [];
 
-                // Fetch details for each ID in parallel
                 const sessionPromises = ids.map(id => 
                     fetchWithAuth(`${API_BASE_URL}/session/${id}`, {}, "GET")
                         .then(r => r.json())
@@ -41,11 +43,9 @@ export default function Dashboard() {
                 
                 const sessionsDetails = await Promise.all(sessionPromises);
                 
-                // Format for the UI
                 const formattedSessions = sessionsDetails.map(s => ({
                     id: s.id, 
                     destination: s.destination || "New Trip",
-                    // Map backend "current_stage" to a number for the UI if needed, or pass string
                     stage: s.current_stage || 'discovery', 
                     current_stage: s.current_stage || 'discovery',
                     description: s.session_data?.summary || `Created on ${new Date(s.created_at).toLocaleDateString()}`,
@@ -57,14 +57,14 @@ export default function Dashboard() {
             }
         } catch (err) {
             console.error("Failed to load sessions", err);
+        } finally {
+            setIsLoading(false); 
         }
     };
     loadSessions();
   }, []);
 
-  // 3. Smart Resume Handler: Redirects to the correct stage
   const handleResumeSession = async (sessionId) => {
-    // Optimistic check from local state first
     const session = vacations.find(v => v.id === sessionId);
     let stage = session?.current_stage;
 
@@ -102,7 +102,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 px-8 py-12">
+    <PageTransition className="min-h-screen bg-gray-50 px-8 py-12">
       <div className="max-w-6xl mx-auto">
         
         {/* Header Section */}
@@ -119,56 +119,83 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* Empty State */}
-        {vacations.length === 0 && (
-          <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-3xl p-10 text-white text-center shadow-xl mb-12">
-            <h2 className="text-3xl font-bold mb-4">Ready for your next adventure?</h2>
-            <p className="text-blue-100 mb-8 max-w-xl mx-auto">Start a conversation with our AI agent to build your perfect itinerary from scratch.</p>
-            <button 
-              onClick={handleCreateNew}
-              className="px-8 py-3 bg-white text-blue-600 font-bold rounded-xl shadow hover:bg-gray-100 transition"
+        {/* Content Section */}
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <motion.div 
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse"
             >
-              Start Planning Now
-            </button>
-          </div>
-        )}
-
-        {/* History Grid */}
-        {vacations.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            
-            {/* "Plan a New Trip" Card */}
-            <div 
-              onClick={handleCreateNew}
-              className="group border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:border-blue-500 hover:bg-blue-50 transition min-h-[200px] cursor-pointer"
+              {[1, 2, 3].map(n => (
+                <div key={n} className="bg-gray-200 h-48 rounded-2xl border-2 border-gray-100"></div>
+              ))}
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="content"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
             >
-              <div className="h-12 w-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition">
-                <span className="text-2xl font-bold">+</span>
-              </div>
-              <h3 className="text-lg font-bold text-gray-700 group-hover:text-blue-700">Plan a New Trip</h3>
-              <p className="text-sm text-gray-400 mt-2">Start from scratch</p>
-            </div>
+              {/* Empty State */}
+              {vacations.length === 0 && (
+                <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-3xl p-10 text-white text-center shadow-xl mb-12">
+                  <h2 className="text-3xl font-bold mb-4">Ready for your next adventure?</h2>
+                  <p className="text-blue-100 mb-8 max-w-xl mx-auto">Start a conversation with our AI agent to build your perfect itinerary from scratch.</p>
+                  <button 
+                    onClick={handleCreateNew}
+                    className="px-8 py-3 bg-white text-blue-600 font-bold rounded-xl shadow hover:bg-gray-100 transition"
+                  >
+                    Start Planning Now
+                  </button>
+                </div>
+              )}
 
-            {/* Vacation Cards */}
-            {vacations.map(vacation => (
-              <div 
-                key={vacation.id} 
-                onClick={() => handleResumeSession(vacation.id)} 
-                className="cursor-pointer"
-              >
-                <VacationCard 
-                  vacation={vacation} 
-                  onDelete={handleDeleteFromUI} 
-                />
-              </div>
-            ))}
-          </div>
-        )}
+              {/* History Grid */}
+              {vacations.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  
+                  {/* "Plan a New Trip" Card */}
+                  <div 
+                    onClick={handleCreateNew}
+                    className="group border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:border-blue-500 hover:bg-blue-50 transition min-h-[200px] cursor-pointer"
+                  >
+                    <div className="h-12 w-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                      <span className="text-2xl font-bold">+</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-700 group-hover:text-blue-700">Plan a New Trip</h3>
+                    <p className="text-sm text-gray-400 mt-2">Start from scratch</p>
+                  </div>
+
+                  {/* Vacation Cards */}
+                  {vacations.map(vacation => (
+                    <div 
+                      key={vacation.id} 
+                      onClick={() => handleResumeSession(vacation.id)} 
+                      className="cursor-pointer"
+                    >
+                      <VacationCard 
+                        vacation={vacation} 
+                        onDelete={handleDeleteFromUI} 
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+      
       <NewVacationModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
-    </div>
+    </PageTransition>
   );
 }

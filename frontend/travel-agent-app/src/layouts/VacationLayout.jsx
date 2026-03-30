@@ -53,9 +53,16 @@ export default function VacationLayout() {
     }
   }, [location.pathname, id]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      window.scrollTo({ top: 76, behavior: 'smooth' });
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
+
   if (loading) return <div className="p-10 text-center">Loading your trip...</div>;
 
-  // FIX: Create a unified session variable that handles both nested and unnested API responses
   const session = sessionData?.data || sessionData;
 
   return (

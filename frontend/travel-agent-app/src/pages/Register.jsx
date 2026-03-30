@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import toast, { Toaster } from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
+import PageTransition from '../components/PageTransition';
 
 export default function Register() {
   const [form, setForm] = useState({ email: "", password: "", confirm_password: "" });
@@ -42,7 +43,7 @@ export default function Register() {
   };
 
   return (
-    <div className="relative flex items-center justify-center min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <PageTransition className="relative flex items-center justify-center min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <Toaster position="top-center" reverseOrder={false} />
 
       <form onSubmit={handleSubmit} className="bg-white p-10 rounded-2xl shadow-xl w-full max-w-md relative z-0">
@@ -112,6 +113,6 @@ export default function Register() {
           Already have an account? <Link to="/login" className="text-blue-600 hover:underline">Login</Link>
         </p>
       </form>
-    </div>
+    </PageTransition>
   );
 }

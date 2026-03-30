@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
+import PageTransition from '../components/PageTransition';
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
@@ -38,7 +39,7 @@ export default function VerifyEmail() {
   }, [token, navigate]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+    <PageTransition className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
       <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
         <h2 className="text-2xl font-bold mb-4">Email Verification</h2>
         <p className="text-gray-700">{status}</p>
@@ -52,6 +53,6 @@ export default function VerifyEmail() {
           </button>
         ) : null}
       </div>
-    </div>
+    </PageTransition>
   );
 }

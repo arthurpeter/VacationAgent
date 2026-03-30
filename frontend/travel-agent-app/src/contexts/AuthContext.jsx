@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { getAccessToken, clearTokens, setTokens, fetchWithAuth, getCSRFToken } from '../authService';
+import { motion, AnimatePresence } from 'framer-motion';
 import { API_BASE_URL } from '../config';
 
 const AuthContext = createContext(null);
@@ -68,22 +69,38 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
   };
 
-  // Don't render the app until the initial authentication check is complete
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <h2 className="text-lg font-medium text-gray-900 mb-2">Loading Application</h2>
-          <p className="text-sm text-gray-600">Checking Credentials...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
-      {children}
+      <AnimatePresence mode="wait">
+        {isLoading ? (
+          /* The App Loading Screen */
+          <motion.div 
+            key="app-loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }} // A slight shrink on exit makes it feel premium
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="flex flex-col items-center justify-center min-h-screen bg-gray-50 absolute inset-0 z-50"
+          >
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <h2 className="text-lg font-medium text-gray-900 mb-2">Loading Application</h2>
+              <p className="text-sm text-gray-600">Checking Credentials...</p>
+            </div>
+          </motion.div>
+        ) : (
+          /* The Actual Application */
+          <motion.div 
+            key="app-content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.1 }} // Tiny delay so they don't overlap
+            className="w-full h-full"
+          >
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AuthContext.Provider>
   );
 };

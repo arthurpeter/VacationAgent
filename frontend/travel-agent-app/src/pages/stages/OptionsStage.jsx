@@ -9,6 +9,7 @@ import L from 'leaflet';
 // --- Leaflet Icon Fix ---
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import PageTransition from '../../components/PageTransition';
 
 let DefaultIcon = L.icon({
     iconUrl: icon,
@@ -821,7 +822,7 @@ export default function OptionsStage() {
   };
 
   return (
-    <div className="flex flex-col w-full h-full bg-gray-50 overflow-hidden">
+    <PageTransition className="flex flex-col w-full h-full bg-gray-50 overflow-hidden">
       
       {/* --- HOTEL DETAIL MODAL --- */}
       {viewingHotel && (
@@ -996,7 +997,7 @@ export default function OptionsStage() {
 
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 }
 

@@ -1,13 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import PageTransition from '../components/PageTransition';
 
 export default function Terms() {
-  return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+  return ( 
+    <PageTransition className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto bg-white p-8 md:p-12 rounded-2xl shadow-sm border border-gray-100">
         
         <h1 className="text-3xl font-extrabold text-gray-900 mb-6">Terms of Service & Privacy Policy</h1>
-        <p className="text-sm text-gray-500 mb-8">Last updated: October 2023</p>
+        <p className="text-sm text-gray-500 mb-8">Last updated: February 2026</p>
 
         <div className="prose prose-blue max-w-none text-gray-600 space-y-6">
           
@@ -59,6 +60,6 @@ export default function Terms() {
         </div>
 
       </div>
-    </div>
+    </PageTransition>
   );
 }

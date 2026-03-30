@@ -3,6 +3,7 @@ import { useOutletContext, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../config';
 import { fetchWithAuth } from '../../authService';
 import ReactMarkdown from 'react-markdown'; // IMPORT MARKDOWN PARSER
+import PageTransition from '../../components/PageTransition';
 
 const DiscoveryStage = () => {
   const { sessionData, refreshContext } = useOutletContext();
@@ -254,7 +255,7 @@ const DiscoveryStage = () => {
   );
 
   return (
-    <div className="flex w-full h-full bg-white overflow-hidden font-sans relative">
+    <PageTransition className="flex w-full h-full bg-white overflow-hidden font-sans relative">
       
       {/* LEFT PANEL: Chat Interface (Takes 100% on mobile, flex-1 on desktop) */}
       <div className="flex-1 flex flex-col relative bg-gray-50/50 min-h-0 w-full">
@@ -406,7 +407,7 @@ const DiscoveryStage = () => {
         </div>
       </div>
       
-    </div>
+    </PageTransition>
   );
 };
 

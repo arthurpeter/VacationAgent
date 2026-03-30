@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { API_BASE_URL } from '../../config';
+import PageTransition from '../../components/PageTransition';
 
 export default function ItineraryStage() {
   const { sessionData } = useOutletContext();
@@ -57,7 +58,7 @@ export default function ItineraryStage() {
 
   // State 3: Display Itinerary
   return (
-    <div className="w-full h-full bg-gray-50 overflow-y-auto p-8">
+    <PageTransition className="w-full h-full bg-gray-50 overflow-y-auto p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
             <div>
@@ -80,7 +81,7 @@ export default function ItineraryStage() {
             ))}
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 }
 

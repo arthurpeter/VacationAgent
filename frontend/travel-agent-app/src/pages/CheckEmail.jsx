@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
+import PageTransition from '../components/PageTransition';
 
 export default function CheckEmail() {
   const location = useLocation();
@@ -26,7 +27,7 @@ export default function CheckEmail() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+    <PageTransition className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
       <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
         <h2 className="text-2xl font-bold mb-4 text-blue-600">Check Your Email</h2>
         <p className="mb-6 text-gray-600">
@@ -43,6 +44,6 @@ export default function CheckEmail() {
         
         {status && <p className="mt-4 text-sm text-gray-700">{status}</p>}
       </div>
-    </div>
+    </PageTransition>
   );
 }

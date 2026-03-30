@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
@@ -17,76 +18,51 @@ import FAQ from "./pages/FAQ";
 import Profile from "./pages/Profile";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import ScrollToTop from "./components/ScrollToTop";
 
 import './App.css'
-
-// function App() {
-//   return (
-//     <BrowserRouter>
-//       <Navbar />
-//       <Routes>
-//         <Route path="/" element={<Home />} />
-//         <Route path="/login" element={<Login />} />
-//         <Route path="/register" element={<Register />} />
-//         <Route path="/check-email" element={<CheckEmail />} />
-//         <Route path="/verify-email" element={<VerifyEmail />} />
-//         <Route path="/plan/:id" element={<VacationLayout />}>
-//           <Route index element={<Navigate to="discovery" replace />} />
-//           <Route path="discovery" element={<DiscoveryStage />} />
-//           <Route path="options" element={<OptionsStage />} />
-//           <Route path="itinerary" element={<ItineraryStage />} />
-//         </Route>
-//         <Route path="*" element={<NotFound />} />
-//       </Routes>
-//     </BrowserRouter>
-//   );
-// }
-
-// export default App
 
 function AppContent() {
   const location = useLocation();
 
-  // 3. Check if the current route is part of the VacationLayout
-  // Since all your planning routes start with "/plan", we can just check that
   const isVacationLayout = location.pathname.startsWith('/plan');
 
   return (
-    // 4. Flex column with min-h-screen ensures the footer is pushed to the bottom
     <div className="flex flex-col min-h-screen">
       
       <Navbar />
       
       {/* flex-grow allows the main content to expand and push the footer down */}
       <main className="flex-grow flex flex-col">
-        <Routes>
-          {/* Main Routes */}
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/check-email" element={<CheckEmail />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/help" element={<FAQ />} />
-          <Route path="/profile" element={<Profile />} />
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname}>
+            {/* Main Routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/check-email" element={<CheckEmail />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/help" element={<FAQ />} />
+            <Route path="/profile" element={<Profile />} />
 
-          {/* Vacation Layout Routes */}
-          <Route path="/plan/:id" element={<VacationLayout />}>
-            <Route index element={<Navigate to="discovery" replace />} />
-            <Route path="discovery" element={<DiscoveryStage />} />
-            <Route path="options" element={<OptionsStage />} />
-            <Route path="itinerary" element={<ItineraryStage />} />
-          </Route>
-          
-          {/* 404 Route */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            {/* Vacation Layout Routes */}
+            <Route path="/plan/:id" element={<VacationLayout />}>
+              <Route index element={<Navigate to="discovery" replace />} />
+              <Route path="discovery" element={<DiscoveryStage />} />
+              <Route path="options" element={<OptionsStage />} />
+              <Route path="itinerary" element={<ItineraryStage />} />
+            </Route>
+            
+            {/* 404 Route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AnimatePresence>
       </main>
 
-      {/* 5. Conditionally render the Footer ONLY if not in the VacationLayout */}
       {!isVacationLayout && <Footer />}
       
     </div>
@@ -96,6 +72,7 @@ function AppContent() {
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AppContent />
     </BrowserRouter>
   );

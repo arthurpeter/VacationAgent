@@ -4,6 +4,7 @@ import { fetchWithAuth } from '../authService';
 import { API_BASE_URL } from '../config'; 
 import { toast, Toaster } from 'react-hot-toast';
 import { ALL_CURRENCIES } from '../utils/currencies';
+import PageTransition from '../components/PageTransition';
 
 export default function Profile() {
   const { isAuthenticated } = useAuth(); 
@@ -207,7 +208,7 @@ export default function Profile() {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading profile...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+    <PageTransition className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
       <Toaster position="bottom-right" /> 
 
       <div className="max-w-4xl mx-auto">
@@ -458,6 +459,6 @@ export default function Profile() {
           </div>
         </div>
       </div>
-    </div>
+    </PageTransition>
   );
 }
