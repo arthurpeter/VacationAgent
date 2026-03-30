@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import { fetchWithAuth } from '../authService';
 import { API_BASE_URL } from '../config';
 
@@ -39,13 +40,14 @@ export default function VacationCard({ vacation, onDelete }) {
 
       if (response && response.ok) {
         if (onDelete) onDelete(vacation.id);
+        toast.success("Trip deleted successfully.");
       } else {
         const errorData = await response?.json();
-        alert(`Deletion failed: ${errorData?.detail || "Unknown server error"}`);
+        toast.error(`Deletion failed: ${errorData?.detail || "Unknown server error"}`);
       }
     } catch (err) {
       console.error("Delete request error:", err);
-      alert("A network error occurred while trying to delete the trip.");
+      toast.error("A network error occurred while trying to delete the trip.");
     } finally {
       setIsDeleting(false);
     }

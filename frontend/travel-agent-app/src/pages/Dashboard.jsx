@@ -6,6 +6,7 @@ import { API_BASE_URL } from '../config';
 import NewVacationModal from '../components/NewVacationModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageTransition from '../components/PageTransition';
+import { Toaster } from 'react-hot-toast';
 
 export default function Dashboard() {
   const [vacations, setVacations] = useState([]);
@@ -103,6 +104,7 @@ export default function Dashboard() {
 
   return (
     <PageTransition className="min-h-screen bg-gray-50 px-8 py-12">
+      <Toaster position="bottom-right" reverseOrder={false} />
       <div className="max-w-6xl mx-auto">
         
         {/* Header Section */}

@@ -19,16 +19,19 @@ from app.routers.sessions import router as sessions_router
 from app.routers.search import router as search_router
 from app.routers.chat import router as chat_router
 from app.routers.notifications import router as notifications_router
+from app.core.logger import get_logger
+
+log = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await langgraph_pool.open()
-    print("LangGraph checkpointer pool opened.")
+    log.info("LangGraph checkpointer pool opened.")
     
     yield
     
     await langgraph_pool.close()
-    print("LangGraph checkpointer pool closed.")
+    log.info("LangGraph checkpointer pool closed.")
 
 # Create FastAPI app
 app = FastAPI(

@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../../config';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { toast, Toaster } from 'react-hot-toast';
 
 // --- Leaflet Icon Fix ---
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -796,12 +797,14 @@ export default function OptionsStage() {
         setBooked(newBookedState);
 
         if (newBookedState.flights && newBookedState.hotel) {
-            alert("Success! Flights and Accommodation booked.");
-            navigate(`/plan/${sessionData.id}/itinerary`);
+            toast.success("Success! Flights and Accommodation booked. ✈️🏨");
+            setTimeout(() => {
+                navigate(`/plan/${sessionData.id}/itinerary`);
+            }, 1000);
         } else if (newBookedState.flights && !newBookedState.hotel) {
-            alert("Flights booked! Please proceed with hotel booking.");
+            toast.success("Flights booked! Please proceed with hotel booking. ✈️");
         } else if (!newBookedState.flights && newBookedState.hotel) {
-            alert("Accommodation booked! Please proceed with flights.");
+            toast.success("Accommodation booked! Please proceed with flights. 🏨");
         }
 
     } catch (err) {
@@ -823,6 +826,8 @@ export default function OptionsStage() {
 
   return (
     <PageTransition className="flex flex-col w-full h-full bg-gray-50 overflow-hidden">
+
+      <Toaster position="top-center" reverseOrder={false} />
       
       {/* --- HOTEL DETAIL MODAL --- */}
       {viewingHotel && (

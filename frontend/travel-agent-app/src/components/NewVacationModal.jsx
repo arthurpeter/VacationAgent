@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import { fetchWithAuth } from '../authService';
 import { API_BASE_URL } from '../config';
 
@@ -127,7 +128,7 @@ export default function NewVacationModal({ isOpen, onClose }) {
       
     } catch (error) {
       console.error("Error creating session:", error);
-      alert("Something went wrong starting your session.");
+      toast.error("Something went wrong starting your session.");
     } finally {
       setIsLoading(false);
       onClose(); 
