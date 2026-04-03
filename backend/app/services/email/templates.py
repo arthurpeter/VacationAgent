@@ -46,15 +46,103 @@ def get_password_reset_email_html(reset_link: str) -> str:
     </html>
     """
 
-def get_itinerary_email_html(user_name: str, destination: str, links: dict) -> str:
+def get_vacation_blueprint_html(session_data: dict) -> str:
     """
-    Placeholder for the itinerary email.
+    Generates the final trip blueprint email.
+    Works with or without a generated daily itinerary.
     """
+    from_date = session_data.get("from_date", "TBD")
+    to_date = session_data.get("to_date", "TBD")
+    
+    flight_html = ""
+    if session_data.get("flights_url"):
+        price = f"{session_data.get('flight_price', 'N/A')} {session_data.get('currency', 'EUR')}"
+        flight_html = f"""
+        <div style="margin-bottom: 15px; padding: 15px; background: #f8fafc; border-left: 4px solid #3b82f6; border-radius: 4px;">
+            <h4 style="margin: 0 0 5px 0; color: #1e293b;">✈️ Flights (Estimated: {price})</h4>
+            <a href="{session_data['flights_url']}" style="color: #3b82f6; text-decoration: none; font-size: 14px;">View & Book Flight Options &rarr;</a>
+        </div>
+        """
+
+    hotel_html = ""
+    if session_data.get("accomodation_url"):
+        price = f"{session_data.get('accomodation_price', 'N/A')} {session_data.get('currency', 'EUR')}"
+        hotel_html = f"""
+        <div style="margin-bottom: 15px; padding: 15px; background: #f8fafc; border-left: 4px solid #10b981; border-radius: 4px;">
+            <h4 style="margin: 0 0 5px 0; color: #1e293b;">🏨 Accommodation (Estimated: {price})</h4>
+            <a href="{session_data['accomodation_url']}" style="color: #10b981; text-decoration: none; font-size: 14px;">View & Book Accomodation Options &rarr;</a>
+        </div>
+        """
+
+    extra_links_html = ""
+    extra_links = session_data.get("extra_links", [])
+    if extra_links:
+        extra_links_html += """
+        <h3 style="color: #0f172a; margin-top: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+            🔗 Activities & Extra Bookings
+        </h3>
+        """
+        for link in extra_links:
+            extra_links_html += f"""
+            <div style="margin-bottom: 12px; padding: 15px; background: #f8fafc; border-left: 4px solid #8b5cf6; border-radius: 4px;">
+                <h4 style="margin: 0 0 4px 0; color: #1e293b;">{link.get('title', 'Activity')}</h4>
+                <p style="margin: 0 0 8px 0; font-size: 13px; color: #64748b;">{link.get('description', '')}</p>
+                <a href="{link.get('url', '#')}" style="color: #8b5cf6; text-decoration: none; font-size: 14px; font-weight: bold;">
+                    View Details &rarr;
+                </a>
+            </div>
+            """    
+
+    itinerary_html = ""
+    itinerary_text = session_data.get("itinerary_text")
+    if itinerary_text:
+        formatted_itinerary = itinerary_text.replace("\n", "<br/>")
+        itinerary_html = f"""
+        <h3 style="color: #0f172a; margin-top: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">📅 Your Daily Itinerary</h3>
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; font-size: 15px; color: #475569; line-height: 1.6;">
+            {formatted_itinerary}
+        </div>
+        """
+    else:
+        itinerary_html = """
+        <div style="margin-top: 30px; padding: 20px; background: #f1f5f9; border-radius: 8px; text-align: center;">
+            <p style="margin: 0; color: #64748b;"><em>You haven't generated a daily itinerary yet, but your travel options are ready above!</em></p>
+        </div>
+        """
+
     return f"""
+    <!DOCTYPE html>
     <html>
-        <body>
-            <h2>Your Trip to {destination} is Ready! ✈️</h2>
-            <p>Hi {user_name}, your AI agent has finalized your itinerary...</p>
-            </body>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f5; padding: 20px; margin: 0;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+            
+            <div style="background-color: #0f172a; padding: 30px 20px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Your TuRAG Vacation Blueprint 🌴</h1>
+                <p style="color: #94a3b8; margin: 10px 0 0 0; font-size: 16px;">{session_data.get('origin', 'Home')} to {session_data.get('destination', 'Paradise')}</p>
+            </div>
+
+            <div style="padding: 30px 20px;">
+                <p style="font-size: 16px; color: #334155; margin-top: 0;">Hi,</p>
+                <p style="font-size: 16px; color: #334155;">Your trip details for <strong>{from_date}</strong> to <strong>{to_date}</strong> are ready. Here is everything we've collected for you:</p>
+
+                <div style="margin-top: 25px;">
+                    {flight_html}
+                    {hotel_html}
+                </div>
+
+                {extra_links_html}
+
+                {itinerary_html}
+
+                <div style="margin-top: 40px; text-align: center;">
+                    <a href="http://localhost:5173/dashboard" style="display: inline-block; background-color: #0f172a; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">View Trip in Dashboard</a>
+                </div>
+            </div>
+
+            <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+                <p style="margin: 0; color: #94a3b8; font-size: 13px;">Safe travels,<br>The TuRAG Team</p>
+            </div>
+        </div>
+    </body>
     </html>
     """

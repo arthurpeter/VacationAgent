@@ -47,8 +47,8 @@ def send_verification_email(to_email: str) -> bool:
             server.starttls()
             server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
             server.send_message(msg)
-            log.info(f"✅ Verification email sent to {to_email}")
+            log.info(f"Verification email sent to {to_email}")
             return True
     except Exception as e:
-        log.error(f"❌ Failed to send verification email: {e}")
+        log.error(f"Failed to send verification email: {e}")
         return False

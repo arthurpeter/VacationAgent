@@ -17,14 +17,13 @@ def create_password_reset_token(email: str) -> str:
         "exp": expire, 
         "sub": email, 
         "type": "password_reset",
-        "jti": uuid.uuid4().hex  # <-- Added a unique ID for blacklisting
+        "jti": uuid.uuid4().hex
     }
     return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 async def decode_password_reset_token(token: str) -> dict | None:
     """Decodes token, checks blacklist, and returns the full payload if valid."""
     try:
-        # 1. Check if the token was already used and blacklisted
         if await is_token_revoked(token):
             return None
             
@@ -33,7 +32,6 @@ async def decode_password_reset_token(token: str) -> dict | None:
         if payload.get("type") != "password_reset":
             return None
             
-        # Return the whole payload so we have access to the email, exp, and jti
         return payload
     except Exception:
         return None
@@ -61,8 +59,8 @@ def send_password_reset_email(to_email: str) -> bool:
             server.starttls()
             server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
             server.send_message(msg)
-            log.info(f"✅ Password reset email sent to {to_email}")
+            log.info(f"Password reset email sent to {to_email}")
             return True
     except Exception as e:
-        log.error(f"❌ Failed to send password reset email: {e}")
+        log.error(f"Failed to send password reset email: {e}")
         return False

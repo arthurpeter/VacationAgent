@@ -13,6 +13,8 @@ from app.models.vacation_session import SessionStage
 from app.models.companion import TravelCompanion
 from sqlalchemy.orm import selectinload
 
+from backend.app.services.email.itinerary_email import send_vacation_blueprint_email
+
 log = get_logger(__name__)
 
 router = APIRouter(prefix="/session", tags=["Session Management"])
@@ -112,6 +114,48 @@ async def get_sessions(
     sessions = result.scalars().all()
     ids = [session.id for session in sessions]
     return {"session_ids": ids}
+
+@router.post("/finalize/{session_id}")
+async def finalize_and_email_session(
+    session_id: int, 
+    db: AsyncSession = Depends(get_db), 
+    token: TokenPayload = Depends(access_token_header)
+):
+    """
+    Fetches the completed session from the database and emails the user.
+    """
+    stmt = select(models.VacationSession).where(
+        models.VacationSession.id == session_id,
+        models.VacationSession.user_id == token.sub
+    )
+    session = (await db.execute(stmt)).scalar_one_or_none()
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    user_stmt = select(models.User).where(models.User.id == token.sub)
+    user = (await db.execute(user_stmt)).scalar_one_or_none()
+
+    session_data = {
+        "origin": session.origin,
+        "destination": session.destination,
+        "from_date": session.from_date.strftime("%b %d, %Y") if session.from_date else "TBD",
+        "to_date": session.to_date.strftime("%b %d, %Y") if session.to_date else "TBD",
+        "flights_url": session.flights_url,
+        "flight_price": session.flight_price,
+        "accomodation_url": session.accomodation_url,
+        "accomodation_price": session.accomodation_price,
+        "currency": session.currency,
+        "itinerary_text": session.itinerary_text,
+        "extra_links": session.extra_links or []
+    }
+
+    session.is_complete = True
+    await db.commit()
+
+    await send_vacation_blueprint_email(user.email, session_data)
+
+    return {"message": "Trip finalized and email sent successfully!"}
 
 @router.delete("/{session_id}")
 async def delete_vacation_session(
