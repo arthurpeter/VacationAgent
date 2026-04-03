@@ -12,8 +12,10 @@ from app.core.auth import access_token_header
 from app.models.vacation_session import SessionStage
 from app.models.companion import TravelCompanion
 from sqlalchemy.orm import selectinload
+from fastapi import BackgroundTasks
+from app.routers.notifications import get_db_context
 
-from backend.app.services.email.itinerary_email import send_vacation_blueprint_email
+from app.services.email.itinerary_email import send_vacation_blueprint_email
 
 log = get_logger(__name__)
 
@@ -115,9 +117,43 @@ async def get_sessions(
     ids = [session.id for session in sessions]
     return {"session_ids": ids}
 
+async def process_email_and_notify(user_id: str, email_to: str, session_data: dict):
+    """Runs in the background: Sends the email, then safely creates a notification."""
+    try:
+        success = await send_vacation_blueprint_email(email_to, session_data)
+        
+        async for db in get_db():
+            if success:
+                db.add(models.Notification(
+                    user_id=user_id,
+                    category="EMAIL_SUCCESS",
+                    message=f"🎉 Pack your bags! Your detailed TuRAG Blueprint for {session_data['destination']} is waiting in your inbox."
+                ))
+            else:
+                db.add(models.Notification(
+                    user_id=user_id,
+                    category="EMAIL_ERROR",
+                    message=f"✈️ Slight turbulence: We couldn't deliver your {session_data['destination']} itinerary. Please click 'Resend' to try again."
+                ))
+            
+            await db.commit()
+            break
+            
+    except Exception as e:
+        log.error(f"Background email task completely failed: {e}")
+        async for db in get_db():
+            db.add(models.Notification(
+                user_id=user_id,
+                category="EMAIL_ERROR",
+                message=f"⚠️ System error while finalizing your trip to {session_data['destination']}. Your plan is saved, but the email failed to send."
+            ))
+            await db.commit()
+            break
+
 @router.post("/finalize/{session_id}")
 async def finalize_and_email_session(
-    session_id: int, 
+    session_id: int,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db), 
     token: TokenPayload = Depends(access_token_header)
 ):
@@ -137,7 +173,7 @@ async def finalize_and_email_session(
     user = (await db.execute(user_stmt)).scalar_one_or_none()
 
     session_data = {
-        "origin": session.origin,
+        "origin": session.departure,
         "destination": session.destination,
         "from_date": session.from_date.strftime("%b %d, %Y") if session.from_date else "TBD",
         "to_date": session.to_date.strftime("%b %d, %Y") if session.to_date else "TBD",
@@ -150,12 +186,18 @@ async def finalize_and_email_session(
         "extra_links": session.extra_links or []
     }
 
-    session.is_complete = True
-    await db.commit()
+    if session.is_active:
+        session.is_active = False
+        await db.commit()
 
-    await send_vacation_blueprint_email(user.email, session_data)
+    background_tasks.add_task(
+        process_email_and_notify, 
+        user_id=token.sub, 
+        email_to=user.email, 
+        session_data=session_data
+    )
 
-    return {"message": "Trip finalized and email sent successfully!"}
+    return {"message": "Plan finished. Email queued for sending."}
 
 @router.delete("/{session_id}")
 async def delete_vacation_session(

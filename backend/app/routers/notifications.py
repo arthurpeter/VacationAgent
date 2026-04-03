@@ -78,7 +78,7 @@ async def notification_stream_generator(user_id: str, request: Request):
                 yield f"data: {json_string}\n\n"
                 last_sent_hash = current_hash
 
-        await asyncio.sleep(60)
+        await asyncio.sleep(10)
 
 @router.get("/stream")
 async def get_stream(request: Request, token=Depends(access_token_header)):

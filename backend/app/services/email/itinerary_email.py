@@ -6,7 +6,7 @@ from app.services.email.templates import get_vacation_blueprint_html
 
 log = get_logger(__name__)
 
-def send_vacation_blueprint_email(to_email: str, session_data: dict) -> bool:
+async def send_vacation_blueprint_email(to_email: str, session_data: dict) -> bool:
     """Sends the final trip blueprint email. Returns True if successful."""
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
         log.error("SMTP credentials missing.")
