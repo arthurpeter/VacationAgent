@@ -13,12 +13,12 @@ createRoot(document.getElementById('root')).render(
     <Toaster
       position="top-center"
       toastOptions={{
-        duration: 2000, // auto-dismiss after 2 seconds
+        duration: 2000,
         style: {
-          background: '#22c55e', // green for success (can change dynamically)
+          background: '#22c55e',
           color: 'white',
           fontWeight: 'bold',
-          borderRadius: '0.75rem', // rounded-xl
+          borderRadius: '0.75rem',
           padding: '1rem',
           boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
         },

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../../config';
 import { fetchWithAuth } from '../../authService';
-import ReactMarkdown from 'react-markdown'; // IMPORT MARKDOWN PARSER
+import ReactMarkdown from 'react-markdown';
 import PageTransition from '../../components/PageTransition';
 
 const DiscoveryStage = () => {

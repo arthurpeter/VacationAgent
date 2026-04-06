@@ -474,6 +474,7 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
 // --- Main Component ---
 export default function OptionsStage() {
   const { sessionData, refreshContext } = useOutletContext();
+  const session = sessionData?.data || sessionData;
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -522,56 +523,43 @@ export default function OptionsStage() {
     }
   };
 
-  // Sync from DB
   useEffect(() => {
-    const fetchSessionDetails = async () => {
-        if (!sessionData?.id) return;
-        try {
-            const res = await fetchWithAuth(`${API_BASE_URL}/session/${sessionData.id}`, {}, "GET");
-            if (res.ok) {
-                const data = await res.json();
-                console.log("Loaded Session Data:", data);
-                
-                // Locations
-                if (data.departure) setOrigin(data.departure);
-                if (data.destination) setDestination(data.destination);
-                
-                // Dates
-                const formatForInput = (isoString) => {
-                    if (!isoString) return "";
-                    return isoString.split("T")[0];
-                };
-                setDates({
-                    start: formatForInput(data.from_date),
-                    end: formatForInput(data.to_date)
-                });
-
-                // Travelers
-                if (data.adults !== undefined) {
-                    setTravelerCounts({
-                        adults: data.adults || 1,
-                        children: data.children || 0,
-                        infantsSeat: data.infants_in_seat || 0,
-                        infantsLap: data.infants_on_lap || 0
-                    });
-                }
-                
-                // Child Ages
-                if (data.children_ages) {
-                    setChildAges(data.children_ages.split(',').filter(age => age !== ''));
-                }
-
-                // Rooms
-                if (data.room_qty) {
-                    setRoomQty(data.room_qty);
-                }
-            }
-        } catch (err) {
-            console.error("Failed to load session details:", err);
-        }
+    if (!session) return;
+    
+    // Locations
+    if (session.departure) setOrigin(session.departure);
+    if (session.destination) setDestination(session.destination);
+    
+    // Dates
+    const formatForInput = (isoString) => {
+        if (!isoString) return "";
+        return isoString.split("T")[0];
     };
-    fetchSessionDetails();
-  }, [sessionData?.id]);
+    setDates({
+        start: formatForInput(session.from_date),
+        end: formatForInput(session.to_date)
+    });
+
+    // Travelers
+    if (session.adults !== undefined) {
+        setTravelerCounts({
+            adults: session.adults || 1,
+            children: session.children || 0,
+            infantsSeat: session.infants_in_seat || 0,
+            infantsLap: session.infants_on_lap || 0
+        });
+    }
+    
+    // Child Ages
+    if (session.children_ages) {
+        setChildAges(session.children_ages.split(',').filter(age => age !== ''));
+    }
+
+    // Rooms
+    if (session.room_qty) {
+        setRoomQty(session.room_qty);
+    }
+  }, [session]);
 
   useEffect(() => {
       if (roomQty > travelerCounts.adults) {

@@ -26,6 +26,7 @@ function AppContent() {
   const location = useLocation();
 
   const isVacationLayout = location.pathname.startsWith('/plan');
+  const routeKey = isVacationLayout ? "/plan" : location.pathname;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -35,7 +36,7 @@ function AppContent() {
       {/* flex-grow allows the main content to expand and push the footer down */}
       <main className="flex-grow flex flex-col">
         <AnimatePresence mode="wait">
-          <Routes location={location} key={location.pathname}>
+          <Routes location={location} key={routeKey}>
             {/* Main Routes */}
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
