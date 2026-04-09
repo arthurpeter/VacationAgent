@@ -53,6 +53,8 @@ class FlightsRequest(BaseModel):
     sort_by: Optional[int] = 2
     stops: Optional[int] = 0
     price: Optional[float] = None
+    destination_arrival: Optional[str] = ""
+    destination_departure: Optional[str] = ""
 
 class AccomodationsRequest(BaseModel):
     """Schema for accomodations search request."""

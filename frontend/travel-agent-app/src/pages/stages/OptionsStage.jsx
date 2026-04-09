@@ -742,6 +742,12 @@ export default function OptionsStage() {
         const bookingPromises = [];
 
         if (needsFlight) {
+            const outboundSegments = selectedOutbound.flights;
+            const destArrival = outboundSegments[outboundSegments.length - 1].arrival_time;
+
+            const inboundSegments = selectedInbound.flights;
+            const destDeparture = inboundSegments[0].departure_time;
+
             bookingPromises.push(
                 fetchWithAuth(`${API_BASE_URL}/search/bookFlight`, {
                     session_id: parseInt(sessionData?.id) || 0,
@@ -751,7 +757,9 @@ export default function OptionsStage() {
                     outbound_date: dates.start,
                     return_date: dates.end,
                     adults: travelerCounts.adults,
-                    price: selectedInbound.price
+                    price: selectedInbound.price,
+                    destination_arrival: destArrival,
+                    destination_departure: destDeparture
                 }, "POST").then(res => ({ type: 'flights', res }))
             );
         }

@@ -201,6 +201,9 @@ async def search_outbound_flights(
         response = []
         for flight in all_flights[:10]:
             log.info(f"Flight: Price {flight.get('price')}")
+            if not flight.get('departure_token') or not flight.get('price'):
+                log.warning("Skipping flight with missing departure token or price.")
+                continue
             flight_schema = schemas.FlightsResponse(
                 token=flight.get('departure_token'),
                 price=flight.get('price'),
@@ -309,6 +312,9 @@ async def search_inbound_flights(
         response = []
         for flight in all_flights[:5]:
             log.info(f"Flight: Price {flight.get('price')}")
+            if not flight.get('booking_token') or not flight.get('price'):
+                log.warning("Skipping flight with missing booking token or price.")
+                continue
             flight_schema = schemas.FlightsResponse(
                 token=flight.get('booking_token'),
                 price=flight.get('price'),
@@ -408,6 +414,18 @@ async def book_flight(
         log.error("Booking failed: Incomplete booking information received.")
         raise HTTPException(status_code=500, detail="Booking failed")
     
+    arrival_dt = None
+    departure_dt = None
+    
+    try:
+        if data.destination_arrival:
+            arrival_dt = datetime.fromisoformat(data.destination_arrival.replace(" ", "T"))
+        
+        if data.destination_departure:
+            departure_dt = datetime.fromisoformat(data.destination_departure.replace(" ", "T"))
+    except ValueError as e:
+        log.error(f"Error parsing flight times: {e}")
+    
     try:
         stmt = (
             update(models.VacationSession)
@@ -417,8 +435,10 @@ async def book_flight(
             )
             .values(
                 flights_url=url,
-                flight_price=data.price
-                )
+                flight_price=data.price,
+                destination_arrival=arrival_dt,
+                destination_departure=departure_dt
+            )
         )
         await db.execute(stmt)
         await db.commit()

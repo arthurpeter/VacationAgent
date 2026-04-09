@@ -49,6 +49,9 @@ class VacationSession(Base):
     room_qty = Column(Integer, nullable=True, default=1)
     budget = Column(Integer, nullable=True)
 
+    destination_arrival = Column(DateTime(timezone=False), nullable=True)
+    destination_departure = Column(DateTime(timezone=False), nullable=True)
+
     flights_url = Column(Text, nullable=True)
     flight_price = Column(Float, nullable=True)
     accomodation_url = Column(Text, nullable=True)
