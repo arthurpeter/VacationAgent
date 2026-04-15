@@ -1,8 +1,8 @@
-"""add_checkpoint_cleanup_trigger
+"""add checkpoint cleanup trigger
 
-Revision ID: 3fdf81ff6cfe
-Revises: ea5a8a1c516e
-Create Date: 2026-03-06 12:12:56.652787
+Revision ID: 3a679a51e891
+Revises: e67af2186813
+Create Date: 2026-04-15 15:39:13.896829
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '3fdf81ff6cfe'
-down_revision: Union[str, Sequence[str], None] = 'ea5a8a1c516e'
+revision: str = '3a679a51e891'
+down_revision: Union[str, Sequence[str], None] = 'e67af2186813'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -24,10 +24,15 @@ def upgrade() -> None:
         CREATE OR REPLACE FUNCTION delete_session_checkpoints()
         RETURNS TRIGGER AS $$
         BEGIN
-            -- LangGraph thread_id is the string version of VacationSession.id
-            DELETE FROM checkpoints WHERE thread_id = CAST(OLD.id AS TEXT);
-            DELETE FROM checkpoint_blobs WHERE thread_id = CAST(OLD.id AS TEXT);
-            DELETE FROM checkpoint_writes WHERE thread_id = CAST(OLD.id AS TEXT);
+            DELETE FROM checkpoints 
+            WHERE thread_id IN ('discovery_' || CAST(OLD.id AS TEXT), 'itinerary_' || CAST(OLD.id AS TEXT));
+            
+            DELETE FROM checkpoint_blobs 
+            WHERE thread_id IN ('discovery_' || CAST(OLD.id AS TEXT), 'itinerary_' || CAST(OLD.id AS TEXT));
+            
+            DELETE FROM checkpoint_writes 
+            WHERE thread_id IN ('discovery_' || CAST(OLD.id AS TEXT), 'itinerary_' || CAST(OLD.id AS TEXT));
+            
             RETURN OLD;
         END;
         $$ LANGUAGE plpgsql;

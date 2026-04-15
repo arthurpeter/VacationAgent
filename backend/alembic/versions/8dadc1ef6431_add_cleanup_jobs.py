@@ -1,8 +1,8 @@
-"""add_pg_cron_cleanup_jobs
+"""add cleanup jobs
 
-Revision ID: c2c2b3dfce45
-Revises: 1e6e388c9646
-Create Date: 2026-03-29 18:00:03.591690
+Revision ID: 8dadc1ef6431
+Revises: 10d27dbdc81b
+Create Date: 2026-04-15 15:36:21.579848
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'c2c2b3dfce45'
-down_revision: Union[str, Sequence[str], None] = '1e6e388c9646'
+revision: str = '8dadc1ef6431'
+down_revision: Union[str, Sequence[str], None] = '10d27dbdc81b'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

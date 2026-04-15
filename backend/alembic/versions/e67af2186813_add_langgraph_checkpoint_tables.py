@@ -1,8 +1,8 @@
 """add langgraph checkpoint tables
 
-Revision ID: ea5a8a1c516e
-Revises: f9d38644cbe0
-Create Date: 2026-03-06 12:09:18.645410
+Revision ID: e67af2186813
+Revises: 8dadc1ef6431
+Create Date: 2026-04-15 15:37:28.130176
 
 """
 from typing import Sequence, Union
@@ -11,9 +11,10 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+
 # revision identifiers, used by Alembic.
-revision: str = 'ea5a8a1c516e'
-down_revision: Union[str, Sequence[str], None] = 'a9347f5f4d0e'
+revision: str = 'e67af2186813'
+down_revision: Union[str, Sequence[str], None] = '8dadc1ef6431'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

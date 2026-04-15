@@ -31,3 +31,19 @@ class ExtractionResult(BaseModel):
         False,
         description="True if the user is explicitly correcting or changing existing info"
     )
+
+class DailyTheme(BaseModel):
+    day_number: int = Field(description="The day number of the trip (e.g., 1, 2, 3)")
+    theme: str = Field(description="A high-level title/theme for the day. e.g., 'Arrival & Trastevere Food Tour'")
+
+class ArchitectResult(BaseModel):
+    themes: List[DailyTheme] = Field(description="The complete list of high-level themes for EVERY day of the trip.")
+
+class LinkFinderResult(BaseModel):
+    day_number: int = Field(description="The specific day the resource is relevant for")
+    name: str = Field(description="Name of the place, activity, or restaurant")
+    url: str = Field(description="A valid URL to book or learn more")
+
+class DetailerResult(BaseModel):
+    day_number: int = Field(description="The specific day being detailed")
+    detailed_plan: str = Field(description="The full schedule (Morning, Afternoon, Evening) formatted in Markdown")

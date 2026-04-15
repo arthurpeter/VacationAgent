@@ -1,6 +1,4 @@
 import orjson
-import sys
-import asyncio
 
 from langgraph.graph import START, END, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
@@ -13,7 +11,6 @@ from app.services.agents.memory import DiscoveryState
 from app.services.agents.nodes import information_collector, db_validator, responder
 from app.services.agents.utils import get_initial_state, get_resumed_state
 from app.services.agents.tools import responder_tools
-from app.core.database import SessionLocal, langgraph_pool
 from app.core.logger import get_logger
 
 log = get_logger(__name__)
@@ -44,16 +41,16 @@ async def stream_discovery_message(
     checkpointer: AsyncPostgresSaver
 ):
     graph = generate_graph(checkpointer) 
-    config = {"configurable": {"thread_id": str(session_id)}}
+    config = {"configurable": {"thread_id": f"discovery_{session_id}"}}
 
     current_state = await graph.aget_state(config)
 
     if not current_state.values:
-        log.info(f"Starting new LangGraph thread for session {session_id}...")
+        log.info(f"Starting new LangGraph discovery thread for session {session_id}...")
         input_data = await get_initial_state(db, session_id)
         input_data["messages"].append(HumanMessage(content=user_message))
     else:
-        log.info(f"Resuming existing thread for session {session_id}...")
+        log.info(f"Resuming existing LangGraph discovery thread for session {session_id}...")
         fresh_extracted_data = await get_resumed_state(db, session_id)
         input_data = {
             "messages": [HumanMessage(content=user_message)],
@@ -90,8 +87,7 @@ async def stream_discovery_message(
 
 
 if __name__ == "__main__":
-    print("This module is not meant to be run directly. It provides the execution graph.\n\n")
-    print("Test\n\n")
+    print("This module is not meant to be run directly. It provides the execution graph for the discovery process.\n\n")
     my_graph = generate_graph()
     
     png_bytes = my_graph.get_graph(xray=True).draw_mermaid_png()

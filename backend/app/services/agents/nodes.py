@@ -1,6 +1,6 @@
 from typing import Literal
 
-from app.services.agents.memory import DiscoveryState
+from app.services.agents.memory import DiscoveryState, ItineraryState
 from app.services.agents.prompts import *
 from langgraph.store.base import BaseStore
 from langgraph.graph import END
@@ -19,6 +19,8 @@ from app.services.agents.tools import responder_tools
 
 
 llm = settings.llm
+
+# Discovery Graph Nodes
 
 async def information_collector(state: DiscoveryState) -> dict:
     """
@@ -186,3 +188,30 @@ async def responder(state: DiscoveryState) -> dict:
 
 if __name__ == "__main__":
     print("This module is not meant to be run directly. It provides the agent nodes and decisional edges.")
+
+
+# Itinerary Graph Nodes
+
+async def global_architect(state: ItineraryState) -> dict:
+    """
+    Node 1: Takes the complete trip parameters and formulates a high-level itinerary.
+    """
+    pass
+
+async def focused_detailer(state: ItineraryState) -> dict:
+    """
+    Node 2: Takes the high-level itinerary and fills in detailed recommendations.
+    """
+    pass
+
+async def link_finder(state: ItineraryState) -> dict:
+    """
+    Node 3: A tool node that finds relevant links for itinerary items.
+    """
+    pass
+
+async def itinerary_responder(state: ItineraryState) -> dict:
+    """
+    Node 4: Formulates the final response to the user with the complete itinerary.
+    """
+    pass
