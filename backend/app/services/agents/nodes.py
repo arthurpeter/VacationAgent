@@ -5,7 +5,7 @@ from app.services.agents.prompts import *
 from langgraph.store.base import BaseStore
 from langgraph.graph import END
 
-from app.services.agents.responses import ArchitectResult, ExtractionResult, LinkFinderResult, DetailerResult
+from app.services.agents.responses import ArchitectResult, ExtractionResult, DetailerResult, SubmitLinks
 from app.core.config import settings
 
 from datetime import datetime
@@ -13,8 +13,8 @@ from sqlalchemy import update, select
 from app.core.database import SessionLocal
 from app.models.vacation_session import VacationSession
 from app.services.agents.utils import is_llm_null, resolve_location, get_resumed_state
-from langchain_core.messages import SystemMessage
-from app.services.agents.tools import responder_tools
+from langchain_core.messages import RemoveMessage, SystemMessage
+from app.services.agents.tools import responder_tools, link_finder_tools
 
 
 llm = settings.llm
@@ -231,13 +231,97 @@ async def focused_detailer(state: ItineraryState) -> dict:
     """
     Node 2: Takes the high-level itinerary and fills in detailed recommendations.
     """
-    pass
+    trip_data = state.get("data", {})
+    trip_data_str = "\n".join([f"- {k}: {v}" for k, v in trip_data.items() if v is not None])
+
+    current_themes_dict = state.get("daily_themes") or {}
+    themes_str = "\n".join([f"Day {day}: {theme}" for day, theme in current_themes_dict.items()]) if current_themes_dict else "No themes available."
+
+    current_plans_dict = state.get("daily_plans") or {}
+    plans_str = "\n".join([f"Day {day}:\n{plan}" for day, plan in current_plans_dict.items()]) if current_plans_dict else "No detailed plans generated yet."
+
+    messages = state.get("messages", [])
+    recent_msgs = messages[-4:] if len(messages) >= 4 else messages
+    chat_context = ""
+    for msg in recent_msgs:
+        role = "User" if msg.type == "human" else "Assistant"
+        chat_context += f"{role}: {msg.content}\n"
+
+    instructions = itinerary_detailer_prompt.format(
+        trip_data=trip_data_str,
+        current_themes=themes_str,
+        current_plans=plans_str,
+        chat_history=chat_context.strip() or "No conversation yet."
+    )
+
+    structured_llm = llm.with_structured_output(DetailerResult)
+    response: DetailerResult = await structured_llm.ainvoke(instructions)
+
+    new_plans = dict(current_plans_dict)
+    
+    new_plans[response.day_number] = response.detailed_plan
+
+    return {
+        "daily_plans": new_plans,
+        "recently_detailed_days": [response.day_number]
+    }
 
 async def link_finder(state: ItineraryState) -> dict:
     """
     Node 3: A tool node that finds relevant links for itinerary items.
     """
-    pass
+    target_days = state.get("recently_detailed_days") or []
+    if not target_days:
+        return {}
+    
+    target_day = target_days[0]
+    current_plans_dict = state.get("daily_plans") or {}
+    plan_text = current_plans_dict.get(target_day, "No plan found.")
+
+    instructions = link_finder_prompt.format(
+        target_day=target_day,
+        plan_text=plan_text
+    )
+
+    messages = state.get("messages", [])
+    tool_loop_messages = []
+    
+    for msg in reversed(messages):
+        if msg.type == "human":
+            break
+        tool_loop_messages.insert(0, msg)
+
+    llm_with_tools = llm.bind_tools(link_finder_tools + [SubmitLinks])
+    
+    response = await llm_with_tools.ainvoke([SystemMessage(content=instructions)] + tool_loop_messages)
+    
+    return {"messages": [response]}
+
+async def save_links_and_cleanup(state: ItineraryState) -> dict:
+    """Node 3.5: Intercepts SubmitLinks, saves data, and wipes the search history."""
+    messages = state.get("messages", [])
+    last_message = messages[-1]
+
+    tool_call = last_message.tool_calls[0]
+    args = tool_call["args"]
+
+    current_links = state.get("daily_links") or {}
+    new_links = dict(current_links)
+    new_links[args["day_number"]] = args["links"]
+
+    messages_to_remove = []
+    
+    for msg in reversed(messages):
+        if msg.type == "human":
+            break
+        if getattr(msg, "id", None):
+            messages_to_remove.append(RemoveMessage(id=msg.id))
+
+    return {
+        "daily_links": new_links,
+        "recently_detailed_days": [],
+        "messages": messages_to_remove
+    }
 
 async def itinerary_responder(state: ItineraryState) -> dict:
     """

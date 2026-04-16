@@ -8,7 +8,7 @@ from psycopg_pool import AsyncConnectionPool
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.agents.memory import ItineraryState
-from app.services.agents.nodes import global_architect, focused_detailer, link_finder, itinerary_responder
+from app.services.agents.nodes import global_architect, focused_detailer, link_finder, itinerary_responder, save_links_and_cleanup
 from app.services.agents.utils import get_initial_itinerary_state
 from app.services.agents.tools import link_finder_tools
 from app.core.logger import get_logger
@@ -23,6 +23,22 @@ def route_phase(state: ItineraryState):
         return "focused_detailer"
     return "global_architect"
 
+def route_link_finder(state: ItineraryState):
+    """The Traffic Cop for the ReAct loop."""
+    messages = state.get("messages", [])
+    if not messages:
+        return "itinerary_responder"
+    
+    last_message = messages[-1]
+    
+    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+        if last_message.tool_calls[0]["name"] == "SubmitLinks":
+            return "save_links_and_cleanup"
+        
+        return "tools"
+        
+    return "itinerary_responder"
+
 def generate_graph(checkpointer=None):
     
     builder = StateGraph(ItineraryState)
@@ -31,12 +47,14 @@ def generate_graph(checkpointer=None):
     builder.add_node("link_finder", link_finder)
     builder.add_node("itinerary_responder", itinerary_responder)
     builder.add_node("tools", ToolNode(link_finder_tools))
+    builder.add_node("save_links_and_cleanup", save_links_and_cleanup)
 
     builder.add_conditional_edges(START, route_phase)
     builder.add_edge("global_architect", "itinerary_responder")
     builder.add_edge("focused_detailer", "link_finder")
-    builder.add_conditional_edges("link_finder", tools_condition, {"tools": "tools",  "__end__": "itinerary_responder"})
+    builder.add_conditional_edges("link_finder", route_link_finder)
     builder.add_edge("tools", "link_finder")
+    builder.add_edge("save_links_and_cleanup", "itinerary_responder")
     builder.add_edge("itinerary_responder", END)
 
     return builder.compile(checkpointer=checkpointer)

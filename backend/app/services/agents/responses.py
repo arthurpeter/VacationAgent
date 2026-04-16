@@ -39,11 +39,15 @@ class DailyTheme(BaseModel):
 class ArchitectResult(BaseModel):
     themes: List[DailyTheme] = Field(description="The complete list of high-level themes for EVERY day of the trip.")
 
-class LinkFinderResult(BaseModel):
-    day_number: int = Field(description="The specific day the resource is relevant for")
-    name: str = Field(description="Name of the place, activity, or restaurant")
-    url: str = Field(description="A valid URL to book or learn more")
-
 class DetailerResult(BaseModel):
     day_number: int = Field(description="The specific day being detailed")
     detailed_plan: str = Field(description="The full schedule (Morning, Afternoon, Evening) formatted in Markdown")
+
+class ResourceLink(BaseModel):
+    name: str = Field(description="Name of the place, activity, or restaurant")
+    url: str = Field(description="A valid URL to book or learn more")
+
+class SubmitLinks(BaseModel):
+    """CRITICAL: Use this tool to submit the final list of official links you found for the day's activities."""
+    day_number: int = Field(description="The specific day these links belong to")
+    links: List[ResourceLink] = Field(description="The list of links found")

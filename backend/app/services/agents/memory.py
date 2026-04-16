@@ -28,4 +28,5 @@ class ItineraryState(TypedDict):
     daily_themes: Optional[dict[int, str]] = None
     daily_plans: Optional[dict[int, str]] = None
     daily_links: Optional[dict[int, List[dict[str, str]]]] = None
+    recently_detailed_days: Optional[List[int]] = None
     are_themes_confirmed: bool = False
