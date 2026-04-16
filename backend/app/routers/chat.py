@@ -188,26 +188,55 @@ async def get_itinerary_messages(
                 
     return {"messages": formatted_messages}
 
+@router.post("/itinerary/confirm_themes/{session_id}")
+async def confirm_itinerary_themes(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
+    # token: TokenPayload = Depends(access_token_header)
+):
+    # stmt = select(models.VacationSession).where(
+    #     models.VacationSession.id == session_id,
+    #     models.VacationSession.user_id == token.sub
+    # )
+    # result = await db.execute(stmt)
+    # session = result.scalar_one_or_none()
+
+    # if not session:
+    #     log.warning(f"Unauthorized access attempt to session {session_id} by user {token.sub}")
+    #     raise HTTPException(status_code=404, detail="Session not found")
+    
+    graph = generate_itinerary_graph(checkpointer)
+    config = {"configurable": {"thread_id": f"itinerary_{session_id}"}}
+
+    await graph.aupdate_state(
+        config, 
+        {"are_themes_confirmed": True}
+    )
+
+    log.info(f"Session {session_id} transitioned to Phase 2 (Detailing).")
+    return {"status": "success", "message": "Itinerary theemes confirmed."}
+
 @router.post("/itinerary/{session_id}")
 async def chat_itinerary(
     session_id: int,
     request: ChatRequest,
     db: AsyncSession = Depends(get_db),
     checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
-    token: TokenPayload = Depends(access_token_header)
+    #token: TokenPayload = Depends(access_token_header)
 ):
-    stmt = select(models.VacationSession).where(
-        models.VacationSession.id == session_id,
-        models.VacationSession.user_id == token.sub
-    )
-    result = await db.execute(stmt)
-    session = result.scalar_one_or_none()
+    # stmt = select(models.VacationSession).where(
+    #     models.VacationSession.id == session_id,
+    #     models.VacationSession.user_id == token.sub
+    # )
+    # result = await db.execute(stmt)
+    # session = result.scalar_one_or_none()
 
-    if not session:
-        log.warning(f"Unauthorized access attempt to session {session_id} by user {token.sub}")
-        raise HTTPException(status_code=404, detail="Session not found")
+    # if not session:
+    #     log.warning(f"Unauthorized access attempt to session {session_id} by user {token.sub}")
+    #     raise HTTPException(status_code=404, detail="Session not found")
     
-    log.info(f"User {token.sub} initiated itinerary chat for session {session_id}")
+    # log.info(f"User {token.sub} initiated itinerary chat for session {session_id}")
     
     return StreamingResponse(
         stream_itinerary_message(

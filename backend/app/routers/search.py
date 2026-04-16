@@ -510,13 +510,14 @@ async def get_accomodations(
     for hotel in sorted_hotels:
         hotel_info = hotel.get("property", {})
         price_info = round(hotel_info.get("priceBreakdown", {}).get("grossPrice", {}).get("value", float('inf')), 2)
+        ccy = hotel_info.get("priceBreakdown", {}).get("grossPrice", {}).get("currency")
         response.append(schemas.AccomodationsResponse(
             hotel_id=str(hotel.get("hotel_id", "")),
             hotel_name=hotel_info.get("name", ""),
             latitude=hotel_info.get("latitude"),
             longitude=hotel_info.get("longitude"),
             price=price_info,
-            currency=currency_code,
+            currency=ccy,
             photo_urls=hotel_info.get("photoUrls", []),
             accessibilityLabel=hotel.get("accessibilityLabel"),
             reviewScoreWord=hotel_info.get("reviewScoreWord"),

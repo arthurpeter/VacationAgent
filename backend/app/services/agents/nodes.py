@@ -5,7 +5,7 @@ from app.services.agents.prompts import *
 from langgraph.store.base import BaseStore
 from langgraph.graph import END
 
-from app.services.agents.responses import ExtractionResult
+from app.services.agents.responses import ArchitectResult, ExtractionResult, LinkFinderResult, DetailerResult
 from app.core.config import settings
 
 from datetime import datetime
@@ -14,7 +14,6 @@ from app.core.database import SessionLocal
 from app.models.vacation_session import VacationSession
 from app.services.agents.utils import is_llm_null, resolve_location, get_resumed_state
 from langchain_core.messages import SystemMessage
-from app.services.agents.prompts import responder_prompt
 from app.services.agents.tools import responder_tools
 
 
@@ -196,7 +195,37 @@ async def global_architect(state: ItineraryState) -> dict:
     """
     Node 1: Takes the complete trip parameters and formulates a high-level itinerary.
     """
-    pass
+    trip_data = state.get("data", {})
+    trip_data_str = "\n".join([f"- {k}: {v}" for k, v in trip_data.items() if v is not None])
+
+    current_themes_dict = state.get("daily_themes") or {}
+    if current_themes_dict:
+        current_themes_str = "\n".join([f"Day {day}: {theme}" for day, theme in current_themes_dict.items()])
+    else:
+        current_themes_str = "No themes generated yet. You must generate the initial sketch."
+
+    messages = state.get("messages", [])
+    recent_msgs = messages[-4:] if len(messages) >= 4 else messages
+    chat_context = ""
+    for msg in recent_msgs:
+        role = "User" if msg.type == "human" else "Assistant"
+        chat_context += f"{role}: {msg.content}\n"
+
+    instructions = itinerary_architect_prompt.format(
+        persona=state.get("persona_context", "Unknown traveler"),
+        trip_data=trip_data_str,
+        current_themes=current_themes_str,
+        chat_history=chat_context.strip() or "No conversation yet."
+    )
+
+    structured_llm = llm.with_structured_output(ArchitectResult)
+    response: ArchitectResult = await structured_llm.ainvoke(instructions)
+
+    new_themes = dict(current_themes_dict)
+    for item in response.themes:
+        new_themes[item.day_number] = item.theme
+
+    return {"daily_themes": new_themes}
 
 async def focused_detailer(state: ItineraryState) -> dict:
     """
@@ -214,4 +243,49 @@ async def itinerary_responder(state: ItineraryState) -> dict:
     """
     Node 4: Formulates the final response to the user with the complete itinerary.
     """
-    pass
+    is_phase2 = state.get("are_themes_confirmed", False)
+    all_messages = state.get("messages", [])
+
+    last_human_idx = -1
+    for i in range(len(all_messages) - 1, -1, -1):
+        if all_messages[i].type == "human":
+            last_human_idx = i
+            break
+
+    if last_human_idx != -1:
+        start_idx = max(0, last_human_idx - 10)
+        older_messages = all_messages[start_idx:last_human_idx]
+        current_messages = all_messages[last_human_idx:]
+    else:
+        older_messages = []
+        current_messages = all_messages
+
+    history_str = ""
+    for msg in older_messages:
+        if msg.type == "human":
+            history_str += f"Human: {msg.content}\n"
+        elif msg.type == "ai":
+            if hasattr(msg, "tool_calls") and msg.tool_calls:
+                tools_used = ", ".join([tc["name"] for tc in msg.tool_calls])
+                history_str += f"Assistant (Action): Used tool [{tools_used}]\n"
+            elif msg.content:
+                history_str += f"Assistant: {msg.content}\n"
+        elif msg.type == "tool":
+            content_str = str(msg.content)
+            short_content = content_str if len(content_str) < 300 else content_str[:300] + "..."
+            history_str += f"Tool Result ({msg.name}): {short_content}\n"
+
+    current_themes_dict = state.get("daily_themes") or {}
+    themes_str = "\n".join([f"Day {d}: {t}" for d, t in current_themes_dict.items()]) if current_themes_dict else "No themes generated yet."
+
+    if not is_phase2:
+        instructions = itinerary_responder_phase_1_prompt.format(
+            current_themes=themes_str,
+            chat_history=history_str.strip() or "No conversation yet."
+        )
+    else:
+        instructions = itinerary_responder_phase_2_prompt
+
+    response = await llm.ainvoke([SystemMessage(content=instructions)] + current_messages)
+
+    return {"messages": [response]}

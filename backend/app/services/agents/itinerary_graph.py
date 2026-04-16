@@ -82,7 +82,7 @@ async def stream_itinerary_message(
                 "are_themes_confirmed": node_updates.get("are_themes_confirmed")
             }
             
-            yield f"data: {orjson.dumps(payload).decode()}\n\n"
+            yield f"data: {orjson.dumps(payload, option=orjson.OPT_NON_STR_KEYS).decode()}\n\n"
 
     final_payload = {
         "status": "complete", 
