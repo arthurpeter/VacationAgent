@@ -287,9 +287,9 @@ async def link_finder(state: ItineraryState) -> dict:
     tool_loop_messages = []
     
     for msg in reversed(messages):
+        tool_loop_messages.insert(0, msg)
         if msg.type == "human":
             break
-        tool_loop_messages.insert(0, msg)
 
     llm_with_tools = llm.bind_tools(link_finder_tools + [SubmitLinks])
     
@@ -368,7 +368,22 @@ async def itinerary_responder(state: ItineraryState) -> dict:
             chat_history=history_str.strip() or "No conversation yet."
         )
     else:
-        instructions = itinerary_responder_phase_2_prompt
+        current_plans_dict = state.get("daily_plans") or {}
+        plans_str = "\n".join([f"Day {d}:\n{p}" for d, p in current_plans_dict.items()]) if current_plans_dict else "No detailed plans generated yet."
+        current_links_dict = state.get("daily_links") or {}
+        links_str = ""
+        for d, links in current_links_dict.items():
+            links_str += f"Day {d}:\n"
+            for link in links:
+                links_str += f"- {link['name']}: {link['url']}\n"
+        if not links_str:
+            links_str = "No links curated yet."
+        instructions = itinerary_responder_phase_2_prompt.format(
+            current_themes=themes_str,
+            current_plans=plans_str,
+            current_links=links_str,
+            chat_history=history_str.strip() or "No conversation yet."
+        )
 
     response = await llm.ainvoke([SystemMessage(content=instructions)] + current_messages)
 

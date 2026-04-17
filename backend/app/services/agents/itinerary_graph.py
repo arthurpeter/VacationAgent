@@ -49,10 +49,17 @@ def generate_graph(checkpointer=None):
     builder.add_node("tools", ToolNode(link_finder_tools))
     builder.add_node("save_links_and_cleanup", save_links_and_cleanup)
 
-    builder.add_conditional_edges(START, route_phase)
+    builder.add_conditional_edges(START, route_phase, {
+            "focused_detailer": "focused_detailer",
+            "global_architect": "global_architect"
+        })
     builder.add_edge("global_architect", "itinerary_responder")
     builder.add_edge("focused_detailer", "link_finder")
-    builder.add_conditional_edges("link_finder", route_link_finder)
+    builder.add_conditional_edges("link_finder", route_link_finder, {
+            "save_links_and_cleanup": "save_links_and_cleanup",
+            "tools": "tools",
+            "itinerary_responder": "itinerary_responder"
+        })
     builder.add_edge("tools", "link_finder")
     builder.add_edge("save_links_and_cleanup", "itinerary_responder")
     builder.add_edge("itinerary_responder", END)
@@ -97,7 +104,6 @@ async def stream_itinerary_message(
                 "daily_themes": node_updates.get("daily_themes"),
                 "daily_plans": node_updates.get("daily_plans"),
                 "daily_links": node_updates.get("daily_links"),
-                "are_themes_confirmed": node_updates.get("are_themes_confirmed")
             }
             
             yield f"data: {orjson.dumps(payload, option=orjson.OPT_NON_STR_KEYS).decode()}\n\n"
