@@ -164,7 +164,13 @@ async def get_itinerary_messages(
     current_state = await graph.aget_state(config)
     
     if not current_state.values:
-        return {"messages": []}
+        return {
+            "messages": [],
+            "daily_themes": {},
+            "daily_plans": {},
+            "daily_links": {},
+            "are_themes_confirmed": False
+        }
         
     raw_messages = current_state.values.get("messages", [])
     formatted_messages = []
@@ -186,7 +192,18 @@ async def get_itinerary_messages(
                     "text": text_content
                 })
                 
-    return {"messages": formatted_messages}
+    daily_themes = current_state.values.get("daily_themes") or {}
+    daily_plans = current_state.values.get("daily_plans") or {}
+    daily_links = current_state.values.get("daily_links") or {}
+    are_themes_confirmed = current_state.values.get("are_themes_confirmed", False)
+            
+    return {
+        "messages": formatted_messages,
+        "daily_themes": daily_themes,
+        "daily_plans": daily_plans,
+        "daily_links": daily_links,
+        "are_themes_confirmed": are_themes_confirmed
+    }
 
 @router.post("/itinerary/confirm_themes/{session_id}")
 async def confirm_itinerary_themes(
@@ -215,7 +232,7 @@ async def confirm_itinerary_themes(
     )
 
     log.info(f"Session {session_id} transitioned to Phase 2 (Detailing).")
-    return {"status": "success", "message": "Itinerary theemes confirmed."}
+    return {"status": "success", "message": "Itinerary themes confirmed."}
 
 @router.post("/itinerary/{session_id}")
 async def chat_itinerary(
