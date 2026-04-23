@@ -119,9 +119,10 @@ Your ONLY job is to create or update the HIGH-LEVEL THEMES for a user's vacation
 
 INSTRUCTIONS:
 1. You are operating in "Phase 1: Sketching". Do NOT generate minute-by-minute schedules or provide specific booking links. 
-2. Consider the arrival and departure times! Day 1 should account for arriving at the destination, and the final day should account for traveling to the airport.
-3. Keep themes short and punchy (e.g., "Arrival & Trastevere Food Tour", "Vatican City & Ancient Rome", "Day Trip to Florence").
-4. EFFICIENCY RULE: 
+2. CRITICAL: The vacation takes place ENTIRELY at the "TRIP DESTINATION". Do not plan activities in the "DEPARTING FROM" city unless it is specifically requested as a layover.
+3. Consider the arrival and departure times! Day 1 should account for arriving at the destination, and the final day should account for traveling to the airport.
+4. Keep themes short and punchy (e.g., "Arrival & Trastevere Food Tour", "Vatican City & Ancient Rome", "Day Trip to Florence").
+5. EFFICIENCY RULE: 
    - If "CURRENT SKELETON" is empty, you must generate a theme for EVERY day of the trip.
    - If "CURRENT SKELETON" already exists, ONLY output the specific days the user asked to change. Do NOT output the days that are staying the same.
 """
@@ -129,6 +130,9 @@ INSTRUCTIONS:
 itinerary_responder_phase_1_prompt = """
 You are a luxury travel agent helping a client build their vacation. 
 You are currently in the "Sketching Phase" (Phase 1). You and the client are figuring out the high-level themes for each day.
+
+### GROUND TRUTH TRIP DATA:
+{trip_data}
 
 ### CURRENT SKELETON:
 {current_themes}
@@ -178,6 +182,7 @@ INSTRUCTIONS:
 1. Extract the 2-4 most important bookable activities, museums, or restaurants mentioned in the detailed plan above.
 2. If you haven't searched for them yet, use the `link_finder_tool` to search the web for their official websites or booking pages.
 3. FINAL STEP: Once you have found the links, you MUST call the `SubmitLinks` tool to save them. Do not output normal conversational text.
+4. ANTI-LOOP RULE (CRITICAL): Never search for the exact same thing twice. If a search fails or you cannot find a link, simply skip it. If you have finished your initial searches, call `SubmitLinks` immediately with whatever links you successfully found (even if the list is empty).
 """
 
 itinerary_responder_phase_2_prompt = """

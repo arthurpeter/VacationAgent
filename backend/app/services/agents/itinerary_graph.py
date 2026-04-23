@@ -32,7 +32,7 @@ def route_link_finder(state: ItineraryState):
     last_message = messages[-1]
     
     if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        if last_message.tool_calls[0]["name"] == "SubmitLinks":
+        if any(tc["name"] == "SubmitLinks" for tc in last_message.tool_calls):
             return "save_links_and_cleanup"
         
         return "tools"

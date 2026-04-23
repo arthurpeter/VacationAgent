@@ -196,7 +196,13 @@ async def global_architect(state: ItineraryState) -> dict:
     Node 1: Takes the complete trip parameters and formulates a high-level itinerary.
     """
     trip_data = state.get("data", {})
-    trip_data_str = "\n".join([f"- {k}: {v}" for k, v in trip_data.items() if v is not None])
+    trip_data_str = f"-> TRIP DESTINATION (Where the vacation takes place): {trip_data.get('destination')}\n"
+    trip_data_str += f"-> DEPARTING FROM (Just the airport they fly out of): {trip_data.get('departure')}\n"
+    trip_data_str += "Other Details:\n"
+    
+    for k, v in trip_data.items():
+        if k not in ["departure", "destination"] and v is not None:
+            trip_data_str += f"- {k}: {v}\n"
 
     current_themes_dict = state.get("daily_themes") or {}
     if current_themes_dict:
@@ -302,7 +308,10 @@ async def save_links_and_cleanup(state: ItineraryState) -> dict:
     messages = state.get("messages", [])
     last_message = messages[-1]
 
-    tool_call = last_message.tool_calls[0]
+    tool_call = next((tc for tc in last_message.tool_calls if tc["name"] == "SubmitLinks"), None)
+    if not tool_call:
+        return {"recently_detailed_days": []}
+    
     args = tool_call["args"]
 
     current_links = state.get("daily_links") or {}
@@ -362,8 +371,17 @@ async def itinerary_responder(state: ItineraryState) -> dict:
     current_themes_dict = state.get("daily_themes") or {}
     themes_str = "\n".join([f"Day {d}: {t}" for d, t in current_themes_dict.items()]) if current_themes_dict else "No themes generated yet."
 
+    trip_data = state.get("data", {})
+    trip_data_str = f"-> TRIP DESTINATION (Where the vacation takes place): {trip_data.get('destination')}\n"
+    trip_data_str += f"-> DEPARTING FROM (Just the airport they fly out of): {trip_data.get('departure')}\n"
+    trip_data_str += "Other Details:\n"
+    for k, v in trip_data.items():
+        if k not in ["departure", "destination"] and v is not None:
+            trip_data_str += f"- {k}: {v}\n"
+
     if not is_phase2:
         instructions = itinerary_responder_phase_1_prompt.format(
+            trip_data=trip_data_str,
             current_themes=themes_str,
             chat_history=history_str.strip() or "No conversation yet."
         )
