@@ -112,7 +112,7 @@ def call_flights_api(
     Uses the official serpapi-python library.
     
     Args:
-        # (All args are documented in the original function)
+        All args are documented in the original function
     
     Returns:
         Dict[str, Any]: API response containing flight data
