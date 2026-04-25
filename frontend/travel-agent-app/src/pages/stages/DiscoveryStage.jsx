@@ -17,7 +17,6 @@ const DiscoveryStage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [agentStatus, setAgentStatus] = useState(null);
   
-  // Mobile Drawer State
   const [showMobilePlan, setShowMobilePlan] = useState(false);
   
   const [tripData, setTripData] = useState({
@@ -154,7 +153,6 @@ const DiscoveryStage = () => {
     }
   };
 
-  // Calculate Progress
   const requiredFields = ['departure', 'destination', 'from_date', 'to_date', 'adults', 'currency', 'room_qty'];
   const filledCount = requiredFields.filter(field => tripData[field]).length;
   const progressPercent = Math.round((filledCount / requiredFields.length) * 100);
@@ -165,10 +163,8 @@ const DiscoveryStage = () => {
     "I want to travel somewhere new on a tight budget. What are some good options?"
   ];
 
-  // A reusable component for the Plan Cards so we can show it in the Desktop Sidebar AND the Mobile Drawer
   const BlueprintContent = () => (
     <div className="space-y-4">
-      {/* Progress Bar Section */}
       <div className="mb-6">
         <div className="flex justify-between items-end mb-2">
             <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Plan Progress</h3>
@@ -257,17 +253,14 @@ const DiscoveryStage = () => {
   return (
     <PageTransition className="flex w-full h-full bg-white overflow-hidden font-sans relative">
       
-      {/* LEFT PANEL: Chat Interface (Takes 100% on mobile, flex-1 on desktop) */}
       <div className="flex-1 flex flex-col relative bg-gray-50/50 min-h-0 w-full">
         
-        {/* Header */}
         <div className="px-6 md:px-8 py-4 border-b border-gray-200 bg-white z-10 flex justify-between items-center shadow-sm">
           <div>
             <h2 className="text-lg md:text-xl font-black text-gray-800">Trip Discovery</h2>
             <p className="text-xs md:text-sm text-gray-500 font-medium hidden sm:block">Chat with your AI agent to build your perfect itinerary.</p>
           </div>
 
-          {/* Mobile "View Plan" Toggle Button */}
           <button 
             onClick={() => setShowMobilePlan(true)}
             className="md:hidden flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-full font-bold text-sm shadow-sm border border-blue-100 transition-colors"
@@ -279,10 +272,8 @@ const DiscoveryStage = () => {
           </button>
         </div>
 
-        {/* Chat Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
           
-          {/* Cold Start View */}
           {messages.length === 0 && (
             <div className="text-center mt-6 md:mt-16 flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-700">
               <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-50 rounded-full flex items-center justify-center mb-4 border border-blue-100 shadow-sm">
@@ -291,7 +282,6 @@ const DiscoveryStage = () => {
               <h3 className="text-xl font-black text-gray-800 mb-2">Where are we going?</h3>
               <p className="text-sm text-gray-500 max-w-sm px-4 mb-8">Tell me about your dream trip, your available budget, or who you're traveling with.</p>
               
-              {/* Quick Start Chips */}
               <div className="flex flex-col gap-3 w-full max-w-md px-4">
                 {SUGGESTED_PROMPTS.map((prompt, i) => (
                   <button 
@@ -306,7 +296,6 @@ const DiscoveryStage = () => {
             </div>
           )}
           
-          {/* Messages */}
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div 
@@ -316,7 +305,6 @@ const DiscoveryStage = () => {
                     : 'bg-white border border-gray-200 text-gray-800 rounded-2xl rounded-tl-sm'
                 }`}
               >
-                {/* AI Markdown Render vs User Plain Text Render */}
                 {msg.sender === 'ai' ? (
                   <ReactMarkdown 
                     className="[&>p]:mb-3 last:[&>p]:mb-0 [&>ul]:list-disc [&>ul]:ml-6 [&>ul]:mb-3 [&>ol]:list-decimal [&>ol]:ml-6 [&>strong]:font-bold [&>h1]:font-black [&>h1]:text-lg [&>h1]:mb-2 [&>h2]:font-bold [&>h2]:mb-2"
@@ -330,7 +318,6 @@ const DiscoveryStage = () => {
             </div>
           ))}
 
-          {/* Loading Status */}
           {agentStatus && (
             <div className="flex justify-start">
               <div className="bg-white border border-blue-100 text-blue-700 text-sm font-medium rounded-2xl rounded-tl-sm px-5 py-3 shadow-sm flex items-center gap-3">
@@ -346,7 +333,6 @@ const DiscoveryStage = () => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
         <div className="p-3 md:p-4 bg-white border-t border-gray-200 shrink-0">
           <form onSubmit={handleSendMessage} className="flex gap-2 md:gap-3 relative max-w-4xl mx-auto">
             <input
@@ -368,25 +354,22 @@ const DiscoveryStage = () => {
         </div>
       </div>
 
-      {/* DESKTOP RIGHT PANEL (Hidden on Mobile) */}
       <div className="hidden md:flex flex-col w-80 lg:w-96 bg-gray-50 border-l border-gray-200 overflow-y-auto p-5 md:p-6 shadow-inner shrink-0">
         <BlueprintContent />
       </div>
 
-      {/* MOBILE DRAWER OVERLAY (Hidden on Desktop) */}
       <div 
         className={`md:hidden fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm transition-opacity duration-300 ${
           showMobilePlan ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
-        onClick={() => setShowMobilePlan(false)} // Close if they click the dark background
+        onClick={() => setShowMobilePlan(false)}
       >
         <div 
           className={`absolute bottom-0 left-0 right-0 bg-gray-50 rounded-t-3xl h-[85vh] flex flex-col transition-transform duration-300 shadow-2xl ${
             showMobilePlan ? 'translate-y-0' : 'translate-y-full'
           }`}
-          onClick={(e) => e.stopPropagation()} // Prevent clicks inside the drawer from closing it
+          onClick={(e) => e.stopPropagation()}
         >
-          {/* Drawer Header */}
           <div className="flex justify-between items-center p-5 bg-white rounded-t-3xl border-b border-gray-200 shrink-0">
              <div>
                <h3 className="font-black text-gray-800 text-lg">Trip Blueprint</h3>
@@ -400,7 +383,6 @@ const DiscoveryStage = () => {
              </button>
           </div>
           
-          {/* Drawer Scrollable Content */}
           <div className="overflow-y-auto p-5 pb-10 flex-1">
              <BlueprintContent />
           </div>

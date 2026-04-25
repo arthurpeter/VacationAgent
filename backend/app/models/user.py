@@ -24,7 +24,6 @@ class User(Base):
     currency_preference = Column(String, nullable=True)
     home_airports = Column(JSON, nullable=True, default=list)
 
-    # finalized vacations
     vacations = relationship(
         "Vacation",
         back_populates="user",
@@ -32,7 +31,6 @@ class User(Base):
         lazy="selectin"
     )
 
-    # active/in-progress sessions for resuming AI-driven interactions
     sessions = relationship(
         "VacationSession",
         back_populates="user",

@@ -15,7 +15,6 @@ export default function Dashboard() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // 1. Helper to fetch a single session's details (used for resume)
   const getSession = async (sessionId) => {
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/session/${sessionId}`, {}, "GET");
@@ -28,7 +27,6 @@ export default function Dashboard() {
     return null;
   };
 
-  // 2. Load all sessions on mount
   useEffect(() => {
     const loadSessions = async () => {
         try {
@@ -69,16 +67,13 @@ export default function Dashboard() {
     const session = vacations.find(v => v.id === sessionId);
     let stage = session?.current_stage;
 
-    // If missing, fetch fresh data
     if (!stage) {
         const freshData = await getSession(sessionId);
         stage = freshData?.current_stage;
     }
 
-    // Default to discovery
     let targetRoute = 'discovery'; 
-    
-    // Map backend stage to frontend route
+
     if (stage) {
         const stageMap = {
             'discovery': 'discovery',
@@ -93,7 +88,6 @@ export default function Dashboard() {
     navigate(`/plan/${sessionId}/${targetRoute}`);
   };
 
-  // 4. Create New Session Handler
   const handleCreateNew = async () => {
     setIsModalOpen(true);
   };
@@ -106,8 +100,7 @@ export default function Dashboard() {
     <PageTransition className="min-h-screen bg-gray-50 px-8 py-12">
       <Toaster position="bottom-right" reverseOrder={false} />
       <div className="max-w-6xl mx-auto">
-        
-        {/* Header Section */}
+
         <div className="flex flex-col md:flex-row justify-between items-center mb-10">
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900">Your Trips</h1>
@@ -121,7 +114,6 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* Content Section */}
         <AnimatePresence mode="wait">
           {isLoading ? (
             <motion.div 
@@ -144,7 +136,6 @@ export default function Dashboard() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
             >
-              {/* Empty State */}
               {vacations.length === 0 && (
                 <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-3xl p-10 text-white text-center shadow-xl mb-12">
                   <h2 className="text-3xl font-bold mb-4">Ready for your next adventure?</h2>
@@ -158,11 +149,9 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* History Grid */}
               {vacations.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  
-                  {/* "Plan a New Trip" Card */}
+
                   <div 
                     onClick={handleCreateNew}
                     className="group border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:border-blue-500 hover:bg-blue-50 transition min-h-[200px] cursor-pointer"
@@ -174,7 +163,6 @@ export default function Dashboard() {
                     <p className="text-sm text-gray-400 mt-2">Start from scratch</p>
                   </div>
 
-                  {/* Vacation Cards */}
                   {vacations.map(vacation => (
                     <div 
                       key={vacation.id} 

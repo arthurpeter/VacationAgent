@@ -67,7 +67,6 @@ export default function VacationLayout() {
 
   const session = sessionData?.data || sessionData;
 
-  // Visibility logic
   const canFinalize = session && (
     session.flights_url || 
     session.accomodation_url || 
@@ -114,8 +113,7 @@ export default function VacationLayout() {
     <div className="flex flex-col h-screen bg-gray-50 font-sans">
       <Toaster position="top-center" reverseOrder={false} />
       <header className="bg-white border-b border-gray-200 px-8 py-4 flex items-center shrink-0">
-        
-        {/* LEFT SIDE */}
+
         <div className="flex-1">
           <h1 className="text-xl font-bold text-gray-800 line-clamp-1 pr-4">
             {session?.destination || "New Vacation Plan"}
@@ -129,15 +127,13 @@ export default function VacationLayout() {
             )}
           </p>
         </div>
-        
-        {/* CENTER */}
+
         <nav className="flex bg-gray-100 p-1 rounded-lg shrink-0">
           <StageLink to="discovery" label="1. Discovery" />
           <StageLink to="options" label="2. Options" />
           <StageLink to="itinerary" label="3. Itinerary" />
         </nav>
 
-        {/* RIGHT SIDE */}
         <div className="flex-1 flex justify-end items-center gap-6 pl-4">
           <div className="flex flex-col items-end">
             {session?.budget ? (

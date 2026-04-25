@@ -2,7 +2,6 @@
 Main FastAPI application.
 """
 from app.core.logger import configure_logging
-# Configure logging early (console-only logger)
 configure_logging()
 
 from contextlib import asynccontextmanager
@@ -33,7 +32,6 @@ async def lifespan(app: FastAPI):
     await langgraph_pool.close()
     log.info("LangGraph checkpointer pool closed.")
 
-# Create FastAPI app
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.VERSION,
@@ -41,7 +39,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
@@ -50,7 +47,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(sessions_router)
@@ -58,7 +54,6 @@ app.include_router(search_router)
 app.include_router(chat_router)
 app.include_router(notifications_router)
 
-# Configure AuthX error handling
 auth.handle_errors(app)
 
 

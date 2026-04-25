@@ -55,11 +55,9 @@ export default function VacationCard({ vacation, onDelete }) {
 
   return (
     <div className="group relative bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 overflow-hidden flex flex-col h-full">
-      
-      {/* Top Progress Bar */}
+
       <div className={`h-1.5 w-full ${isCompleted ? 'bg-green-500' : 'bg-blue-500'}`}></div>
 
-      {/* Delete Button - Visible on Hover */}
       <button
         onClick={handleDelete}
         disabled={isDeleting}
@@ -81,7 +79,6 @@ export default function VacationCard({ vacation, onDelete }) {
       </button>
 
       <div className="p-6 flex-grow flex flex-col">
-        {/* Header Section */}
         <div className="flex justify-between items-start mb-4 pr-6">
           <h3 className="text-xl font-bold text-gray-900 line-clamp-1">
             {vacation.destination || "Unnamed Trip"}
@@ -91,12 +88,10 @@ export default function VacationCard({ vacation, onDelete }) {
           </span>
         </div>
         
-        {/* Description Section */}
         <p className="text-gray-500 text-sm mb-6 flex-grow line-clamp-2 leading-relaxed">
           {vacation.description || "No specific details added yet for this trip..."}
         </p>
 
-        {/* Footer Section */}
         <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-50">
           <div className="flex flex-col">
             <span className="text-[10px] text-gray-400 uppercase font-semibold">Last updated</span>

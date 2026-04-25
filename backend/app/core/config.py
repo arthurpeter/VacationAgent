@@ -17,13 +17,11 @@ ENV_FILE_PATH = BASE_DIR / ".env"
 
 class Settings(BaseSettings):
     """Application settings."""
-    
-    # App
+
     APP_NAME: str = "Vacation Agent API"
     VERSION: str = "1.0.0"
     DEBUG: bool
-    
-    # Database
+
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
@@ -44,15 +42,12 @@ class Settings(BaseSettings):
 
     WORKER_COUNT: int
 
-    # CORS
     BACKEND_CORS_ORIGINS: list = ["http://localhost:5173", "http://127.0.0.1:5173"]
-    
-    # External APIs
+
     GOOGLE_API_KEY: str
     SERPAPI_API_KEY: str
     RAPIDAPI_KEY: str
 
-    # LLM Configuration
     LLM_MODEL: str = "gemini-2.5-flash"
     LLM_TEMPERATURE: float = 0.0
     

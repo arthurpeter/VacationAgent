@@ -33,11 +33,9 @@ function AppContent() {
       
       <Navbar />
       
-      {/* flex-grow allows the main content to expand and push the footer down */}
       <main className="flex-grow flex flex-col">
         <AnimatePresence mode="wait">
           <Routes location={location} key={routeKey}>
-            {/* Main Routes */}
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -50,7 +48,6 @@ function AppContent() {
             <Route path="/help" element={<FAQ />} />
             <Route path="/profile" element={<Profile />} />
 
-            {/* Vacation Layout Routes */}
             <Route path="/plan/:id" element={<VacationLayout />}>
               <Route index element={<Navigate to="discovery" replace />} />
               <Route path="discovery" element={<DiscoveryStage />} />
@@ -58,7 +55,6 @@ function AppContent() {
               <Route path="itinerary" element={<ItineraryStage />} />
             </Route>
             
-            {/* 404 Route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AnimatePresence>

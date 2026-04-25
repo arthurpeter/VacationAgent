@@ -11,16 +11,13 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState('preferences');
   const [loading, setLoading] = useState(true);
 
-  // --- USER PROFILE STATE ---
   const [email, setEmail] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [userDescription, setUserDescription] = useState('');
-  
-  // --- PREFERENCES STATE ---
+
   const [airports, setAirports] = useState([]);
   const [currencySearch, setCurrencySearch] = useState('');
-  
-  // --- VAULT STATE ---
+
   const [companions, setCompanions] = useState([]);
   const [newCompanion, setNewCompanion] = useState({
     name: '',
@@ -29,12 +26,10 @@ export default function Profile() {
     is_infant_on_lap: false
   });
 
-  // --- UI TOGGLE STATE ---
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [showAirportDropdown, setShowAirportDropdown] = useState(false);
   const [airportSearch, setAirportSearch] = useState('');
-  
-  // --- DYNAMIC AIRPORT SEARCH STATE ---
+
   const [airportOptions, setAirportOptions] = useState([]);
   const [isSearchingAirports, setIsSearchingAirports] = useState(false);
   
@@ -43,7 +38,6 @@ export default function Profile() {
 
   const API_URL = API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-  // --- 1. FETCH PROFILE DATA ON MOUNT ---
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -72,7 +66,6 @@ export default function Profile() {
     }
   }, [API_URL, isAuthenticated]);
 
-  // Click outside listeners for custom dropdowns
   useEffect(() => {
     function handleClickOutside(event) {
       if (currencyRef.current && !currencyRef.current.contains(event.target)) setShowCurrencyDropdown(false);
@@ -82,7 +75,6 @@ export default function Profile() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- DEBOUNCED AIRPORT SEARCH ---
   useEffect(() => {
     if (airportSearch.trim().length < 2) {
       setAirportOptions([]);
@@ -103,12 +95,11 @@ export default function Profile() {
       } finally {
         setIsSearchingAirports(false);
       }
-    }, 300); // Wait 300ms before calling API
+    }, 300);
 
     return () => clearTimeout(delayDebounceFn);
   }, [airportSearch, API_URL]);
 
-  // --- 2. UPDATE PROFILE (PATCH /users/me) ---
   const saveProfileUpdates = async (updateData) => {
     const loadingToast = toast.loading('Saving updates...');
     
@@ -137,7 +128,6 @@ export default function Profile() {
     }
   };
 
-  // --- 3. ADD COMPANION (POST /users/me/companions) ---
   const handleAddCompanion = async () => {
     if (!newCompanion.name || !newCompanion.date_of_birth) return;
 
@@ -168,7 +158,6 @@ export default function Profile() {
     }
   };
 
-  // --- 4. REMOVE COMPANION (DELETE /users/me/companions/{id}) ---
   const handleRemoveCompanion = async (companionId) => {
     try {
       const response = await fetchWithAuth(`${API_URL}/users/me/companions/${companionId}`, {}, 'DELETE');
@@ -185,7 +174,6 @@ export default function Profile() {
     }
   };
 
-  // --- HELPERS ---
   const handleAddAirport = (code) => {
     if (!airports.includes(code)) {
       setAirports([...airports, code]);
@@ -212,8 +200,7 @@ export default function Profile() {
       <Toaster position="bottom-right" /> 
 
       <div className="max-w-4xl mx-auto">
-        
-        {/* Header */}
+
         <div className="mb-8 flex justify-between items-end">
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900">Your Profile</h1>
@@ -222,23 +209,19 @@ export default function Profile() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col md:flex-row">
-          
-          {/* Sidebar Navigation */}
+
           <div className="w-full md:w-64 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-100 p-6 space-y-2">
             <button onClick={() => setActiveTab('preferences')} className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${activeTab === 'preferences' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>Travel Preferences</button>
             <button onClick={() => setActiveTab('account')} className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${activeTab === 'account' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>Account Details</button>
             <button onClick={() => setActiveTab('vault')} className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-colors ${activeTab === 'vault' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>Traveler Vault</button>
           </div>
 
-          {/* Content Area */}
           <div className="flex-1 p-8 min-h-[500px]">
-            
-            {/* --- TRAVEL PREFERENCES TAB --- */}
+
             {activeTab === 'preferences' && (
               <div className="space-y-8 animate-fadeIn">
                 <h2 className="text-xl font-bold text-gray-900 border-b pb-4">AI Travel Preferences</h2>
-                
-                {/* Currency */}
+
                 <div className="relative w-full md:w-1/2" ref={currencyRef}>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Default Currency</label>
                   <input
@@ -260,7 +243,6 @@ export default function Profile() {
                   )}
                 </div>
 
-                {/* Airports */}
                 <div className="relative" ref={airportRef}>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Preferred Departure Airports</label>
                   <div className="flex flex-wrap gap-2 mb-3">
@@ -278,7 +260,6 @@ export default function Profile() {
                     placeholder="Search by city (e.g., Bucharest) or code"
                     className="w-full md:w-2/3 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"
                   />
-                  {/* Dynamic Dropdown */}
                   {showAirportDropdown && airportSearch.trim().length >= 2 && (
                     <div className="absolute z-10 w-full md:w-2/3 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                       {isSearchingAirports ? (
@@ -299,7 +280,6 @@ export default function Profile() {
                             >
                               <div className="flex justify-between items-center">
                                 <div>
-                                  {/* Added ", {a.country}" below */}
                                   <p className="text-sm font-bold text-gray-800">{a.city}, {a.country}</p>
                                   <p className="text-xs text-gray-500">{a.name} Airport</p>
                                 </div>
@@ -330,7 +310,6 @@ export default function Profile() {
               </div>
             )}
 
-            {/* --- ACCOUNT DETAILS TAB --- */}
             {activeTab === 'account' && (
               <div className="space-y-6 animate-fadeIn">
                 <h2 className="text-xl font-bold text-gray-900 border-b pb-4">Account Details</h2>
@@ -376,13 +355,11 @@ export default function Profile() {
               </div>
             )}
 
-            {/* --- TRAVELER VAULT TAB --- */}
             {activeTab === 'vault' && (
               <div className="space-y-6 animate-fadeIn">
                 <h2 className="text-xl font-bold text-gray-900 border-b pb-4">Traveler Vault</h2>
                 <p className="text-gray-600 text-sm mb-4">Save details for the people you travel with frequently.</p>
-                
-                {/* Companions List */}
+
                 <div className="space-y-4 mb-8">
                   {companions.map(comp => (
                     <div key={comp.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border border-gray-200 rounded-xl bg-gray-50">
@@ -402,7 +379,6 @@ export default function Profile() {
                   {companions.length === 0 && <p className="text-sm text-gray-400 italic">No companions added yet.</p>}
                 </div>
 
-                {/* Add New Companion Form */}
                 <div className="border border-gray-200 rounded-xl p-6 bg-white shadow-sm">
                   <h3 className="text-md font-semibold text-gray-800 mb-4">Add New Companion</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -433,7 +409,6 @@ export default function Profile() {
                     />
                   </div>
 
-                  {/* Smart Infant Checkbox */}
                   {isInfant(newCompanion.date_of_birth) && (
                     <div className="mb-4 flex items-center gap-2 bg-yellow-50 p-3 rounded-md border border-yellow-100">
                       <input 

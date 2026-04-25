@@ -47,7 +47,6 @@ export default function ResetPassword() {
       }
 
       setMessage(data.message);
-      // Give them a moment to read the success message, then send to login
       setTimeout(() => navigate('/login'), 3000);
       
     } catch (err) {

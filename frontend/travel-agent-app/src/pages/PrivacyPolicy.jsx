@@ -15,15 +15,15 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-2">1. Introduction</h2>
             <p>
-              Welcome to VacationAgent. We respect your privacy and are committed to protecting your personal data. This Privacy Policy explains how we collect, use, and safeguard your information when you use our AI-powered travel planning application.
+              Welcome to TuRAG. We respect your privacy and are committed to protecting your personal data. This Privacy Policy explains how we collect, use, and safeguard your information when you use our AI-powered travel planning application.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-2">2. Information We Collect</h2>
             <ul className="list-disc pl-5 space-y-2">
-              <li><strong>Account Information:</strong> When you register, we collect your email address and authentication credentials.</li>
-              <li><strong>Travel Preferences:</strong> We store the information you provide during the AI Discovery chat, including your preferred vibe, budget, travel dates, and home airport.</li>
+              <li><strong>Account Information:</strong> When you register, we collect your email address and authentication credentials We also store any information you might fill out in your profile.</li>
+              <li><strong>Travel Preferences:</strong> We store the information you provide during the AI chats, including your preferred destination, budget, travel dates, and departure.</li>
               <li><strong>Itinerary Data:</strong> We save your generated day-by-day itineraries and saved trips so you can access them later.</li>
             </ul>
           </section>
@@ -38,7 +38,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-2">4. Third-Party Services & APIs</h2>
             <p>
-              To find the best travel options, your search parameters (such as destination, dates, and budget) are securely transmitted to third-party data providers (like Google Flights and Hotels via SerpAPI). <strong>We do not share your personally identifiable information (PII) with these search providers.</strong> 
+              To find the best travel options, your search parameters (such as destination, dates, and number of travelers) are securely transmitted to third-party data providers (like Google Flights via SerpAPI and Booking.com via RapidAPI). <strong>We do not share your personally identifiable information with these search providers.</strong> 
             </p>
             <p className="mt-2">
               Please note that we do not process bookings directly. When you click a link to book a flight or hotel, you are navigating to a third-party platform governed by its own privacy policy.

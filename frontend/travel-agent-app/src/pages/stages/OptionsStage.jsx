@@ -7,7 +7,6 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { toast, Toaster } from 'react-hot-toast';
 
-// --- Leaflet Icon Fix ---
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import PageTransition from '../../components/PageTransition';
@@ -20,7 +19,6 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// --- Helper Hook: useDebounce ---
 function useDebounce(value, delay) {
     const [debouncedValue, setDebouncedValue] = useState(value);
     useEffect(() => {
@@ -34,7 +32,6 @@ function useDebounce(value, delay) {
     return debouncedValue;
 }
 
-// --- Helper: Location Autocomplete Component ---
 function LocationAutocomplete({ label, value, onChange, placeholder }) {
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -109,7 +106,6 @@ function LocationAutocomplete({ label, value, onChange, placeholder }) {
 
     const handleInput = (e) => {
         isSelectionEvent.current = false; 
-        // Pass false to indicate this is just typing, not a final selection
         onChange(e.target.value, false);
     };
 
@@ -120,7 +116,6 @@ function LocationAutocomplete({ label, value, onChange, placeholder }) {
         
         isSelectionEvent.current = true;
         
-        // Pass true to indicate a final selection that should be saved
         onChange(formatted, true);
         setShowSuggestions(false);
     };
@@ -164,12 +159,10 @@ function LocationAutocomplete({ label, value, onChange, placeholder }) {
     );
 }
 
-// --- Helper: Travelers Popover Component ---
 function TravelersInput({ counts, setCounts, childAges, setChildAges, onSave }) {
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef(null);
 
-    // Ref for debouncing age typing
     const ageSaveTimer = useRef(null);
 
     useEffect(() => {
@@ -207,7 +200,6 @@ function TravelersInput({ counts, setCounts, childAges, setChildAges, onSave }) 
         setCounts(newCounts);
         setChildAges(newAges);
 
-        // Save immediately when button clicked
         onSave({
             adults: newCounts.adults,
             children: newCounts.children,
@@ -222,7 +214,6 @@ function TravelersInput({ counts, setCounts, childAges, setChildAges, onSave }) 
         newAges[index] = val;
         setChildAges(newAges);
         
-        // Debounce saving the age string
         if (ageSaveTimer.current) clearTimeout(ageSaveTimer.current);
         ageSaveTimer.current = setTimeout(() => {
             onSave({ children_ages: newAges.join(',') });
@@ -289,21 +280,17 @@ function TravelersInput({ counts, setCounts, childAges, setChildAges, onSave }) 
 function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
     if (!hotel) return null;
 
-    // Use coordinates from the search result 'hotel' object
     const position = [hotel.latitude || 0, hotel.longitude || 0];
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
             <div className="bg-white w-full max-w-6xl h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col relative animate-in fade-in zoom-in duration-200">
-                
-                {/* Header */}
                 <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-white z-10">
                     <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                             <h2 className="text-2xl font-black text-gray-900">{hotel.hotel_name}</h2>
                             <span className="text-orange-400 text-sm">{"⭐".repeat(hotel.propertyClass)}</span>
-                            
-                            {/* Review Badge */}
+
                             {hotel.reviewScore && (
                                 <div className="flex items-center bg-blue-600 text-white rounded-md px-2 py-1 shadow-sm ml-2">
                                     <span className="font-bold text-lg leading-none">{hotel.reviewScore}</span>
@@ -315,7 +302,6 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
                             )}
                         </div>
 
-                        {/* Address Display */}
                         <p className="text-gray-500 text-sm flex items-center gap-1">
                             <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
                             <span className="font-medium">{details?.address || hotel.location_string || "Address details loading..."}</span>
@@ -328,11 +314,9 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
 
                 <div className="flex-grow overflow-y-auto p-8">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                        
-                        {/* LEFT COLUMN: Content */}
+
                         <div className="lg:col-span-2 space-y-8">
-                            
-                            {/* Photo Grid */}
+
                             <div className="grid grid-cols-4 grid-rows-2 gap-3 h-96">
                                 <div className="col-span-2 row-span-2 rounded-2xl overflow-hidden bg-gray-100 relative">
                                     <img src={details?.photos?.[0] || hotel.photo_urls?.[0]} className="w-full h-full object-cover" alt="Main View" />
@@ -348,7 +332,6 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
                                 ))}
                             </div>
 
-                            {/* Features Strip */}
                             <div className="flex flex-wrap gap-4">
                                 {details?.property_highlights?.map((h, i) => (
                                     <div key={i} className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-xs font-bold">
@@ -357,7 +340,6 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
                                 ))}
                             </div>
 
-                            {/* Description */}
                             <div>
                                 <h3 className="text-lg font-bold mb-3">About this property</h3>
                                 {isLoading ? (
@@ -372,7 +354,6 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
                                 )}
                             </div>
 
-                            {/* Languages Spoken */}
                             {details?.languages_spoken?.length > 0 && (
                                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
                                     <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide mb-3 flex items-center gap-2">
@@ -388,7 +369,6 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
                                 </div>
                             )}
 
-                            {/* Interactive Map */}
                             <div>
                                 <h3 className="text-lg font-bold mb-3">Location</h3>
                                 <div className="h-64 w-full bg-gray-100 rounded-2xl overflow-hidden border border-gray-200 relative z-0">
@@ -411,7 +391,6 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
 
                         </div>
 
-                        {/* RIGHT COLUMN: Pricing & Booking Card */}
                         <div className="lg:col-span-1">
                             <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 sticky top-0 space-y-6">
                                 <div>
@@ -422,7 +401,6 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
                                     </p>
                                 </div>
 
-                                {/* Check-in / Check-out Times */}
                                 <div className="grid grid-cols-2 gap-3 py-4 border-t border-gray-200">
                                     <div className="bg-white p-2 rounded border border-gray-200 text-center">
                                         <div className="text-[9px] uppercase text-gray-400 font-bold mb-1">Check-in</div>
@@ -471,7 +449,6 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
     );
 }
 
-// --- Main Component ---
 export default function OptionsStage() {
   const { sessionData, refreshContext } = useOutletContext();
   const session = sessionData?.data || sessionData;
@@ -480,7 +457,6 @@ export default function OptionsStage() {
   const [error, setError] = useState(null);
   const [step, setStep] = useState('SEARCH'); 
 
-  // --- Filter State ---
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [dates, setDates] = useState({ start: "", end: "" });
@@ -495,12 +471,10 @@ export default function OptionsStage() {
   const [roomQty, setRoomQty] = useState(1);
   const [booked, setBooked] = useState({ flights: false, hotel: false });
 
-  // --- Modal State ---
   const [viewingHotel, setViewingHotel] = useState(null); 
   const [selectedHotelDetails, setSelectedHotelDetails] = useState(null); 
   const [loadingDetails, setLoadingDetails] = useState(false); 
   
-  // --- Selection State ---
   const [outboundFlights, setOutboundFlights] = useState([]);
   const [inboundFlights, setInboundFlights] = useState([]);
   const [hotels, setHotels] = useState([]);
@@ -526,11 +500,9 @@ export default function OptionsStage() {
   useEffect(() => {
     if (!session) return;
     
-    // Locations
     if (session.departure) setOrigin(session.departure);
     if (session.destination) setDestination(session.destination);
     
-    // Dates
     const formatForInput = (isoString) => {
         if (!isoString) return "";
         return isoString.split("T")[0];
@@ -540,7 +512,6 @@ export default function OptionsStage() {
         end: formatForInput(session.to_date)
     });
 
-    // Travelers
     if (session.adults !== undefined) {
         setTravelerCounts({
             adults: session.adults || 1,
@@ -550,12 +521,10 @@ export default function OptionsStage() {
         });
     }
     
-    // Child Ages
     if (session.children_ages) {
         setChildAges(session.children_ages.split(',').filter(age => age !== ''));
     }
 
-    // Rooms
     if (session.room_qty) {
         setRoomQty(session.room_qty);
     }
@@ -568,13 +537,11 @@ export default function OptionsStage() {
   }, [travelerCounts.adults, roomQty]);
 
 
-  // --- Event Handlers for Input ---
   
   const handleLocationChange = (type, val, isFinalSelection) => {
       if (type === 'origin') setOrigin(val);
       else setDestination(val);
 
-      // Only save to backend if they clicked a suggestion
       if (isFinalSelection) {
           saveToSession({ [type === 'origin' ? 'departure' : 'destination']: val });
       }
@@ -583,7 +550,6 @@ export default function OptionsStage() {
   const handleDateChange = (type, val) => {
       setDates(prev => ({ ...prev, [type]: val }));
       
-      // Save to backend if it's a complete date
       if (val && val.length === 10) {
           saveToSession({ [type === 'start' ? 'from_date' : 'to_date']: val });
       }
@@ -596,7 +562,6 @@ export default function OptionsStage() {
   };
 
 
-  // 1. Initial Search
   const handleSearch = async () => {
     setLoading(true);
     setError(null);
@@ -654,7 +619,6 @@ export default function OptionsStage() {
     }
   };
 
-  // 2. Select Flights
   const handleSelectOutbound = async (flight) => {
     setSelectedOutbound(flight);
     setLoading(true);
@@ -691,7 +655,6 @@ export default function OptionsStage() {
     setStep('CONFIRM');
   };
 
-  // 3. View Details
   const handleViewDetails = async (hotel) => {
     setViewingHotel(hotel); 
     setLoadingDetails(true);
@@ -725,7 +688,6 @@ export default function OptionsStage() {
     }
   };
 
-  // 4. Handle Final Booking
   const handleBookTrip = async () => {
     const needsFlight = selectedInbound && !booked.flights;
     const needsHotel = selectedHotel && !booked.hotel;
@@ -824,8 +786,7 @@ export default function OptionsStage() {
     <PageTransition className="flex flex-col w-full h-full bg-gray-50 overflow-hidden">
 
       <Toaster position="top-center" reverseOrder={false} />
-      
-      {/* --- HOTEL DETAIL MODAL --- */}
+
       {viewingHotel && (
           <HotelDetailsModal 
             hotel={viewingHotel}
@@ -839,7 +800,6 @@ export default function OptionsStage() {
           />
       )}
 
-      {/* --- Filter Bar --- */}
       <div className="bg-white border-b border-gray-200 p-4 shadow-sm shrink-0 flex flex-wrap gap-4 items-end z-20">
         <LocationAutocomplete 
             label="Origin"
@@ -871,7 +831,6 @@ export default function OptionsStage() {
             </div>
         </div>
         
-        {/* UPDATED: Pass the saveToSession callback to travelers */}
         <TravelersInput 
             counts={travelerCounts} 
             setCounts={setTravelerCounts} 
@@ -901,17 +860,14 @@ export default function OptionsStage() {
         </button>
       </div>
 
-      {/* --- Main Content --- */}
       <div className="flex-grow overflow-y-auto p-8 z-10">
         <div className="max-w-6xl mx-auto space-y-8">
           {error && <div className="bg-red-100 text-red-700 p-4 rounded-lg">{error}</div>}
 
-          {/* CONFIRMATION SUMMARY */}
           {(step === 'CONFIRM' || selectedHotel) && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center animate-in fade-in slide-in-from-top-4 duration-500">
                 <h2 className="text-3xl font-bold text-green-800 mb-4">Trip Summary</h2>
                 <div className="flex justify-center gap-8 text-left mb-8 flex-wrap">
-                    {/* Flights UI */}
                     {selectedOutbound && selectedInbound ? (
                         <>
                              <div className={`bg-white p-4 rounded shadow-sm w-64 border-l-4 ${booked.flights ? 'border-gray-400 opacity-75' : 'border-blue-500'}`}>
@@ -928,8 +884,7 @@ export default function OptionsStage() {
                     ) : (
                         <div className="bg-gray-100 border-2 border-dashed border-gray-300 p-4 rounded shadow-sm flex flex-col justify-center items-center w-64 opacity-50"><span className="text-gray-500 font-bold text-lg">No Flights Selected</span></div>
                     )}
-                    
-                    {/* Hotel UI */}
+
                     {selectedHotel ? (
                         <div className={`bg-white p-4 rounded shadow-sm w-64 border-l-4 ${booked.hotel ? 'border-gray-400 opacity-75' : 'border-green-500'}`}>
                             <div className="flex justify-between"><h3 className="font-bold text-gray-500 text-xs uppercase">Accommodation</h3>{booked.hotel && <span className="text-xs font-bold text-green-600 bg-green-100 px-2 rounded-full">BOOKED</span>}</div>
@@ -958,7 +913,6 @@ export default function OptionsStage() {
             </div>
           )}
 
-          {/* FLIGHTS LIST */}
           {(step === 'SEARCH' || step === 'SELECT_INBOUND') && (
             <section>
                 <div className="flex justify-between items-center mb-4">
@@ -980,7 +934,6 @@ export default function OptionsStage() {
             </section>
           )}
 
-          {/* HOTELS LIST */}
           <section className="mt-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Accommodations</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1002,37 +955,31 @@ export default function OptionsStage() {
   );
 }
 
-// --- Sub-components ---
 function FlightCard({ flight, onSelect, btnText, isOutbound }) {
     const segments = flight.flights;
     const firstLeg = segments[0];
     const lastLeg = segments[segments.length - 1];
     
-    // 1. Calculate Totals
     let totalFlightMinutes = 0;
     let totalLayoverMinutes = 0;
     const layovers = [];
 
     segments.forEach((segment, i) => {
-        // Add Flight Duration
         totalFlightMinutes += parseInt(segment.duration) || 0;
 
-        // Calculate Layover (if there is a next segment)
         if (i < segments.length - 1) {
             const nextSegment = segments[i + 1];
             
-            // Parse times ("2026-02-21 09:10" -> "2026-02-21T09:10") for Safari/ISO compatibility
             const arrival = new Date(segment.arrival_time.replace(" ", "T"));
             const departure = new Date(nextSegment.departure_time.replace(" ", "T"));
             
-            // Difference in milliseconds -> minutes
             const diffMins = Math.floor((departure - arrival) / 60000);
             
             if (diffMins > 0) {
                 totalLayoverMinutes += diffMins;
                 layovers.push({
-                    city: segment.arrival.split(',')[0], // Extract City Name
-                    code: segment.arrival.split('(')[1]?.replace(')', '') || '', // Extract Airport Code if available
+                    city: segment.arrival.split(',')[0],
+                    code: segment.arrival.split('(')[1]?.replace(')', '') || '',
                     duration: diffMins
                 });
             }
@@ -1041,7 +988,6 @@ function FlightCard({ flight, onSelect, btnText, isOutbound }) {
 
     const totalDurationMinutes = totalFlightMinutes + totalLayoverMinutes;
     
-    // Helper to format minutes into "2h 15m"
     const formatDuration = (mins) => {
         const h = Math.floor(mins / 60);
         const m = mins % 60;
@@ -1050,14 +996,12 @@ function FlightCard({ flight, onSelect, btnText, isOutbound }) {
 
     return (
       <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition group">
-        
-        {/* Header: Airline & Price */}
+
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-3 mt-1">
              {firstLeg.airline_logo && <img src={firstLeg.airline_logo} alt={firstLeg.airline} className="h-8 w-8 object-contain" />}
              <div>
                  <div className="font-bold text-lg text-gray-800 leading-none">{firstLeg.airline}</div>
-                 {/* Show operating carrier if different */}
                  {segments.length > 1 && segments[0].airline !== segments[1].airline && (
                      <div className="text-[10px] text-gray-400 mt-1">Includes {segments[1].airline}</div>
                  )}
@@ -1071,23 +1015,18 @@ function FlightCard({ flight, onSelect, btnText, isOutbound }) {
           </div>
         </div>
 
-        {/* Flight Timeline */}
         <div className="flex justify-between items-center text-sm text-gray-600 mb-4 bg-gray-50 p-4 rounded-lg">
-          
-          {/* Departure */}
+
           <div>
               <div className="font-bold text-gray-900 text-lg">{firstLeg.departure_time.split(" ")[1]}</div>
               <div className="text-gray-500 font-medium">{firstLeg.departure.split(',')[0]}</div>
           </div>
 
-          {/* Visualization */}
           <div className="flex flex-col items-center px-4 flex-grow">
              <span className="text-xs text-gray-500 font-bold mb-1">{formatDuration(totalDurationMinutes)}</span>
              
-             {/* Visual Line */}
              <div className="w-full flex items-center gap-1">
                  <div className="h-[2px] bg-gray-300 flex-grow relative">
-                    {/* Dots for stops */}
                     {layovers.map((_, idx) => (
                         <div key={idx} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white border-2 border-gray-400 rounded-full"></div>
                     ))}
@@ -1095,20 +1034,17 @@ function FlightCard({ flight, onSelect, btnText, isOutbound }) {
                  <span className="text-gray-400">✈</span>
              </div>
 
-             {/* Stop Info */}
              <span className={`text-[10px] font-bold mt-1 ${layovers.length > 0 ? 'text-orange-600' : 'text-green-600'}`}>
                 {layovers.length === 0 ? "Direct" : `${layovers.length} Stop${layovers.length > 1 ? 's' : ''}`}
              </span>
           </div>
 
-          {/* Arrival */}
           <div className="text-right">
               <div className="font-bold text-gray-900 text-lg">{lastLeg.arrival_time.split(" ")[1]}</div>
               <div className="text-gray-500 font-medium">{lastLeg.arrival.split(',')[0]}</div>
           </div>
         </div>
 
-        {/* Detailed Connection Info (Only if stops exist) */}
         {layovers.length > 0 && (
             <div className="mb-4 text-xs bg-orange-50 border border-orange-100 p-2 rounded text-orange-800">
                 {layovers.map((stop, i) => (

@@ -177,11 +177,9 @@ export default function ItineraryStage() {
 
   return (
     <PageTransition className="flex w-full h-full bg-white overflow-hidden font-sans relative">
-      
-      {/* LEFT PANEL: Chat Interface */}
+
       <div className="flex-1 lg:max-w-md flex flex-col bg-gray-50/50 border-r border-gray-200 z-10 shrink-0">
-        
-        {/* Chat Header */}
+
         <div className="px-6 py-4 border-b border-gray-200 bg-white shadow-sm shrink-0">
           <h2 className="text-lg font-black text-gray-800 flex items-center gap-2">
             <MapPin className="text-blue-600" size={20} />
@@ -191,8 +189,7 @@ export default function ItineraryStage() {
             {areThemesConfirmed ? "Phase 2: Deep Detailing & Booking" : "Phase 1: Sketching the Skeleton"}
           </p>
         </div>
-        
-        {/* Chat Messages */}
+
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
           {messages.length === 0 && (
             <div className="text-center mt-10 opacity-70">
@@ -223,7 +220,6 @@ export default function ItineraryStage() {
             </div>
           ))}
 
-          {/* Loading Indicator */}
           {agentStatus && (
             <div className="flex justify-start">
               <div className="bg-white border border-blue-100 text-blue-700 text-sm font-medium rounded-2xl rounded-tl-sm px-5 py-3 shadow-sm flex items-center gap-3">
@@ -235,7 +231,6 @@ export default function ItineraryStage() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
         <div className="p-4 bg-white border-t border-gray-200 shrink-0">
           <form onSubmit={handleSendMessage} className="flex gap-2 relative w-full">
             <input
@@ -257,18 +252,15 @@ export default function ItineraryStage() {
         </div>
       </div>
 
-      {/* RIGHT PANEL: Live Itinerary Dashboard */}
       <div className="flex-[2] overflow-y-auto bg-gray-50 p-6 md:p-10 relative">
         <div className="max-w-4xl mx-auto w-full">
-          
-          {/* Header & Controls */}
+
           <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
             <div>
               <h1 className="text-xl font-black text-gray-800">Trip Blueprint</h1>
               <p className="text-gray-500 text-sm mt-1 font-medium">Watch your plan evolve in real-time.</p>
             </div>
 
-            {/* The Gatekeeper Button */}
             {!areThemesConfirmed && sortedDays.length > 0 ? (
               <button 
                 onClick={handleFinalize} 
@@ -286,7 +278,6 @@ export default function ItineraryStage() {
             ) : null}
           </div>
 
-          {/* Daily Cards */}
           {sortedDays.length === 0 ? (
              <div className="flex flex-col items-center justify-center mt-20 p-10 border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50">
                <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mb-4">
@@ -301,8 +292,7 @@ export default function ItineraryStage() {
             <div className="space-y-6 pb-10">
               {sortedDays.map(day => (
                 <div key={day} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden transition-all hover:shadow-md">
-                  
-                  {/* Card Header (The Theme) */}
+
                   <div className="bg-gray-50/50 border-b border-gray-100 px-6 py-4 flex items-center justify-between">
                     <h3 className="text-lg font-black text-gray-800 flex items-center gap-3">
                       <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 text-blue-700 text-sm font-black shadow-sm">
@@ -311,8 +301,7 @@ export default function ItineraryStage() {
                       {dailyThemes[day]}
                     </h3>
                   </div>
-                  
-                  {/* Card Body (The Plan) */}
+
                   {areThemesConfirmed && dailyPlans[day] && (
                     <div className="p-6">
                       <div className="prose prose-sm max-w-none text-gray-700 [&>p]:mb-3 last:[&>p]:mb-0 [&>strong]:text-gray-900">
@@ -321,7 +310,6 @@ export default function ItineraryStage() {
                     </div>
                   )}
 
-                  {/* Card Footer (The Links) */}
                   {areThemesConfirmed && dailyLinks[day] && dailyLinks[day].length > 0 && (
                     <div className="bg-blue-50/50 px-6 py-4 border-t border-blue-100/50">
                       <h4 className="text-[10px] font-black text-blue-800 uppercase tracking-widest mb-3">Suggested Links</h4>

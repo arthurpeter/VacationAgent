@@ -7,7 +7,7 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // To handle initial auth check
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -46,8 +46,7 @@ export const AuthProvider = ({ children }) => {
       "Authorization": `Bearer ${getAccessToken()}`,
       "Content-Type": "application/json"
     };
-    
-    // Add CSRF token header if available
+
     if (csrfToken) {
       headers["X-CSRF-TOKEN-Refresh"] = csrfToken;
       console.log("Adding CSRF token to header:", csrfToken);
@@ -73,12 +72,11 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
       <AnimatePresence mode="wait">
         {isLoading ? (
-          /* The App Loading Screen */
           <motion.div 
             key="app-loading"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }} // A slight shrink on exit makes it feel premium
+            exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="flex flex-col items-center justify-center min-h-screen bg-gray-50 absolute inset-0 z-50"
           >
@@ -89,12 +87,11 @@ export const AuthProvider = ({ children }) => {
             </div>
           </motion.div>
         ) : (
-          /* The Actual Application */
           <motion.div 
             key="app-content"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.1 }} // Tiny delay so they don't overlap
+            transition={{ duration: 0.4, delay: 0.1 }}
             className="w-full h-full"
           >
             {children}
@@ -105,5 +102,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Custom hook to easily use the auth context
 export const useAuth = () => useContext(AuthContext);

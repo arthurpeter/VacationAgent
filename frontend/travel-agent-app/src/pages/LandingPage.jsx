@@ -4,7 +4,6 @@ import PageTransition from "../components/PageTransition";
 export default function Home() {
   return (
     <PageTransition className="flex flex-col min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Hero Section */}
       <header className="flex flex-col items-center justify-center flex-grow text-center p-8">
         <h1 className="text-5xl font-extrabold text-gray-900 mb-4">
           Welcome to <span className="text-blue-600">Travel Agent</span>
@@ -21,7 +20,6 @@ export default function Home() {
         </Link>
       </header>
 
-      {/* Flow Preview Section */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-8 max-w-6xl mx-auto">
         <div className="bg-white rounded-2xl shadow-md p-6 flex flex-col items-center text-center hover:shadow-lg transition">
           <span className="text-3xl mb-2">💬</span>
@@ -55,7 +53,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="mt-auto p-6 text-center text-gray-500 text-sm">
         © {new Date().getFullYear()} Travel Agent. All rights reserved.
       </footer>

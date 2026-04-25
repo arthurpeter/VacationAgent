@@ -10,17 +10,14 @@ class Vacation(Base):
     __tablename__ = "vacations"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
-    
-    # basic trip info
+
     departure = Column(String, nullable=False)
     destination = Column(String, nullable=False)
     description = Column(Text, nullable=True)
-    
-    # core dates
+
     start_date = Column(DateTime(timezone=True), nullable=False)
     end_date = Column(DateTime(timezone=True), nullable=False)
 
-    # detailed components for the vacation
     flights = Column(JSON, nullable=True)
     hotels = Column(JSON, nullable=True)
     itinerary = Column(Text, nullable=True)

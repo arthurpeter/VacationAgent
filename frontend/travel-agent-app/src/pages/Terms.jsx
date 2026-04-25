@@ -15,14 +15,14 @@ export default function Terms() {
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-2">1. Acceptance of Terms</h2>
             <p>
-              By accessing and using VacationAgent ("we", "our", or "us"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our application.
+              By accessing and using TuRAG ("we", "our", or "us"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our application.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-2">2. AI-Generated Itineraries & Pricing</h2>
             <p>
-              VacationAgent utilizes artificial intelligence and third-party APIs (such as search engine aggregators) to recommend flights, accommodations, and activities. 
+              TuRAG utilizes artificial intelligence and third-party APIs (such as search engine aggregators) to recommend flights, accommodations, and activities. 
               <strong> Please note:</strong> The prices and availability displayed during the planning process are estimates based on live and cached data. We do not guarantee the final price or availability of any travel service. Final prices are determined by the respective booking providers.
             </p>
           </section>
@@ -30,7 +30,7 @@ export default function Terms() {
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-2">3. Booking and Third-Party Links</h2>
             <p>
-              We are a travel planning tool, not a travel agency. We do not directly process bookings or payments for flights, hotels, or activities. When you click to view or book an offer, you will be redirected to third-party affiliate partners or providers. We are not responsible for the terms, conditions, or privacy policies of those third-party sites.
+              TuRAG is a travel planning tool, not a travel agency. We do not directly process bookings or payments for flights, hotels, or activities. When you click to view or book an offer, you will be redirected to third-party affiliate partners or providers. We are not responsible for the terms, conditions, or privacy policies of those third-party sites.
             </p>
           </section>
 

@@ -15,8 +15,8 @@ def test_smtp():
     
     # Create a simple email
     msg = EmailMessage()
-    msg['Subject'] = "Success! VacationAgent SMTP is Working"
-    msg['From'] = f"Turag Test <{SENDER_EMAIL}>"
+    msg['Subject'] = "Success! TuRAG SMTP is Working"
+    msg['From'] = f"TuRAG Test <{SENDER_EMAIL}>"
     msg['To'] = RECEIVER_EMAIL
     msg.set_content("Hello! If you are reading this, your Google SMTP credentials and App Password are working perfectly.")
 

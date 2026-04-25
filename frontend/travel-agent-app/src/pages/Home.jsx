@@ -6,6 +6,5 @@ import Dashboard from './Dashboard';
 export default function Home() {
   const { isAuthenticated } = useAuth();
 
-  // If the user is authenticated, show the dashboard. Otherwise, show the public landing page.
   return isAuthenticated ? <Dashboard /> : <LandingPage />;
 }

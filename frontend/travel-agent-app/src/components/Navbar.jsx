@@ -94,13 +94,11 @@ export default function Navbar() {
 
   return (
     <nav className="flex items-center justify-between px-8 py-4 bg-white shadow-sm border-b border-gray-100">
-      
-      {/* Brand / Logo */}
+
       <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition">
-        <img src={logo} alt="VacationAgent Logo" className="h-10 w-auto object-contain" />
+        <img src={logo} alt="TuRAG Logo" className="h-10 w-auto object-contain" />
       </Link>
 
-      {/* Navigation */}
       <div className="flex items-center gap-6">
         {isAuthenticated ? (
           <>
@@ -116,7 +114,6 @@ export default function Navbar() {
 
             <div className="h-6 w-px bg-gray-200 mx-1"></div>
 
-            {/* Notifications Bell */}
             <div className="relative flex items-center">
               <button 
                 onClick={() => {
@@ -137,7 +134,6 @@ export default function Navbar() {
                 )}
               </button>
 
-              {/* Notifications Dropdown Panel */}
               {showNotifications && (
                 <div className="absolute right-0 top-10 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden flex flex-col max-h-96">
                   <div className="p-3 border-b bg-gray-50 flex justify-between items-center shrink-0">
@@ -163,7 +159,6 @@ export default function Navbar() {
                           >
                             <div className="flex justify-between items-start pr-6">
                               <p className="text-sm leading-snug">{notif.message}</p>
-                              {/* Delete Button (Visible on Hover) */}
                               <button 
                                 onClick={(e) => handleDelete(e, notif.id)}
                                 className="absolute right-3 top-4 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
@@ -184,7 +179,6 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* Profile Avatar & Logout */}
             <Link to="/profile" className="flex items-center hover:opacity-80 transition group ml-2">
               <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs border border-blue-200 group-hover:bg-blue-200 group-hover:border-blue-300 transition">
                 ME
