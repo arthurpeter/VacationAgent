@@ -8,7 +8,7 @@ import { API_BASE_URL } from '../../config';
 import PageTransition from '../../components/PageTransition';
 
 export default function ItineraryStage() {
-  const { sessionData } = useOutletContext();
+  const { sessionData, refreshContext } = useOutletContext();
   const params = useParams();
   
   const session = sessionData?.data || sessionData;
@@ -38,6 +38,12 @@ export default function ItineraryStage() {
     }
   }, [sessionId]);
 
+  useEffect(() => {
+    if (!isStreaming && areThemesConfirmed && Object.keys(dailyPlans).length > 0) {
+      saveItineraryToSession();
+    }
+  }, [isStreaming, areThemesConfirmed, dailyPlans, dailyThemes, dailyLinks]);
+
   const fetchInitialState = async () => {
     setIsLoading(true);
     try {
@@ -57,6 +63,34 @@ export default function ItineraryStage() {
       console.error("Error fetching state:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const saveItineraryToSession = async () => {
+    const sortedDays = Object.keys(dailyThemes).sort((a, b) => parseInt(a) - parseInt(b));
+    if (sortedDays.length === 0) return;
+
+    const finalItinerary = sortedDays.map(dayStr => {
+      const dayNum = parseInt(dayStr);
+      return {
+        day: dayNum,
+        title: dailyThemes[dayStr] || `Day ${dayNum}`,
+        description: dailyPlans[dayStr] || "",
+        links: dailyLinks[dayStr] || []
+      };
+    });
+
+    try {
+      const response = await fetchWithAuth(`${API_BASE_URL}/session/${sessionId}/details`, {
+        itinerary_data: finalItinerary
+      }, 'PATCH');
+      
+      if (response.ok) {
+        console.log("Itinerary data structured and auto-saved!");
+        if (refreshContext) refreshContext();
+      }
+    } catch (err) {
+      console.error("Failed to auto-save structured itinerary:", err);
     }
   };
 

@@ -1,3 +1,5 @@
+import markdown2
+
 def get_verification_email_html(verification_link: str) -> str:
     """Template for the email verification."""
     return f"""
@@ -74,35 +76,42 @@ def get_vacation_blueprint_html(session_data: dict) -> str:
         </div>
         """
 
-    extra_links_html = ""
-    extra_links = session_data.get("extra_links", [])
-    if extra_links:
-        extra_links_html += """
+    itinerary_html = ""
+    itinerary_data = session_data.get("itinerary_data")
+    
+    if itinerary_data and isinstance(itinerary_data, list):
+        itinerary_html = """
         <h3 style="color: #0f172a; margin-top: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
-            🔗 Activities & Extra Bookings
+            📅 Your Daily Itinerary
         </h3>
         """
-        for link in extra_links:
-            extra_links_html += f"""
-            <div style="margin-bottom: 12px; padding: 15px; background: #f8fafc; border-left: 4px solid #8b5cf6; border-radius: 4px;">
-                <h4 style="margin: 0 0 4px 0; color: #1e293b;">{link.get('title', 'Activity')}</h4>
-                <p style="margin: 0 0 8px 0; font-size: 13px; color: #64748b;">{link.get('description', '')}</p>
-                <a href="{link.get('url', '#')}" style="color: #8b5cf6; text-decoration: none; font-size: 14px; font-weight: bold;">
-                    View Details &rarr;
-                </a>
-            </div>
-            """    
+        for day in itinerary_data:
+            day_title = day.get('title', f"Day {day.get('day', '')}")
+            raw_description = day.get('description', '')
+            html_description = markdown2.markdown(
+                raw_description, 
+                extras=["cuddled-lists", "break-on-newline"]
+            )
+            
+            links_html = ""
+            if day.get("links"):
+                for link in day["links"]:
+                    links_html += f"""
+                    <div style="margin-top: 10px; padding: 10px; background: #e0e7ff; border-radius: 6px;">
+                        <strong>{link.get('name', 'Activity')}</strong><br/>
+                        <a href="{link.get('url', '#')}" style="color: #4f46e5; text-decoration: none; font-size: 13px; font-weight: bold;">
+                            View Details &rarr;
+                        </a>
+                    </div>
+                    """
 
-    itinerary_html = ""
-    itinerary_text = session_data.get("itinerary_text")
-    if itinerary_text:
-        formatted_itinerary = itinerary_text.replace("\n", "<br/>")
-        itinerary_html = f"""
-        <h3 style="color: #0f172a; margin-top: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">📅 Your Daily Itinerary</h3>
-        <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; font-size: 15px; color: #475569; line-height: 1.6;">
-            {formatted_itinerary}
-        </div>
-        """
+            itinerary_html += f"""
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-bottom: 15px;">
+                <h4 style="margin: 0 0 10px 0; color: #3b82f6; font-size: 18px;">{day_title}</h4>
+                <p style="margin: 0; font-size: 14px; color: #475569; line-height: 1.6;">{html_description}</p>
+                {links_html}
+            </div>
+            """
     else:
         itinerary_html = """
         <div style="margin-top: 30px; padding: 20px; background: #f1f5f9; border-radius: 8px; text-align: center;">
@@ -129,8 +138,6 @@ def get_vacation_blueprint_html(session_data: dict) -> str:
                     {flight_html}
                     {hotel_html}
                 </div>
-
-                {extra_links_html}
 
                 {itinerary_html}
 

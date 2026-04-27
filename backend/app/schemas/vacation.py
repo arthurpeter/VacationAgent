@@ -1,6 +1,6 @@
 """Schemas for vacation-related data."""
 
-from typing import Optional
+from typing import Any, Optional
 from pydantic import BaseModel
 
 class SessionDataUpdate(BaseModel):
@@ -16,6 +16,7 @@ class SessionDataUpdate(BaseModel):
     children_ages: Optional[str] = None
     room_qty: Optional[int] = None
     companion_ids: Optional[list[str]] = None
+    itinerary_data: Optional[list[dict[str, Any]]] = None
 
 class Flight(BaseModel):
     """Schema for individual flight details."""

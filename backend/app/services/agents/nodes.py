@@ -14,7 +14,7 @@ from app.core.database import SessionLocal
 from app.models.vacation_session import VacationSession
 from app.services.agents.utils import is_llm_null, resolve_location, get_resumed_state
 from langchain_core.messages import RemoveMessage, SystemMessage
-from app.services.agents.tools import responder_tools, link_finder_tools
+from app.services.agents.tools import responder_tools, link_finder_tools, detailer_tools
 
 
 llm = settings.llm
@@ -252,6 +252,13 @@ async def focused_detailer(state: ItineraryState) -> dict:
     for msg in recent_msgs:
         role = "User" if msg.type == "human" else "Assistant"
         chat_context += f"{role}: {msg.content}\n"
+    
+    tool_loop_messages = []
+    
+    for msg in reversed(messages):
+        tool_loop_messages.insert(0, msg)
+        if msg.type == "human":
+            break
 
     instructions = itinerary_detailer_prompt.format(
         trip_data=trip_data_str,
@@ -260,8 +267,8 @@ async def focused_detailer(state: ItineraryState) -> dict:
         chat_history=chat_context.strip() or "No conversation yet."
     )
 
-    structured_llm = llm.with_structured_output(DetailerResult)
-    response: DetailerResult = await structured_llm.ainvoke(instructions)
+    llm_with_tools = llm.bind_tools(detailer_tools + [DetailerResult])
+    response: DetailerResult = await llm_with_tools.ainvoke([SystemMessage(content=instructions)] + tool_loop_messages)
 
     new_plans = dict(current_plans_dict)
     
@@ -270,6 +277,35 @@ async def focused_detailer(state: ItineraryState) -> dict:
     return {
         "daily_plans": new_plans,
         "recently_detailed_days": [response.day_number]
+    }
+
+async def save_details_and_cleanup(state: ItineraryState) -> dict:
+    """Node 2.5: Intercepts DetailerResult, saves data, and wipes the detailer's message history."""
+    messages = state.get("messages", [])
+    last_message = messages[-1]
+
+    tool_call = next((tc for tc in last_message.tool_calls if tc["name"] == "DetailerResult"), None)
+    if not tool_call:
+        return {"recently_detailed_days": []}
+    
+    args = tool_call["args"]
+
+    current_plans = state.get("daily_plans") or {}
+    new_plans = dict(current_plans)
+    new_plans[args["day_number"]] = args["detailed_plan"]
+
+    messages_to_remove = []
+    
+    for msg in reversed(messages):
+        if msg.type == "human":
+            break
+        if getattr(msg, "id", None):
+            messages_to_remove.append(RemoveMessage(id=msg.id))
+
+    return {
+        "daily_plans": new_plans,
+        "recently_detailed_days": [args["day_number"]],
+        "messages": messages_to_remove
     }
 
 async def link_finder(state: ItineraryState) -> dict:

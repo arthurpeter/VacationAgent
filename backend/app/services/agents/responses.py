@@ -40,6 +40,7 @@ class ArchitectResult(BaseModel):
     themes: List[DailyTheme] = Field(description="The complete list of high-level themes for EVERY day of the trip.")
 
 class DetailerResult(BaseModel):
+    """CRITICAL: Use this tool to submit the detailed daily plans you create for each day of the itinerary."""
     day_number: int = Field(description="The specific day being detailed")
     detailed_plan: str = Field(description="The full schedule (Morning, Afternoon, Evening) formatted in Markdown")
 

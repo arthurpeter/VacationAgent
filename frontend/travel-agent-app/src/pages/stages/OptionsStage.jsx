@@ -756,13 +756,16 @@ export default function OptionsStage() {
 
         if (newBookedState.flights && newBookedState.hotel) {
             toast.success("Success! Flights and Accommodation booked. ✈️🏨");
+            if (refreshContext) refreshContext();
             setTimeout(() => {
                 navigate(`/plan/${sessionData.id}/itinerary`);
             }, 1000);
         } else if (newBookedState.flights && !newBookedState.hotel) {
             toast.success("Flights booked! Please proceed with hotel booking. ✈️");
+            if (refreshContext) refreshContext();
         } else if (!newBookedState.flights && newBookedState.hotel) {
             toast.success("Accommodation booked! Please proceed with flights. 🏨");
+            if (refreshContext) refreshContext();
         }
 
     } catch (err) {
@@ -784,8 +787,6 @@ export default function OptionsStage() {
 
   return (
     <PageTransition className="flex flex-col w-full h-full bg-gray-50 overflow-hidden">
-
-      <Toaster position="top-center" reverseOrder={false} />
 
       {viewingHotel && (
           <HotelDetailsModal 

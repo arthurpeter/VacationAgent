@@ -1,6 +1,8 @@
 import time
 import random
 import threading
+import googlemaps
+from app.core.config import settings
 
 from langchain_core.tools import tool
 from ddgs import DDGS
@@ -107,3 +109,50 @@ def link_finder_tool(query: str) -> str:
         return "Link finding failed due to search engine rate limits. Proceed with existing knowledge and skip finding links for this item."
 
 link_finder_tools = [link_finder_tool]
+
+@tool
+def get_transit_directions(origin: str, destination: str):
+    """
+    Gets public transit directions, travel time, and estimated fare between two locations.
+    Use this to figure out how to get from one itinerary activity to the next.
+    """
+    gmaps = googlemaps.Client(key=settings.GOOGLE_API_KEY) 
+    
+    try:
+        directions = gmaps.directions(
+            origin,
+            destination,
+            mode="transit"
+        )
+
+        if not directions:
+            return f"No public transit route found between {origin} and {destination}."
+
+        route = directions[0]['legs'][0]
+        distance = route['distance']['text']
+        duration = route['duration']['text']
+
+        fare = "Fare info unavailable"
+        if 'fare' in directions[0]:
+            fare = directions[0]['fare']['text']
+
+        steps = []
+        for step in route['steps']:
+            if step['travel_mode'] == 'TRANSIT':
+                transit = step['transit_details']
+                line = transit['line'].get('short_name', transit['line'].get('name', 'Transit'))
+                vehicle = transit['line']['vehicle']['name']
+                steps.append(f"Take {vehicle} ({line}) from {transit['departure_stop']['name']} to {transit['arrival_stop']['name']}")
+            else:
+                clean_text = step['html_instructions'].replace('<b>', '').replace('</b>', '')
+                clean_text = clean_text.replace('<div style="font-size:0.9em">', ' (').replace('</div>', ')')
+                steps.append(clean_text)
+
+        instructions = " -> ".join(steps)
+        
+        return f"Duration: {duration} | Distance: {distance} | Estimated Fare: {fare} | Route: {instructions}"
+        
+    except Exception as e:
+        return f"Error fetching directions: {str(e)}"
+    
+detailer_tools = [get_transit_directions]
