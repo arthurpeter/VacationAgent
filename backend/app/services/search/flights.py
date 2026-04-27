@@ -7,7 +7,7 @@ from app.core.airport_data import AIRPORTS_DB
 from app.core.cache import redis_cache
 
 
-@redis_cache(expire_time=3600 * 24 * 7)
+@redis_cache(expire_time=3600 * 24 * 14)
 def get_location_data(area_input: str, country_filter: str = None):
     """
     Takes an area (City Name OR Airport Code) and returns all necessary
@@ -68,7 +68,7 @@ if not GoogleSearch.SERP_API_KEY:
     raise ValueError("SERPAPI_API_KEY environment variable is required")
 
 # change to 3 - 15 minutes in prod
-@redis_cache(expire_time=900)
+@redis_cache(expire_time=3600 * 24 * 14)
 def call_flights_api(
     departure_id: Optional[str] = None,
     arrival_id: Optional[str] = None,

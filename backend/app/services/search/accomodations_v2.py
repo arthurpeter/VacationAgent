@@ -15,7 +15,7 @@ if not RAPIDAPI_KEY:
     print("Error: RAPIDAPI_KEY not found. Please create a .env file with your key.")
     exit()
 
-@redis_cache(expire_time=3600 * 24 * 7)
+@redis_cache(expire_time=3600 * 24 * 14)
 def get_destination_id(location_name: str) -> dict:
     """
     Calls the /api/v1/hotels/searchDestination endpoint.
@@ -53,7 +53,7 @@ def get_destination_id(location_name: str) -> dict:
         return None
 
 # change to 5 - 15 minutes in prod
-@redis_cache(expire_time=900)
+@redis_cache(expire_time=3600 * 24 * 14)
 def search_hotels(
         dest_id: str,
         search_type: str,
@@ -122,7 +122,7 @@ def search_hotels(
         return {}
 
  # change to 5 - 15 minutes in prod 
-@redis_cache(expire_time=900)
+@redis_cache(expire_time=3600 * 24 * 14)
 def get_hotel_details(
         hotel_id: str,
         arrival_date: str,

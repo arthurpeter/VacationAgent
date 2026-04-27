@@ -106,12 +106,6 @@ export default function Dashboard() {
             <h1 className="text-3xl font-extrabold text-gray-900">Your Trips</h1>
             <p className="text-gray-500 mt-1">Manage your ongoing plans and past adventures.</p>
           </div>
-          <button 
-            onClick={handleCreateNew}
-            className="mt-4 md:mt-0 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg transition transform hover:-translate-y-0.5"
-          >
-            + Create New Vacation
-          </button>
         </div>
 
         <AnimatePresence mode="wait">
