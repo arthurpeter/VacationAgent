@@ -39,9 +39,9 @@ def web_search_tool(query: str) -> str:
                 if not results:
                     return "No search results found for that query."
 
-                snippets = [res["body"] for res in results]
+                snippets = [f"URL: {res['href']} | Info: {res['body']}" for res in results]
                 
-                combined_text = " ".join(snippets)
+                combined_text = "\n".join(snippets)
                 
                 safe_result = combined_text[:1000] 
 

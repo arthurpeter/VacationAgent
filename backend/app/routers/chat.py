@@ -169,7 +169,8 @@ async def get_itinerary_messages(
             "daily_themes": {},
             "daily_plans": {},
             "daily_links": {},
-            "are_themes_confirmed": False
+            "are_themes_confirmed": False,
+            "transit_strategy": {}
         }
         
     raw_messages = current_state.values.get("messages", [])
@@ -196,13 +197,15 @@ async def get_itinerary_messages(
     daily_plans = current_state.values.get("daily_plans") or {}
     daily_links = current_state.values.get("daily_links") or {}
     are_themes_confirmed = current_state.values.get("are_themes_confirmed", False)
+    transit_strategy = current_state.values.get("transit_strategy", {})
             
     return {
         "messages": formatted_messages,
         "daily_themes": daily_themes,
         "daily_plans": daily_plans,
         "daily_links": daily_links,
-        "are_themes_confirmed": are_themes_confirmed
+        "are_themes_confirmed": are_themes_confirmed,
+        "transit_strategy": transit_strategy,
     }
 
 @router.post("/itinerary/confirm_themes/{session_id}")
@@ -210,18 +213,18 @@ async def confirm_itinerary_themes(
     session_id: int,
     db: AsyncSession = Depends(get_db),
     checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
-    # token: TokenPayload = Depends(access_token_header)
+    token: TokenPayload = Depends(access_token_header)
 ):
-    # stmt = select(models.VacationSession).where(
-    #     models.VacationSession.id == session_id,
-    #     models.VacationSession.user_id == token.sub
-    # )
-    # result = await db.execute(stmt)
-    # session = result.scalar_one_or_none()
+    stmt = select(models.VacationSession).where(
+        models.VacationSession.id == session_id,
+        models.VacationSession.user_id == token.sub
+    )
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
 
-    # if not session:
-    #     log.warning(f"Unauthorized access attempt to session {session_id} by user {token.sub}")
-    #     raise HTTPException(status_code=404, detail="Session not found")
+    if not session:
+        log.warning(f"Unauthorized access attempt to session {session_id} by user {token.sub}")
+        raise HTTPException(status_code=404, detail="Session not found")
     
     graph = generate_itinerary_graph(checkpointer)
     config = {"configurable": {"thread_id": f"itinerary_{session_id}"}}
@@ -240,20 +243,20 @@ async def chat_itinerary(
     request: ChatRequest,
     db: AsyncSession = Depends(get_db),
     checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
-    #token: TokenPayload = Depends(access_token_header)
+    token: TokenPayload = Depends(access_token_header)
 ):
-    # stmt = select(models.VacationSession).where(
-    #     models.VacationSession.id == session_id,
-    #     models.VacationSession.user_id == token.sub
-    # )
-    # result = await db.execute(stmt)
-    # session = result.scalar_one_or_none()
+    stmt = select(models.VacationSession).where(
+        models.VacationSession.id == session_id,
+        models.VacationSession.user_id == token.sub
+    )
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
 
-    # if not session:
-    #     log.warning(f"Unauthorized access attempt to session {session_id} by user {token.sub}")
-    #     raise HTTPException(status_code=404, detail="Session not found")
+    if not session:
+        log.warning(f"Unauthorized access attempt to session {session_id} by user {token.sub}")
+        raise HTTPException(status_code=404, detail="Session not found")
     
-    # log.info(f"User {token.sub} initiated itinerary chat for session {session_id}")
+    log.info(f"User {token.sub} initiated itinerary chat for session {session_id}")
     
     return StreamingResponse(
         stream_itinerary_message(

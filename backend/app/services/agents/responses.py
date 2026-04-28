@@ -52,3 +52,10 @@ class SubmitLinks(BaseModel):
     """CRITICAL: Use this tool to submit the final list of official links you found for the day's activities."""
     day_number: int = Field(description="The specific day these links belong to")
     links: List[ResourceLink] = Field(description="The list of links found")
+
+class SaveTransitStrategy(BaseModel):
+    """Saves the final recommended transit pass strategy to the database/state."""
+    pass_name: str = Field(description="The exact name of the recommended pass (e.g., 'Navigo Easy', 'Oyster Card').")
+    description: str = Field(description="A brief explanation of why this is the best option and what it covers.")
+    price: str = Field(description="The estimated cost (e.g., '€29.90', '£15.00').")
+    purchase_url: str = Field(description="The official website URL where the user can buy or read more about this exact pass.")

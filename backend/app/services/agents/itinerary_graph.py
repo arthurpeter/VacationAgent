@@ -55,10 +55,25 @@ def route_detailer(state: ItineraryState):
         
     return "detailer_guard"
 
+def route_transit(state: ItineraryState):
+    """Transit Advisor ReAct loop."""
+    messages = state.get("messages", [])
+    if not messages: return "itinerary_responder"
+    last_message = messages[-1]
+    
+    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+        if any(tc["name"] == "SaveTransitStrategy" for tc in last_message.tool_calls):
+            return "save_transit_and_cleanup"
+        return "transit_tools"
+    return "itinerary_responder"
+
 def generate_graph(checkpointer=None):
     
     builder = StateGraph(ItineraryState)
     builder.add_node("global_architect", global_architect)
+    builder.add_node("transit_advisor", transit_advisor)
+    builder.add_node("transit_tools", ToolNode([web_search_tool]))
+    builder.add_node("save_transit_and_cleanup", save_transit_and_cleanup)
     builder.add_node("focused_detailer", focused_detailer)
     builder.add_node("link_finder", link_finder)
     builder.add_node("itinerary_responder", itinerary_responder)
@@ -73,7 +88,14 @@ def generate_graph(checkpointer=None):
             "focused_detailer": "focused_detailer",
             "global_architect": "global_architect"
         })
-    builder.add_edge("global_architect", "itinerary_responder")
+    builder.add_edge("global_architect", "transit_advisor")
+    builder.add_conditional_edges("transit_advisor", route_transit, {
+            "transit_tools": "transit_tools",
+            "save_transit_and_cleanup": "save_transit_and_cleanup",
+            "itinerary_responder": "itinerary_responder"
+        })
+    builder.add_edge("transit_tools", "transit_advisor")
+    builder.add_edge("save_transit_and_cleanup", "itinerary_responder")
     builder.add_conditional_edges("link_finder", route_link_finder, {
             "save_links_and_cleanup": "save_links_and_cleanup",
             "link_finder_tools": "link_finder_tools",
@@ -137,6 +159,7 @@ async def stream_itinerary_message(
                 "daily_themes": node_updates.get("daily_themes"),
                 "daily_plans": node_updates.get("daily_plans"),
                 "daily_links": node_updates.get("daily_links"),
+                "transit_strategy": node_updates.get("transit_strategy"),
             }
             
             yield f"data: {orjson.dumps(payload, option=orjson.OPT_NON_STR_KEYS).decode()}\n\n"

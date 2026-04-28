@@ -7,6 +7,45 @@ import { fetchWithAuth } from '../../authService';
 import { API_BASE_URL } from '../../config';
 import PageTransition from '../../components/PageTransition';
 
+// --- NEW TRANSIT CARD COMPONENT ---
+const TransitStrategyCard = ({ strategy }) => {
+  if (!strategy || Object.keys(strategy).length === 0) return null;
+
+  return (
+    <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 mb-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 transition-all hover:shadow-md">
+      <div className="flex items-start gap-4">
+        <div className="bg-blue-600 text-white p-3 rounded-xl shadow-md mt-1 shrink-0">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+        </div>
+        <div>
+          <h4 className="text-[11px] font-black tracking-widest text-blue-600 uppercase mb-1.5">
+            Local Transit Strategy
+          </h4>
+          <h3 className="text-xl font-black text-gray-900 mb-1.5">
+            {strategy.pass_name} <span className="text-gray-500 font-medium">— {strategy.price}</span>
+          </h3>
+          <p className="text-gray-600 text-sm leading-relaxed max-w-xl">
+            {strategy.description}
+          </p>
+        </div>
+      </div>
+
+      {strategy.purchase_url && (
+        <a 
+          href={strategy.purchase_url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="shrink-0 w-full md:w-auto text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-sm hover:shadow hover:-translate-y-0.5"
+        >
+          Get Official Pass
+        </a>
+      )}
+    </div>
+  );
+};
+
 export default function ItineraryStage() {
   const { sessionData, refreshContext } = useOutletContext();
   const params = useParams();
@@ -25,6 +64,7 @@ export default function ItineraryStage() {
   const [dailyPlans, setDailyPlans] = useState({});
   const [dailyLinks, setDailyLinks] = useState({});
   const [areThemesConfirmed, setAreThemesConfirmed] = useState(false);
+  const [transitStrategy, setTransitStrategy] = useState(null); // <--- NEW STATE
 
   const messagesEndRef = useRef(null);
 
@@ -56,6 +96,10 @@ export default function ItineraryStage() {
         setDailyPlans(data.daily_plans || {});
         setDailyLinks(data.daily_links || {});
         setAreThemesConfirmed(data.are_themes_confirmed || false);
+        // <--- SET TRANSIT STRATEGY FROM DB --->
+        if (data.transit_strategy && Object.keys(data.transit_strategy).length > 0) {
+            setTransitStrategy(data.transit_strategy);
+        }
       } else {
         console.error("Failed to fetch initial state:", response.status);
       }
@@ -177,6 +221,10 @@ export default function ItineraryStage() {
       if (data.daily_themes) setDailyThemes(data.daily_themes);
       if (data.daily_plans) setDailyPlans(data.daily_plans);
       if (data.daily_links) setDailyLinks(data.daily_links);
+      // <--- SET TRANSIT STRATEGY FROM STREAM --->
+      if (data.transit_strategy && Object.keys(data.transit_strategy).length > 0) {
+        setTransitStrategy(data.transit_strategy);
+      }
     } else if (data.status === "complete") {
       let finalString = "";
       try {
@@ -312,8 +360,11 @@ export default function ItineraryStage() {
             ) : null}
           </div>
 
+          {/* --- RENDER THE TRANSIT CARD HERE --- */}
+          <TransitStrategyCard strategy={transitStrategy} />
+
           {sortedDays.length === 0 ? (
-             <div className="flex flex-col items-center justify-center mt-20 p-10 border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50">
+             <div className="flex flex-col items-center justify-center mt-10 p-10 border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50">
                <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mb-4">
                  <Calendar className="text-blue-500" size={28} />
                </div>

@@ -5,7 +5,7 @@ from app.services.agents.prompts import *
 from langgraph.store.base import BaseStore
 from langgraph.graph import END
 
-from app.services.agents.responses import ArchitectResult, ExtractionResult, DetailerResult, SubmitLinks
+from app.services.agents.responses import ArchitectResult, ExtractionResult, DetailerResult, SaveTransitStrategy, SubmitLinks
 from app.core.config import settings
 
 from datetime import datetime
@@ -14,7 +14,7 @@ from app.core.database import SessionLocal
 from app.models.vacation_session import VacationSession
 from app.services.agents.utils import is_llm_null, resolve_location, get_resumed_state
 from langchain_core.messages import HumanMessage, RemoveMessage, SystemMessage
-from app.services.agents.tools import responder_tools, link_finder_tools, detailer_tools
+from app.services.agents.tools import responder_tools, link_finder_tools, detailer_tools, web_search_tool
 
 
 llm = settings.llm
@@ -243,6 +243,9 @@ async def focused_detailer(state: ItineraryState) -> dict:
     current_themes_dict = state.get("daily_themes") or {}
     themes_str = "\n".join([f"Day {day}: {theme}" for day, theme in current_themes_dict.items()]) if current_themes_dict else "No themes available."
 
+    transit_strategy = state.get("transit_strategy", {})
+    transit_str = f"Recommended Transit Pass: {transit_strategy.get('pass_name', 'N/A')}\nDescription: {transit_strategy.get('description', 'N/A')}\nEstimated Price: {transit_strategy.get('price', 'N/A')}\nPurchase URL: {transit_strategy.get('purchase_url', 'N/A')}" if transit_strategy else "No transit strategy recommended yet."
+
     current_plans_dict = state.get("daily_plans") or {}
     plans_str = "\n".join([f"Day {day}:\n{plan}" for day, plan in current_plans_dict.items()]) if current_plans_dict else "No detailed plans generated yet."
 
@@ -263,6 +266,7 @@ async def focused_detailer(state: ItineraryState) -> dict:
     instructions = itinerary_detailer_prompt.format(
         trip_data=trip_data_str,
         current_themes=themes_str,
+        transit_strategy=transit_str,
         current_plans=plans_str,
         chat_history=chat_context.strip() or "No conversation yet."
     )
@@ -437,12 +441,70 @@ async def itinerary_responder(state: ItineraryState) -> dict:
     return {"messages": [response]}
 
 
-async def detailer_guard(state: ItineraryState) -> dict:
-    """Catches the AI if it outputs plain text and forces it to use the tool."""
-    warning = "SYSTEM: You output standard text instead of using a tool. You MUST package your final itinerary into the `DetailerResult` tool, or use `get_transit_directions`. Do not reply with plain text."
-    return {"messages": [SystemMessage(content=warning)]}
+# async def detailer_guard(state: ItineraryState) -> dict:
+#     """Catches the AI if it outputs plain text and forces it to use the tool."""
+#     warning = "SYSTEM: You output standard text instead of using a tool. You MUST package your final itinerary into the `DetailerResult` tool, or use `get_transit_directions`. Do not reply with plain text."
+#     return {"messages": [SystemMessage(content=warning)]}
 
-async def link_finder_guard(state: ItineraryState) -> dict:
-    """Catches the AI if it outputs plain text and forces it to use the tool."""
-    warning = "SYSTEM: You output standard text instead of using a tool. You MUST use the `SubmitLinks` tool (even if empty) or use search tools. Do not reply with plain text."
-    return {"messages": [SystemMessage(content=warning)]}
+# async def link_finder_guard(state: ItineraryState) -> dict:
+#     """Catches the AI if it outputs plain text and forces it to use the tool."""
+#     warning = "SYSTEM: You output standard text instead of using a tool. You MUST use the `SubmitLinks` tool (even if empty) or use search tools. Do not reply with plain text."
+#     return {"messages": [SystemMessage(content=warning)]}
+
+async def transit_advisor(state: ItineraryState) -> dict:
+    """Node that researches the best transit pass once."""
+    trip_data = state.get("data", {})
+    trip_data_str = f"-> TRIP DESTINATION (Where the vacation takes place): {trip_data.get('destination')}\n"
+    trip_data_str += f"-> DEPARTING FROM (Just the airport they fly out of): {trip_data.get('departure')}\n"
+    trip_data_str += "Other Details:\n"
+    for k, v in trip_data.items():
+        if k not in ["departure", "destination"] and v is not None:
+            trip_data_str += f"- {k}: {v}\n"
+
+    themes = state.get("daily_themes", {})
+    if themes:
+        themes_str = "\n".join([f"Day {day}: {theme}" for day, theme in themes.items()])
+    else:
+        themes_str = "No specific themes planned yet."
+    
+    instructions = transit_advisor_prompt.format(trip_data=trip_data_str, current_themes=themes_str)
+    
+    allowed_tools = [web_search_tool.name, "SaveTransitStrategy"]
+    llm_with_tools = llm.bind_tools([web_search_tool, SaveTransitStrategy], tool_choice=allowed_tools)
+    
+    messages = state.get("messages", [])
+    tool_loop_messages = [msg for msg in messages if msg.type in ["ai", "tool", "human"]]
+    
+    response = await llm_with_tools.ainvoke([SystemMessage(content=instructions)] + tool_loop_messages)
+    return {"messages": [response]}
+
+async def save_transit_and_cleanup(state: ItineraryState) -> dict:
+    messages = state.get("messages", [])
+
+    tool_call = None
+    for msg in reversed(messages):
+        if hasattr(msg, "tool_calls") and msg.tool_calls:
+            tool_call = next((tc for tc in msg.tool_calls if tc["name"] == "SaveTransitStrategy"), None)
+            if tool_call: break
+
+    if not tool_call: return {}
+    
+    args = tool_call["args"]
+    
+    strategy_data = {
+        "pass_name": args.get("pass_name", "Standard Transit"),
+        "description": args.get("description", ""),
+        "price": args.get("price", "Varies"),
+        "purchase_url": args.get("purchase_url", "")
+    }
+
+    messages_to_remove = []
+    for msg in reversed(messages):
+        if msg.type == "human": break
+        if getattr(msg, "id", None):
+            messages_to_remove.append(RemoveMessage(id=msg.id))
+
+    return {
+        "transit_strategy": strategy_data,
+        "messages": messages_to_remove
+    }
