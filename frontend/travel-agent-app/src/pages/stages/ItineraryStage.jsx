@@ -126,7 +126,8 @@ export default function ItineraryStage() {
 
     try {
       const response = await fetchWithAuth(`${API_BASE_URL}/session/${sessionId}/details`, {
-        itinerary_data: finalItinerary
+        itinerary_data: finalItinerary,
+        transit_strategy: transitStrategy
       }, 'PATCH');
       
       if (response.ok) {

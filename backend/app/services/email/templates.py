@@ -76,6 +76,25 @@ def get_vacation_blueprint_html(session_data: dict) -> str:
         </div>
         """
 
+    transit_strategy = session_data.get("transit_strategy")
+    transit_html = ""
+    if transit_strategy:
+        pass_name = transit_strategy.get("pass_name", "")
+        price = transit_strategy.get("price", "")
+        desc = transit_strategy.get("description", "")
+        url = transit_strategy.get("purchase_url", "")
+        
+        btn = f'<a href="{url}" style="display:inline-block; margin-top:10px; padding:8px 16px; background:#2563eb; color:white; text-decoration:none; border-radius:6px; font-size:13px; font-weight:bold;">Get Official Pass</a>' if url else ""
+        
+        transit_html = f"""
+        <div style="margin-bottom: 15px; padding: 20px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
+            <p style="margin: 0 0 5px 0; font-size: 11px; font-weight: bold; color: #2563eb; text-transform: uppercase; letter-spacing: 1px;">🚇 Local Transit Strategy</p>
+            <h4 style="margin: 0 0 8px 0; color: #1e3a8a; font-size: 18px;">{pass_name} <span style="color: #64748b; font-weight: normal;">— {price}</span></h4>
+            <p style="margin: 0; color: #475569; font-size: 14px; line-height: 1.5;">{desc}</p>
+            {btn}
+        </div>
+        """
+
     itinerary_html = ""
     itinerary_data = session_data.get("itinerary_data")
     
@@ -138,6 +157,8 @@ def get_vacation_blueprint_html(session_data: dict) -> str:
                     {flight_html}
                     {hotel_html}
                 </div>
+
+                {transit_html}
 
                 {itinerary_html}
 

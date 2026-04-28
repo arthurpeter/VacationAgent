@@ -70,7 +70,8 @@ export default function VacationLayout() {
   const canFinalize = session && (
     session.flights_url || 
     session.accomodation_url || 
-    session.itinerary_text || 
+    (session.itinerary_data && session.itinerary_data.length > 0) || 
+    (session.transit_strategy && Object.keys(session.transit_strategy).length > 0) ||
     (session.extra_links && session.extra_links.length > 0)
   );
 

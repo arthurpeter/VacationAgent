@@ -17,6 +17,7 @@ class SessionDataUpdate(BaseModel):
     room_qty: Optional[int] = None
     companion_ids: Optional[list[str]] = None
     itinerary_data: Optional[list[dict[str, Any]]] = None
+    transit_strategy: Optional[dict[str, Any]] = None
 
 class Flight(BaseModel):
     """Schema for individual flight details."""

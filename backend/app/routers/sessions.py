@@ -182,7 +182,8 @@ async def finalize_and_email_session(
         "accomodation_url": session.accomodation_url,
         "accomodation_price": session.accomodation_price,
         "currency": session.currency,
-        "itinerary_data": session.itinerary_data
+        "itinerary_data": session.itinerary_data,
+        "transit_strategy": session.transit_strategy
     }
 
     if session.is_active:
