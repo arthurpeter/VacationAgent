@@ -86,8 +86,8 @@ def generate_graph(checkpointer=None):
             "itinerary_responder": "itinerary_responder",
             "detailer_guard": "itinerary_responder"
         })
-    builder.add_edge("link_finder_guard", "link_finder")
-    builder.add_edge("detailer_guard", "focused_detailer")
+    # builder.add_edge("link_finder_guard", "link_finder")
+    # builder.add_edge("detailer_guard", "focused_detailer")
     builder.add_edge("link_finder_tools", "link_finder")
     builder.add_edge("detailer_tools", "focused_detailer")
     builder.add_edge("save_details_and_cleanup", "link_finder")
