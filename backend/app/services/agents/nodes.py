@@ -13,7 +13,7 @@ from sqlalchemy import update, select
 from app.core.database import SessionLocal
 from app.models.vacation_session import VacationSession
 from app.services.agents.utils import is_llm_null, resolve_location, get_resumed_state
-from langchain_core.messages import RemoveMessage, SystemMessage
+from langchain_core.messages import HumanMessage, RemoveMessage, SystemMessage
 from app.services.agents.tools import responder_tools, link_finder_tools, detailer_tools
 
 
@@ -267,17 +267,10 @@ async def focused_detailer(state: ItineraryState) -> dict:
         chat_history=chat_context.strip() or "No conversation yet."
     )
 
-    llm_with_tools = llm.bind_tools(detailer_tools + [DetailerResult])
-    response: DetailerResult = await llm_with_tools.ainvoke([SystemMessage(content=instructions)] + tool_loop_messages)
+    llm_with_tools = llm.bind_tools(detailer_tools + [DetailerResult], tool_choice=["DetailerResult"] + [t.name for t in detailer_tools]) 
+    response = await llm_with_tools.ainvoke([SystemMessage(content=instructions)] + tool_loop_messages)
 
-    new_plans = dict(current_plans_dict)
-    
-    new_plans[response.day_number] = response.detailed_plan
-
-    return {
-        "daily_plans": new_plans,
-        "recently_detailed_days": [response.day_number]
-    }
+    return {"messages": [response]}
 
 async def save_details_and_cleanup(state: ItineraryState) -> dict:
     """Node 2.5: Intercepts DetailerResult, saves data, and wipes the detailer's message history."""
@@ -333,7 +326,7 @@ async def link_finder(state: ItineraryState) -> dict:
         if msg.type == "human":
             break
 
-    llm_with_tools = llm.bind_tools(link_finder_tools + [SubmitLinks])
+    llm_with_tools = llm.bind_tools(link_finder_tools + [SubmitLinks], tool_choice=["SubmitLinks"] + [t.name for t in link_finder_tools])
     
     response = await llm_with_tools.ainvoke([SystemMessage(content=instructions)] + tool_loop_messages)
     
@@ -442,3 +435,14 @@ async def itinerary_responder(state: ItineraryState) -> dict:
     response = await llm.ainvoke([SystemMessage(content=instructions)] + current_messages)
 
     return {"messages": [response]}
+
+
+async def detailer_guard(state: ItineraryState) -> dict:
+    """Catches the AI if it outputs plain text and forces it to use the tool."""
+    warning = "SYSTEM: You output standard text instead of using a tool. You MUST package your final itinerary into the `DetailerResult` tool, or use `get_transit_directions`. Do not reply with plain text."
+    return {"messages": [SystemMessage(content=warning)]}
+
+async def link_finder_guard(state: ItineraryState) -> dict:
+    """Catches the AI if it outputs plain text and forces it to use the tool."""
+    warning = "SYSTEM: You output standard text instead of using a tool. You MUST use the `SubmitLinks` tool (even if empty) or use search tools. Do not reply with plain text."
+    return {"messages": [SystemMessage(content=warning)]}

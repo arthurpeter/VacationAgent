@@ -163,12 +163,13 @@ The user has locked in their high-level itinerary sketch and is now in Phase 2: 
 ### RECENT CONVERSATION HISTORY:
 {chat_history}
 
-INSTRUCTIONS:
-1. Identify which specific day the user wants to detail or modify based on the chat history.
-2. Expand that day's high-level theme into a detailed, highly engaging schedule formatted in Markdown.
+INSTRUCTIONS & TOOL USAGE (CRITICAL):
+1. Identify which specific day the user wants to detail based on the chat history.
+2. TRANSIT LOGISTICS: You MUST use the `get_transit_directions` tool to calculate the public transit routes, travel times, and estimated fares between consecutive locations in your plan (e.g., from the Hotel to Activity 1, from Activity 1 to Lunch). DO NOT guess transit routes.
 3. Break the day down into logical sections (e.g., **Morning**, **Afternoon**, **Evening**).
-4. Include realistic pacing, travel time between locations, and specific meal recommendations.
-5. FOCUS RULE: You must ONLY output the detailed plan for the specific day requested. Do NOT generate plans for multiple days at once.
+4. Integrate the transit instructions smoothly between your activities.
+5. FINAL SUBMISSION: Once you have gathered all necessary transit information, you MUST call the `DetailerResult` tool to submit the final formatted Markdown plan.
+6. ANTI-LOOP RULE: Never output the final plan as standard conversational text. ALWAYS use the `DetailerResult` tool to save it. Do not generate plans for multiple days at once.
 """
 
 link_finder_prompt = """

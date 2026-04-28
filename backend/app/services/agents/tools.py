@@ -149,6 +149,8 @@ def get_transit_directions(origin: str, destination: str):
                 steps.append(clean_text)
 
         instructions = " -> ".join(steps)
+
+        print(f"Transit directions from {origin} to {destination}: Duration: {duration}, Distance: {distance}, Fare: {fare}, Instructions: {instructions}")
         
         return f"Duration: {duration} | Distance: {distance} | Estimated Fare: {fare} | Route: {instructions}"
         
