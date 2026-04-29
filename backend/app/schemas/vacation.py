@@ -109,6 +109,7 @@ class AccomodationBookingRequest(BaseModel):
     session_id: int
     booking_url: str
     price: Optional[float] = None
+    currency: Optional[str] = None
 
 class AccomodationBookingResponse(BaseModel):
     """Schema for accomodation booking response."""

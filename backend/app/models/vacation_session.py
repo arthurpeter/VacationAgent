@@ -54,8 +54,10 @@ class VacationSession(Base):
 
     flights_url = Column(Text, nullable=True)
     flight_price = Column(Float, nullable=True)
+    flight_ccy = Column(String, nullable=True)
     accomodation_url = Column(Text, nullable=True)
     accomodation_price = Column(Float, nullable=True)
+    accomodation_ccy = Column(String, nullable=True)
     itinerary_data = Column(JSON, nullable=True)
     transit_strategy = Column(JSON, nullable=True)
 

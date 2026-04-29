@@ -18,6 +18,7 @@ import FAQ from "./pages/FAQ";
 import Profile from "./pages/Profile";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import History from "./pages/History";
 import ScrollToTop from "./components/ScrollToTop";
 
 import './App.css'
@@ -47,6 +48,7 @@ function AppContent() {
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/help" element={<FAQ />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/history" element={<History />} />
 
             <Route path="/plan/:id" element={<VacationLayout />}>
               <Route index element={<Navigate to="discovery" replace />} />

@@ -172,23 +172,62 @@ async def finalize_and_email_session(
     user_stmt = select(models.User).where(models.User.id == token.sub)
     user = (await db.execute(user_stmt)).scalar_one_or_none()
 
+    formatted_from = session.from_date.strftime("%b %d, %Y") if session.from_date else "TBD"
+    formatted_to = session.to_date.strftime("%b %d, %Y") if session.to_date else "TBD"
+
     session_data = {
         "origin": session.departure,
         "destination": session.destination,
-        "from_date": session.from_date.strftime("%b %d, %Y") if session.from_date else "TBD",
-        "to_date": session.to_date.strftime("%b %d, %Y") if session.to_date else "TBD",
+        "from_date": formatted_from,
+        "to_date": formatted_to,
         "flights_url": session.flights_url,
         "flight_price": session.flight_price,
+        "flight_ccy": session.flight_ccy,
         "accomodation_url": session.accomodation_url,
         "accomodation_price": session.accomodation_price,
+        "accomodation_ccy": session.accomodation_ccy,
         "currency": session.currency,
         "itinerary_data": session.itinerary_data,
         "transit_strategy": session.transit_strategy
     }
 
+    vacation_stmt = select(models.Vacation).where(models.Vacation.session_id == session.id)
+    existing_vacation = (await db.execute(vacation_stmt)).scalar_one_or_none()
+
+    if existing_vacation:
+        existing_vacation.destination = session.destination
+        existing_vacation.origin = session.departure
+        existing_vacation.from_date = formatted_from
+        existing_vacation.to_date = formatted_to
+        existing_vacation.people_count = getattr(session, 'people_count', None)
+        existing_vacation.flight_price = session.flight_price
+        existing_vacation.flight_ccy = session.flight_ccy
+        existing_vacation.accomodation_price = session.accomodation_price
+        existing_vacation.accomodation_ccy = session.accomodation_ccy
+        existing_vacation.itinerary_data = session.itinerary_data
+        existing_vacation.transit_strategy = session.transit_strategy
+    else:
+        new_vacation = models.Vacation(
+            user_id=token.sub,
+            session_id=session.id,
+            destination=session.destination,
+            origin=session.departure,
+            from_date=formatted_from,
+            to_date=formatted_to,
+            people_count=getattr(session, 'people_count', None),
+            flight_price=session.flight_price,
+            flight_ccy=session.flight_ccy,
+            accomodation_price=session.accomodation_price,
+            accomodation_ccy=session.accomodation_ccy,
+            itinerary_data=session.itinerary_data,
+            transit_strategy=session.transit_strategy
+        )
+        db.add(new_vacation)
+
     if session.is_active:
         session.is_active = False
-        await db.commit()
+        
+    await db.commit()
 
     background_tasks.add_task(
         process_email_and_notify, 

@@ -436,8 +436,9 @@ async def book_flight(
             .values(
                 flights_url=url,
                 flight_price=data.price,
+                flight_ccy=results.get("currency"),
                 destination_arrival=arrival_dt,
-                destination_departure=departure_dt
+                destination_departure=departure_dt,
             )
         )
         await db.execute(stmt)
@@ -632,7 +633,8 @@ async def book_accomodation(
             )
             .values(
                 accomodation_url=data.booking_url,
-                accomodation_price=data.price
+                accomodation_price=data.price,
+                accomodation_ccy=data.currency
             )
         )
         

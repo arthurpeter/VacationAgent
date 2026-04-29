@@ -731,7 +731,8 @@ export default function OptionsStage() {
                 fetchWithAuth(`${API_BASE_URL}/search/bookAccomodation`, {
                     session_id: parseInt(sessionData?.id),
                     booking_url: selectedHotel.booking_url,
-                    price: selectedHotel.price
+                    price: selectedHotel.price,
+                    currency: selectedHotel.currency
                 }, "POST").then(res => ({ type: 'hotel', res }))
             );
         } else if (needsHotel) {
