@@ -15,6 +15,7 @@ class DiscoveryState(TypedDict):
     tool_outputs: List[str] = []
     #vibe: Optional[str] = None
     description: Optional[str] = None
+    user_history: Optional[str] = None
     is_complete: bool = False
     passengers_confirmed: bool = False
 

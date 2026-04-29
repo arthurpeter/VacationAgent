@@ -2,11 +2,38 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from app.models.vacation_session import VacationSession
+from app.models.vacation import Vacation
 from app.services.agents.memory import DiscoveryState, ItineraryState
 from app.utils.generic import calculate_age
 import httpx
 from typing import Optional
 
+
+async def get_formatted_travel_history(db: AsyncSession, user_id: str) -> str:
+    """
+    Fetches the user's past 5 trips and formats them into a lightweight string 
+    for the LLM context window.
+    """
+    stmt = select(Vacation).where(
+        Vacation.user_id == user_id
+    ).order_by(Vacation.created_at.desc()).limit(5)
+    
+    result = await db.execute(stmt)
+    vacations = result.scalars().all()
+
+    if not vacations:
+        return "No prior travel history recorded with TuRAG."
+
+    history_lines = []
+    for v in vacations:
+        line = f"- {v.destination}"
+        if v.from_date and v.to_date:
+            line += f" ({v.from_date} to {v.to_date})"
+        if getattr(v, 'people_count', None):
+            line += f" with {v.people_count} travelers"
+        history_lines.append(line)
+
+    return "\n".join(history_lines)
 
 def format_extracted_data(session: VacationSession) -> dict:
     """Formats the session DB model into the standard extracted_data dictionary."""
@@ -65,11 +92,14 @@ async def get_initial_state(db: AsyncSession, session_id: int) -> DiscoveryState
         for comp in session.companions:
             persona += f"- {comp.name} ({calculate_age(comp.date_of_birth)}): {comp.description or 'No bio available.'}\n"
 
+    user_history_str = await get_formatted_travel_history(db, str(session.user_id))
+
     return {
         "messages": [], 
         "user_id": str(session.user_id),
         "session_id": session.id,
         "persona_context": persona,
+        "user_history": user_history_str,
         "extracted_data": {
             "departure": session.departure,
             "destination": session.destination,

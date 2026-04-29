@@ -47,7 +47,8 @@ async def information_collector(state: DiscoveryState) -> dict:
     )
 
     structured_llm = llm.with_structured_output(ExtractionResult)
-    response = await structured_llm.ainvoke(instructions)    
+    response = await structured_llm.ainvoke(instructions)
+    print("EXTRACTION RESULT:", response)    
     return {"newly_extracted_data": response.model_dump()}
 
 
@@ -169,9 +170,12 @@ async def responder(state: DiscoveryState) -> dict:
             
     if not history_str:
         history_str = "No previous conversation history."
+
+    user_history_str = state.get("user_history", "No prior travel history recorded with us.")
     
     system_instructions = responder_prompt.format(
         persona=persona,
+        user_history=user_history_str,
         current_data=current_data,
         missing_fields=missing_fields,
         is_complete=is_complete,

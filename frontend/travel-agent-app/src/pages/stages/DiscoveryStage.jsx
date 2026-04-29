@@ -34,7 +34,7 @@ const DiscoveryStage = () => {
         from_date: session.from_date ? session.from_date.split('T')[0] : null,
         to_date: session.to_date ? session.to_date.split('T')[0] : null,
         adults: session.adults || null,
-        children: session.children || null,
+        children: session.children + (session.infants_on_lap || 0) + (session.infants_in_seat || 0) || null,
         budget: session.budget || null,
         currency: session.currency || null,
         room_qty: session.room_qty || null
