@@ -5,7 +5,7 @@ import sys
 from app.core.config import settings
 from app.core.airport_data import AIRPORTS_DB
 from app.core.cache import redis_cache
-
+import json
 
 @redis_cache(expire_time=3600 * 24 * 14)
 def get_location_data(area_input: str, country_filter: str = None):
@@ -192,6 +192,9 @@ def call_flights_api(
                     results.get("other_flights", []), 
                     key=lambda x: float(x.get("price", 0))
                 )
+
+        with open("output.json", "w") as f:
+            json.dump(results, f, indent=4)
         
         return results
         

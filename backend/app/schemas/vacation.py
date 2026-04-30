@@ -28,6 +28,9 @@ class Flight(BaseModel):
     arrival: str
     arrival_time: str
     duration: str
+    airplane: Optional[str] = None
+    travel_class: Optional[str] = None
+    extensions: list[str] = []
 
 class FlightsResponse(BaseModel):
     """Schema for flight search response."""

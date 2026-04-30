@@ -449,6 +449,107 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
     );
 }
 
+function FlightDetailsModal({ flight, onClose }) {
+    if (!flight) return null;
+
+    const segments = flight.flights;
+
+    const formatDuration = (mins) => {
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return `${h}h ${m}m`;
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-3xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col relative animate-in fade-in zoom-in duration-200">
+                
+                <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-white z-10 shrink-0">
+                    <div>
+                        <h2 className="text-2xl font-black text-gray-900">Flight Details</h2>
+                        <div className="text-blue-600 font-bold text-xl mt-1">{flight.price} {flight.currency}</div>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition">
+                        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </button>
+                </div>
+
+                <div className="flex-grow overflow-y-auto p-6 bg-gray-50">
+                    <div className="space-y-4">
+                        {segments.map((leg, i) => {
+                            let layoverStr = null;
+                            let layoverCity = null;
+                            if (i < segments.length - 1) {
+                                const nextLeg = segments[i + 1];
+                                const arrival = new Date(leg.arrival_time.replace(" ", "T"));
+                                const departure = new Date(nextLeg.departure_time.replace(" ", "T"));
+                                const diffMins = Math.floor((departure - arrival) / 60000);
+                                if (diffMins > 0) {
+                                    layoverStr = formatDuration(diffMins);
+                                    layoverCity = leg.arrival.split(',')[0];
+                                }
+                            }
+
+                            return (
+                                <React.Fragment key={i}>
+                                    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                                        <div className="flex items-center gap-3 mb-4 border-b border-gray-100 pb-3">
+                                            {leg.airline_logo && <img src={leg.airline_logo} alt={leg.airline} className="h-6 w-6 object-contain" />}
+                                            <span className="font-bold text-gray-800">{leg.airline}</span>
+                                            
+                                            {leg.airplane && (
+                                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+                                                    {leg.airplane}
+                                                </span>
+                                            )}
+                                            
+                                            <span className="text-gray-400 text-sm ml-auto">Duration: {formatDuration(parseInt(leg.duration) || 0)}</span>
+                                        </div>
+                                        
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex-1">
+                                                <div className="text-2xl font-black text-gray-900">{leg.departure_time.split(" ")[1]}</div>
+                                                <div className="text-sm font-bold text-gray-600">{leg.departure}</div>
+                                                <div className="text-xs text-gray-400">{leg.departure_time.split(" ")[0]}</div>
+                                            </div>
+                                            
+                                            <div className="px-4 text-gray-300">➔</div>
+                                            
+                                            <div className="flex-1 text-right">
+                                                <div className="text-2xl font-black text-gray-900">{leg.arrival_time.split(" ")[1]}</div>
+                                                <div className="text-sm font-bold text-gray-600">{leg.arrival}</div>
+                                                <div className="text-xs text-gray-400">{leg.arrival_time.split(" ")[0]}</div>
+                                            </div>
+                                        </div>
+
+                                        {leg.extensions && leg.extensions.length > 0 && (
+                                            <div className="mt-4 pt-3 border-t border-gray-50 flex flex-wrap gap-2">
+                                                {leg.extensions.map((ext, extIdx) => (
+                                                    <span key={extIdx} className="text-[10px] bg-blue-50 text-blue-700 px-2 py-1 rounded font-medium">
+                                                        {ext}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {layoverStr && (
+                                        <div className="flex items-center justify-center -my-2 relative z-10">
+                                            <div className="bg-orange-100 border border-orange-200 text-orange-800 text-xs font-bold px-4 py-1.5 rounded-full shadow-sm">
+                                                Layover: {layoverStr} in {layoverCity}
+                                            </div>
+                                        </div>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function OptionsStage() {
   const { sessionData, refreshContext } = useOutletContext();
   const session = sessionData?.data || sessionData;
@@ -470,6 +571,10 @@ export default function OptionsStage() {
   const [childAges, setChildAges] = useState([]);
   const [roomQty, setRoomQty] = useState(1);
   const [booked, setBooked] = useState({ flights: false, hotel: false });
+
+  const [viewingFlight, setViewingFlight] = useState(null); 
+  const [maxStops, setMaxStops] = useState(0); 
+  const [sortBy, setSortBy] = useState(2);
 
   const [viewingHotel, setViewingHotel] = useState(null); 
   const [selectedHotelDetails, setSelectedHotelDetails] = useState(null); 
@@ -581,8 +686,8 @@ export default function OptionsStage() {
       children: travelerCounts.children,
       infants_in_seat: travelerCounts.infantsSeat,
       infants_on_lap: travelerCounts.infantsLap,
-      stops: 0,
-      sort_by: 2
+      stops: parseInt(maxStops),
+      sort_by: parseInt(sortBy)
     };
 
     const childrenString = childAges.length > 0 ? childAges.join(",") : null;
@@ -802,6 +907,13 @@ export default function OptionsStage() {
           />
       )}
 
+      {viewingFlight && (
+          <FlightDetailsModal 
+              flight={viewingFlight} 
+              onClose={() => setViewingFlight(null)} 
+          />
+      )}
+
       <div className="bg-white border-b border-gray-200 p-4 shadow-sm shrink-0 flex flex-wrap gap-4 items-end z-20">
         <LocationAutocomplete 
             label="Origin"
@@ -853,10 +965,39 @@ export default function OptionsStage() {
                 ))}
             </select>
         </div>
+
+        <div className="flex gap-4 ml-auto border-l border-gray-200 pl-4">
+            <div className="flex flex-col gap-1 w-32">
+                <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Stops</label>
+                <select 
+                    value={maxStops} 
+                    onChange={(e) => setMaxStops(e.target.value)} 
+                    className="border border-gray-300 rounded-lg px-2 py-2 text-sm font-bold text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value={0}>Any Stops</option>
+                    <option value={1}>Nonstop only</option>
+                    <option value={2}>Up to 1 stop</option>
+                </select>
+            </div>
+            
+            <div className="flex flex-col gap-1 w-32">
+                <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Sort By</label>
+                <select 
+                    value={sortBy} 
+                    onChange={(e) => setSortBy(e.target.value)} 
+                    className="border border-gray-300 rounded-lg px-2 py-2 text-sm font-bold text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <option value={1}>Best Flights</option>
+                    <option value={2}>Lowest Price</option>
+                    <option value={3}>Fastest</option>
+                </select>
+            </div>
+        </div>
+
         <button 
           onClick={handleSearch}
           disabled={loading || !destination}
-          className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed ml-auto"
+          className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           {loading ? "Searching..." : "Search"}
         </button>
@@ -929,7 +1070,14 @@ export default function OptionsStage() {
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {(step === 'SEARCH' ? outboundFlights : inboundFlights).map((flight, idx) => (
-                        <FlightCard key={idx} flight={flight} onSelect={() => step === 'SEARCH' ? handleSelectOutbound(flight) : handleSelectInbound(flight)} btnText={step === 'SEARCH' ? "Select Outbound" : "Select Return"} isOutbound={step === 'SEARCH'}/>
+                        <FlightCard 
+                            key={idx} 
+                            flight={flight} 
+                            onSelect={() => step === 'SEARCH' ? handleSelectOutbound(flight) : handleSelectInbound(flight)} 
+                            onViewDetails={() => setViewingFlight(flight)}
+                            btnText={step === 'SEARCH' ? "Select Outbound" : "Select Return"} 
+                            isOutbound={step === 'SEARCH'}
+                        />
                     ))}
                     {(step === 'SEARCH' ? outboundFlights : inboundFlights).length === 0 && !loading && <div className="col-span-2 text-center py-10 text-gray-400 border-2 border-dashed rounded-xl">No flights found.</div>}
                 </div>
@@ -957,7 +1105,7 @@ export default function OptionsStage() {
   );
 }
 
-function FlightCard({ flight, onSelect, btnText, isOutbound }) {
+function FlightCard({ flight, onSelect, onViewDetails, btnText, isOutbound }) {
     const segments = flight.flights;
     const firstLeg = segments[0];
     const lastLeg = segments[segments.length - 1];
@@ -1058,9 +1206,14 @@ function FlightCard({ flight, onSelect, btnText, isOutbound }) {
             </div>
         )}
 
-        <button onClick={onSelect} className="w-full py-2 rounded-lg border border-blue-100 text-blue-600 hover:bg-blue-50 font-semibold text-sm transition">
-          {btnText}
-        </button>
+        <div className="flex gap-2 mt-4">
+            <button onClick={onViewDetails} className="w-1/3 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 font-bold text-sm transition">
+                Details
+            </button>
+            <button onClick={onSelect} className="w-2/3 py-2 rounded-lg border border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white font-black text-sm transition">
+                {btnText}
+            </button>
+        </div>
       </div>
     );
 }

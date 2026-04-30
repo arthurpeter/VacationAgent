@@ -219,6 +219,9 @@ async def search_outbound_flights(
                     arrival=detail.get('arrival_airport', {}).get('name'),
                     arrival_time=detail.get('arrival_airport', {}).get('time'),
                     duration=str(detail.get('duration', '')),
+                    airplane=detail.get('airplane'),
+                    travel_class=detail.get('travel_class'),
+                    extensions=[ext for ext in detail.get('extensions', [])]
                 )
                 flight_schema.flights.append(flight_detail)
             response.append(flight_schema)
@@ -330,6 +333,9 @@ async def search_inbound_flights(
                     arrival=detail.get('arrival_airport', {}).get('name'),
                     arrival_time=detail.get('arrival_airport', {}).get('time'),
                     duration=str(detail.get('duration', '')),
+                    airplane=detail.get('airplane'),
+                    travel_class=detail.get('travel_class'),
+                    extensions=[ext for ext in detail.get('extensions', [])]
                 )
                 flight_schema.flights.append(flight_detail)
             response.append(flight_schema)
