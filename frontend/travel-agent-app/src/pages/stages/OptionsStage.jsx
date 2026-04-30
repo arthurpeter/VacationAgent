@@ -575,6 +575,7 @@ export default function OptionsStage() {
   const [viewingFlight, setViewingFlight] = useState(null); 
   const [maxStops, setMaxStops] = useState(0); 
   const [sortBy, setSortBy] = useState(2);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const [viewingHotel, setViewingHotel] = useState(null); 
   const [selectedHotelDetails, setSelectedHotelDetails] = useState(null); 
@@ -914,93 +915,116 @@ export default function OptionsStage() {
           />
       )}
 
-      <div className="bg-white border-b border-gray-200 p-4 shadow-sm shrink-0 flex flex-wrap gap-4 items-end z-20">
-        <LocationAutocomplete 
-            label="Origin"
-            value={origin} 
-            onChange={(val, isFinal) => handleLocationChange('origin', val, isFinal)} 
-            placeholder="City, Country"
-        />
-        <LocationAutocomplete 
-            label="Destination"
-            value={destination} 
-            onChange={(val, isFinal) => handleLocationChange('destination', val, isFinal)} 
-            placeholder="City, Country"
-        />
-        <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Dates</label>
-            <div className="flex items-center gap-2">
-                <input 
-                    type="date" 
-                    value={dates.start} 
-                    onChange={(e) => handleDateChange('start', e.target.value)} 
-                    className="border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-700"
-                />
-                <input 
-                    type="date" 
-                    value={dates.end} 
-                    onChange={(e) => handleDateChange('end', e.target.value)} 
-                    className="border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-700"
-                />
-            </div>
-        </div>
+      <div className="bg-white border-b border-gray-200 p-4 shadow-sm shrink-0 flex flex-col gap-4 z-20">
         
-        <TravelersInput 
-            counts={travelerCounts} 
-            setCounts={setTravelerCounts} 
-            childAges={childAges} 
-            setChildAges={setChildAges} 
-            onSave={saveToSession}
-        />
+        {/* Main Search Row */}
+        <div className="flex flex-wrap gap-4 items-end">
+          <LocationAutocomplete 
+              label="Origin"
+              value={origin} 
+              onChange={(val, isFinal) => handleLocationChange('origin', val, isFinal)} 
+              placeholder="City, Country"
+          />
+          <LocationAutocomplete 
+              label="Destination"
+              value={destination} 
+              onChange={(val, isFinal) => handleLocationChange('destination', val, isFinal)} 
+              placeholder="City, Country"
+          />
+          <div className="flex flex-col gap-1">
+              <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Dates</label>
+              <div className="flex items-center gap-2">
+                  <input 
+                      type="date" 
+                      value={dates.start} 
+                      onChange={(e) => handleDateChange('start', e.target.value)} 
+                      className="border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-700"
+                  />
+                  <input 
+                      type="date" 
+                      value={dates.end} 
+                      onChange={(e) => handleDateChange('end', e.target.value)} 
+                      className="border border-gray-300 rounded-lg px-2 py-2 text-sm text-gray-700"
+                  />
+              </div>
+          </div>
+          
+          <TravelersInput 
+              counts={travelerCounts} 
+              setCounts={setTravelerCounts} 
+              childAges={childAges} 
+              setChildAges={setChildAges} 
+              onSave={saveToSession}
+          />
 
-        <div className="flex flex-col gap-1 w-20">
-            <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Rooms</label>
-            <select 
-                value={roomQty} 
-                onChange={(e) => handleRoomChange(e.target.value)} 
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          <div className="flex flex-col gap-1 w-20">
+              <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Rooms</label>
+              <select 
+                  value={roomQty} 
+                  onChange={(e) => handleRoomChange(e.target.value)} 
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              >
+                  {Array.from({ length: Math.max(1, travelerCounts.adults) }, (_, i) => i + 1).map(num => (
+                      <option key={num} value={num}>{num}</option>
+                  ))}
+              </select>
+          </div>
+
+          <div className="flex gap-2 ml-auto">
+            <button 
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="h-10 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold text-sm shadow-sm transition"
             >
-                {Array.from({ length: Math.max(1, travelerCounts.adults) }, (_, i) => i + 1).map(num => (
-                    <option key={num} value={num}>{num}</option>
-                ))}
-            </select>
+              {showAdvanced ? "Hide Advanced" : "Advanced ⚙️"}
+            </button>
+            <button 
+              onClick={handleSearch}
+              disabled={loading || !destination}
+              className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {loading ? "Searching..." : "Search"}
+            </button>
+          </div>
         </div>
 
-        <div className="flex gap-4 ml-auto border-l border-gray-200 pl-4">
-            <div className="flex flex-col gap-1 w-32">
-                <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Stops</label>
-                <select 
-                    value={maxStops} 
-                    onChange={(e) => setMaxStops(e.target.value)} 
-                    className="border border-gray-300 rounded-lg px-2 py-2 text-sm font-bold text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                    <option value={0}>Any Stops</option>
-                    <option value={1}>Nonstop only</option>
-                    <option value={2}>Up to 1 stop</option>
-                </select>
-            </div>
-            
-            <div className="flex flex-col gap-1 w-32">
-                <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Sort By</label>
-                <select 
-                    value={sortBy} 
-                    onChange={(e) => setSortBy(e.target.value)} 
-                    className="border border-gray-300 rounded-lg px-2 py-2 text-sm font-bold text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                    <option value={1}>Best Flights</option>
-                    <option value={2}>Lowest Price</option>
-                    <option value={3}>Fastest</option>
-                </select>
-            </div>
-        </div>
+        {/* Advanced Filters Row (Conditionally Rendered) */}
+        {showAdvanced && (
+          <div className="flex flex-wrap gap-4 items-end pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="w-full text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">
+                  Flight Settings
+              </div>
+              <div className="flex flex-col gap-1 w-48">
+                  <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Stops</label>
+                  <select 
+                      value={maxStops} 
+                      onChange={(e) => setMaxStops(e.target.value)} 
+                      className="border border-gray-300 rounded-lg px-2 py-2 text-sm font-bold text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                      <option value={0}>Any number of stops</option>
+                      <option value={1}>Nonstop only</option>
+                      <option value={2}>1 stop or fewer</option>
+                      <option value={3}>2 stops or fewer</option>
+                  </select>
+              </div>
+              
+              <div className="flex flex-col gap-1 w-48">
+                  <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Sort By</label>
+                  <select 
+                      value={sortBy} 
+                      onChange={(e) => setSortBy(e.target.value)} 
+                      className="border border-gray-300 rounded-lg px-2 py-2 text-sm font-bold text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                      <option value={1}>Top flights</option>
+                      <option value={2}>Lowest Price</option>
+                      <option value={3}>Departure time</option>
+                      <option value={4}>Arrival time</option>
+                      <option value={5}>Fastest</option>
+                  </select>
+              </div>
+          </div>
+        )}
 
-        <button 
-          onClick={handleSearch}
-          disabled={loading || !destination}
-          className="h-10 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed"
-        >
-          {loading ? "Searching..." : "Search"}
-        </button>
+        
       </div>
 
       <div className="flex-grow overflow-y-auto p-8 z-10">

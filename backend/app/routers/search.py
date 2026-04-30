@@ -199,10 +199,10 @@ async def search_outbound_flights(
     log.info(f"Found {len(all_flights)} flights.")
     try:
         response = []
-        for flight in all_flights[:10]:
+        for flight in all_flights[:12]:
             log.info(f"Flight: Price {flight.get('price')}")
-            if not flight.get('departure_token') or not flight.get('price'):
-                log.warning("Skipping flight with missing departure token or price.")
+            if not flight.get('departure_token'):
+                log.warning("Skipping flight with missing departure token.")
                 continue
             flight_schema = schemas.FlightsResponse(
                 token=flight.get('departure_token'),
@@ -313,10 +313,10 @@ async def search_inbound_flights(
     log.info(f"Found {len(all_flights)} flights.")
     try:
         response = []
-        for flight in all_flights[:5]:
+        for flight in all_flights[:12]:
             log.info(f"Flight: Price {flight.get('price')}")
-            if not flight.get('booking_token') or not flight.get('price'):
-                log.warning("Skipping flight with missing booking token or price.")
+            if not flight.get('booking_token'):
+                log.warning("Skipping flight with missing booking token.")
                 continue
             flight_schema = schemas.FlightsResponse(
                 token=flight.get('booking_token'),
@@ -511,7 +511,7 @@ async def get_accomodations(
     hotels_list = results.get("data", {}).get("hotels")
 
     #sort hotels by price and return the first 5
-    sorted_hotels = sorted(hotels_list, key=lambda x: x.get("property", {}).get("priceBreakdown", {}).get("grossPrice", {}).get("value", float('inf')))[:10]
+    sorted_hotels = sorted(hotels_list, key=lambda x: x.get("property", {}).get("priceBreakdown", {}).get("grossPrice", {}).get("value", float('inf')))[:12]
 
     response = []
     for hotel in sorted_hotels:

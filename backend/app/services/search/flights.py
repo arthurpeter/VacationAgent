@@ -81,7 +81,7 @@ def call_flights_api(
     travel_class: Optional[int] = None,
     multi_city_json: Optional[str] = None,
     show_hidden: Optional[bool] = None,
-    deep_search: Optional[bool] = None,
+    deep_search: Optional[bool] = True,
     adults: Optional[int] = None,
     children: Optional[int] = None,
     infants_in_seat: Optional[int] = None,
