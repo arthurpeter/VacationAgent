@@ -8,6 +8,7 @@ from sqlalchemy import select, update
 from authx import TokenPayload
 from app.core.auth import access_token_header
 from datetime import datetime
+from urllib.parse import urlparse, urlencode, parse_qsl, urlunparse
 from app.core.airport_data import AIRPORTS_DB
 
 
@@ -599,9 +600,39 @@ async def get_hotel_details(
                 bed_types = bed_configs[0].get("bed_types", [])
                 bed_info = ", ".join([bt.get("name_with_count") for bt in bed_types])
 
+        base_url = raw_data.get("url", "")
+        deep_link_url = base_url
+
+        if base_url:
+            url_parts = list(urlparse(base_url))
+            query = dict(parse_qsl(url_parts[4]))
+            
+            query.update({
+                'checkin': data.arrival_date,
+                'checkout': data.departure_date,
+                'group_adults': data.adults,
+                'req_adults': data.adults,
+                'no_rooms': data.room_qty,
+            })
+            
+            if data.children:
+                child_list = data.children.split(',')
+                num_children = len(child_list)
+                query['group_children'] = num_children
+                query['req_children'] = num_children
+                for age in child_list:
+                    query['age'] = age.strip()
+                    query['req_age'] = age.strip()
+            else:
+                query['group_children'] = 0
+                query['req_children'] = 0
+                
+            url_parts[4] = urlencode(query)
+            deep_link_url = urlunparse(url_parts)
+
         response = schemas.HotelDetailsResponse(
             hotel_id=str(raw_data.get("hotel_id")),
-            url=raw_data.get("url", ""),
+            url=deep_link_url,
             description=description,
             photos=photo_urls,
             amenities=amenities,
