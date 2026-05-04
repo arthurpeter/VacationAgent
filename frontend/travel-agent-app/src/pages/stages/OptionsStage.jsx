@@ -550,6 +550,79 @@ function FlightDetailsModal({ flight, onClose }) {
     );
 }
 
+function BookingLinksModal({ urls, booked, selectedInbound, selectedHotel, onContinue, onClose }) {
+    const allDone = booked.flights && booked.hotel;
+
+    if (!urls.flights && !urls.hotel) return null;
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-200">
+                
+                <div className="bg-yellow-50 p-8 border-b border-yellow-100 text-center">
+                    <div className="text-5xl mb-3 animate-bounce">⏱️</div>
+                    <h2 className="text-2xl font-black text-yellow-800">Action Required</h2>
+                    <p className="text-yellow-700 mt-2 font-medium text-sm leading-relaxed">
+                        {allDone 
+                            ? <span>Your trip is saved in our system! <strong>Please click the links below to securely complete your checkout</strong> for all selected items.</span>
+                            : <span>You've successfully secured this step! However, you still need to book other items. <strong>Click the link below to checkout</strong>, then return here to finish planning.</span>}
+                    </p>
+                </div>
+                
+                <div className="p-6 space-y-4">
+                    {urls.flights && (
+                        <a 
+                            href={urls.flights} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 hover:shadow-md transition group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl">✈️</span>
+                                <div className="font-black text-blue-900">Complete Flight Checkout</div>
+                            </div>
+                            <span className="text-blue-600 font-black group-hover:translate-x-1 transition">➔</span>
+                        </a>
+                    )}
+                    
+                    {urls.hotel && (
+                        <a 
+                            href={urls.hotel} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-xl hover:bg-green-100 hover:shadow-md transition group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl">🏨</span>
+                                <div className="font-black text-green-900">Complete Hotel Checkout</div>
+                            </div>
+                            <span className="text-green-600 font-black group-hover:translate-x-1 transition">➔</span>
+                        </a>
+                    )}
+                </div>
+
+                <div className="p-4 bg-gray-50 border-t border-gray-100 text-center">
+                    {allDone ? (
+                        <button 
+                            onClick={onContinue}
+                            className="text-sm font-bold text-gray-500 hover:text-gray-900 transition underline decoration-dotted underline-offset-4"
+                        >
+                            I've completed my checkouts, take me to my itinerary
+                        </button>
+                    ) : (
+                        <button 
+                            onClick={onClose}
+                            className="text-sm font-bold text-gray-500 hover:text-gray-900 transition underline decoration-dotted underline-offset-4"
+                        >
+                            I've completed this checkout, let me book the rest
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function OptionsStage() {
   const { sessionData, refreshContext } = useOutletContext();
   const session = sessionData?.data || sessionData;
@@ -571,6 +644,9 @@ export default function OptionsStage() {
   const [childAges, setChildAges] = useState([]);
   const [roomQty, setRoomQty] = useState(1);
   const [booked, setBooked] = useState({ flights: false, hotel: false });
+
+  const [bookingUrls, setBookingUrls] = useState({ flights: null, hotel: null });
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   const [viewingFlight, setViewingFlight] = useState(null); 
   const [maxStops, setMaxStops] = useState(0); 
@@ -799,7 +875,7 @@ export default function OptionsStage() {
     const needsHotel = selectedHotel && !booked.hotel;
 
     if (!needsFlight && !needsHotel) {
-        if (!selectedHotel) setError("Please select an accommodation to continue.");
+        if (!selectedHotel && !selectedInbound) setError("Please select a flight or accommodation to continue.");
         return;
     }
 
@@ -832,7 +908,12 @@ export default function OptionsStage() {
             );
         }
 
-        if (needsHotel && selectedHotel.booking_url) {
+        if (needsHotel) {
+            if (!selectedHotel.booking_url) {
+                setError("Missing hotel booking details. Please try viewing details again.");
+                setLoading(false);
+                return;
+            }
             bookingPromises.push(
                 fetchWithAuth(`${API_BASE_URL}/search/bookAccomodation`, {
                     session_id: parseInt(sessionData?.id),
@@ -841,38 +922,30 @@ export default function OptionsStage() {
                     currency: selectedHotel.currency
                 }, "POST").then(res => ({ type: 'hotel', res }))
             );
-        } else if (needsHotel) {
-             console.error("Booking URL missing from selected hotel object.");
-             setError("Missing hotel booking details. Please try viewing details again.");
-             setLoading(false);
-             return;
         }
 
         const results = await Promise.all(bookingPromises);
         let newBookedState = { ...booked };
+        let newUrls = { ...bookingUrls };
+        let anySuccess = false;
 
         for (const item of results) {
             if (item.res.ok) {
+                const data = await item.res.json(); 
                 newBookedState[item.type] = true;
+                newUrls[item.type] = data.booking_url;
+                anySuccess = true; 
             } else {
                 setError(`Failed to book ${item.type}. Please try again.`);
             }
         }
 
         setBooked(newBookedState);
+        setBookingUrls(newUrls);
 
-        if (newBookedState.flights && newBookedState.hotel) {
-            toast.success("Success! Flights and Accommodation booked. ✈️🏨");
+        if (anySuccess) {
             if (refreshContext) refreshContext();
-            setTimeout(() => {
-                navigate(`/plan/${sessionData.id}/itinerary`);
-            }, 1000);
-        } else if (newBookedState.flights && !newBookedState.hotel) {
-            toast.success("Flights booked! Please proceed with hotel booking. ✈️");
-            if (refreshContext) refreshContext();
-        } else if (!newBookedState.flights && newBookedState.hotel) {
-            toast.success("Accommodation booked! Please proceed with flights. 🏨");
-            if (refreshContext) refreshContext();
+            setShowBookingModal(true);
         }
 
     } catch (err) {
@@ -912,6 +985,22 @@ export default function OptionsStage() {
           <FlightDetailsModal 
               flight={viewingFlight} 
               onClose={() => setViewingFlight(null)} 
+          />
+      )}
+
+      {showBookingModal && (
+          <BookingLinksModal 
+              urls={bookingUrls} 
+              booked={booked}
+              selectedInbound={selectedInbound}
+              selectedHotel={selectedHotel}
+              onContinue={() => {
+                  setShowBookingModal(false);
+                  navigate(`/plan/${sessionData.id}/itinerary`);
+              }} 
+              onClose={() => {
+                  setShowBookingModal(false);
+              }}
           />
       )}
 

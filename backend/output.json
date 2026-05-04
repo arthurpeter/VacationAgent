@@ -1,103 +1,283 @@
 {
     "search_metadata": {
-        "id": "69f35bf78c60ca79e0ec1545",
+        "id": "69f89cd448c791e9518d883c",
         "status": "Success",
-        "json_endpoint": "https://serpapi.com/searches/6FMOeGCfsEsGX8u2xEhFBg/69f35bf78c60ca79e0ec1545.json",
-        "created_at": "2026-04-30 13:41:11 UTC",
-        "processed_at": "2026-04-30 13:41:11 UTC",
-        "google_flights_url": "https://www.google.com/travel/flights?hl=en&gl=ro&curr=RON&tfs=CBwQAhopEgoyMDI2LTA2LTIyKABqBwgBEgNCQlVqBwgBEgNPVFByBwgBEgNGQ08aKRIKMjAyNi0wNi0yOCgAagcIARIDRkNPcgcIARIDQkJVcgcIARIDT1RQQAFAAUgBcAGYAQE&tfu=EgIIAQ",
-        "raw_html_file": "https://serpapi.com/searches/6FMOeGCfsEsGX8u2xEhFBg/69f35bf78c60ca79e0ec1545.html",
-        "prettify_html_file": "https://serpapi.com/searches/6FMOeGCfsEsGX8u2xEhFBg/69f35bf78c60ca79e0ec1545.prettify",
-        "total_time_taken": 7.66
+        "json_endpoint": "https://serpapi.com/searches/dsfoRGoQDnN-P0TKbniqsQ/69f89cd448c791e9518d883c.json",
+        "created_at": "2026-05-04 13:19:16 UTC",
+        "processed_at": "2026-05-04 13:19:16 UTC",
+        "google_flights_url": "https://www.google.com/travel/flights?hl=en&gl=ro&curr=RON&tfs=CBwQAhpbEgoyMDI2LTA2LTIyIiAKA09UUBIKMjAyNi0wNi0yMhoDQ0RHKgJPRTIENzIzNWoHCAESA09UUGoHCAESA0JCVXIHCAESA0xCR3IHCAESA0NER3IHCAESA09SWRo5EgoyMDI2LTA2LTI4agcIARIDTEJHagcIARIDQ0RHagcIARIDT1JZcgcIARIDT1RQcgcIARIDQkJVQAFIAXABmAEB&tfu=EgIIAg",
+        "raw_html_file": "https://serpapi.com/searches/dsfoRGoQDnN-P0TKbniqsQ/69f89cd448c791e9518d883c.html",
+        "prettify_html_file": "https://serpapi.com/searches/dsfoRGoQDnN-P0TKbniqsQ/69f89cd448c791e9518d883c.prettify",
+        "total_time_taken": 5.94
     },
     "search_parameters": {
         "engine": "google_flights",
         "hl": "en",
         "gl": "ro",
-        "type": "1",
-        "departure_id": "BBU,OTP",
-        "arrival_id": "FCO",
+        "departure_id": "OTP,BBU",
+        "arrival_id": "LBG,CDG,ORY",
         "outbound_date": "2026-06-22",
         "return_date": "2026-06-28",
-        "adults": 2,
+        "adults": 1,
         "children": 0,
         "infants_in_seat": 0,
         "infants_on_lap": 0,
-        "stops": 1,
+        "stops": 0,
+        "departure_token": "WyJDalJJTjFORWRGWjJTREkyYldkQlEyTXliRkZDUnkwdExTMHRMUzB0TFhaMGJITXlNa0ZCUVVGQlIyNDBia2xOVEVKQ2R5MUJFZ1pQUlRjeU16VWFDd2k0dHdZUUFob0RVazlPT0J4dzFMa0IiLFtbIk9UUCIsIjIwMjYtMDYtMjIiLCJDREciLG51bGwsIk9FIiwiNzIzNSJdXV0=",
         "currency": "RON",
         "deep_search": true,
-        "sort_by": "1"
+        "sort_by": "2"
     },
     "other_flights": [
         {
             "flights": [
                 {
                     "departure_airport": {
-                        "name": "Bucharest Henri Coand\u0103 International Airport",
-                        "id": "OTP",
-                        "time": "2026-06-22 20:20"
+                        "name": "Paris Charles de Gaulle Airport",
+                        "id": "CDG",
+                        "time": "2026-06-28 20:35"
                     },
                     "arrival_airport": {
-                        "name": "Leonardo da Vinci International Airport",
-                        "id": "FCO",
-                        "time": "2026-06-22 21:40"
+                        "name": "Belgrade Nikola Tesla Airport",
+                        "id": "BEG",
+                        "time": "2026-06-28 23:00"
                     },
-                    "duration": 140,
-                    "airplane": "Airbus A321",
-                    "airline": "Wizz Air",
-                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/W4.png",
+                    "duration": 145,
+                    "airplane": "Airbus A319",
+                    "airline": "Air Serbia",
+                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/JU.png",
                     "travel_class": "Economy",
-                    "flight_number": "W4 3145",
+                    "flight_number": "JU 243",
+                    "legroom": "30 in",
                     "extensions": [
-                        "Carbon emissions estimate: 214 kg"
+                        "Average legroom (30 in)",
+                        "Carbon emissions estimate: 143 kg"
                     ]
+                },
+                {
+                    "departure_airport": {
+                        "name": "Belgrade Nikola Tesla Airport",
+                        "id": "BEG",
+                        "time": "2026-06-29 00:40"
+                    },
+                    "arrival_airport": {
+                        "name": "Bucharest Henri Coand\u0103 International Airport",
+                        "id": "OTP",
+                        "time": "2026-06-29 03:05"
+                    },
+                    "duration": 85,
+                    "airplane": "ATR 72",
+                    "airline": "Air Serbia",
+                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/JU.png",
+                    "travel_class": "Economy",
+                    "flight_number": "JU 106",
+                    "legroom": "29 in",
+                    "extensions": [
+                        "Below average legroom (29 in)",
+                        "Carbon emissions estimate: 49 kg"
+                    ],
+                    "overnight": true
                 }
             ],
-            "total_duration": 140,
+            "layovers": [
+                {
+                    "duration": 100,
+                    "name": "Belgrade Nikola Tesla Airport",
+                    "id": "BEG"
+                }
+            ],
+            "total_duration": 330,
             "carbon_emissions": {
-                "this_flight": 214000,
-                "typical_for_this_route": 190000,
-                "difference_percent": 13
+                "this_flight": 193000,
+                "typical_for_this_route": 202000,
+                "difference_percent": -4
             },
-            "price": 756,
+            "price": 1053,
             "type": "Round trip",
-            "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/W4.png",
-            "departure_token": "WyJDalJJV1VsRmJVdHZiVFpOUWtsQlJrbEpUVUZDUnkwdExTMHRMUzB0TFc5NWFITTFORUZCUVVGQlIyNTZWMTlyUTJsUVZGRkJFZ1pYTkRNeE5EVWFDd2pBemdRUUFob0RVazlPT0J4d25ZVUIiLFtbIk9UUCIsIjIwMjYtMDYtMjIiLCJGQ08iLG51bGwsIlc0IiwiMzE0NSJdXV0="
+            "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/JU.png",
+            "extensions": [
+                "Fare non-refundable, taxes may be refundable",
+                "No ticket changes",
+                "Bag and fare conditions depend on the return flight"
+            ],
+            "booking_token": "WyJDalJJVURoeldFUlplVkExYVZGQlZESk1hbEZDUnkwdExTMHRMUzB0TFhaM2VXUXlNa0ZCUVVGQlIyNDBiazVaUjBORk4wZEJFZ3RLVlRJME0zeEtWVEV3TmhvTENOUzJCaEFDR2dOU1QwNDRISEM5dVFFPSIsW1siT1RQIiwiMjAyNi0wNi0yMiIsIkNERyIsbnVsbCwiT0UiLCI3MjM1Il1dLFtbIkNERyIsIjIwMjYtMDYtMjgiLCJCRUciLG51bGwsIkpVIiwiMjQzIl0sWyJCRUciLCIyMDI2LTA2LTI5IiwiT1RQIixudWxsLCJKVSIsIjEwNiJdXV0="
         },
         {
             "flights": [
                 {
                     "departure_airport": {
-                        "name": "Bucharest Henri Coand\u0103 International Airport",
-                        "id": "OTP",
-                        "time": "2026-06-22 07:40"
+                        "name": "Paris Charles de Gaulle Airport",
+                        "id": "CDG",
+                        "time": "2026-06-28 18:45"
                     },
                     "arrival_airport": {
-                        "name": "Leonardo da Vinci International Airport",
-                        "id": "FCO",
-                        "time": "2026-06-22 09:00"
+                        "name": "Bucharest Henri Coand\u0103 International Airport",
+                        "id": "OTP",
+                        "time": "2026-06-28 22:35"
                     },
-                    "duration": 140,
-                    "airplane": "Airbus A321neo",
-                    "airline": "Wizz Air",
-                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/W4.png",
+                    "duration": 170,
+                    "airplane": "Boeing 737",
+                    "airline": "TAROM",
+                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/RO.png",
                     "travel_class": "Economy",
-                    "flight_number": "W4 3141",
+                    "flight_number": "RO 384",
+                    "legroom": "30 in",
                     "extensions": [
-                        "Carbon emissions estimate: 165 kg"
+                        "Average legroom (30 in)",
+                        "Carbon emissions estimate: 168 kg"
+                    ],
+                    "often_delayed_by_over_30_min": true
+                }
+            ],
+            "total_duration": 170,
+            "carbon_emissions": {
+                "this_flight": 169000,
+                "typical_for_this_route": 202000,
+                "difference_percent": -16
+            },
+            "price": 1447,
+            "type": "Round trip",
+            "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/RO.png",
+            "extensions": [
+                "Checked baggage for a fee",
+                "Fare non-refundable, taxes may be refundable",
+                "Ticket changes for a fee",
+                "Bag and fare conditions depend on the return flight"
+            ],
+            "booking_token": "WyJDalJJVURoeldFUlplVkExYVZGQlZESk1hbEZDUnkwdExTMHRMUzB0TFhaM2VXUXlNa0ZCUVVGQlIyNDBiazVaUjBORk4wZEJFZ1ZTVHpNNE5Cb0xDTHpxQ0JBQ0dnTlNUMDQ0SEhEeC9nRT0iLFtbIk9UUCIsIjIwMjYtMDYtMjIiLCJDREciLG51bGwsIk9FIiwiNzIzNSJdXSxbWyJDREciLCIyMDI2LTA2LTI4IiwiT1RQIixudWxsLCJSTyIsIjM4NCJdXV0="
+        },
+        {
+            "flights": [
+                {
+                    "departure_airport": {
+                        "name": "Paris Charles de Gaulle Airport",
+                        "id": "CDG",
+                        "time": "2026-06-28 08:50"
+                    },
+                    "arrival_airport": {
+                        "name": "Bucharest Henri Coand\u0103 International Airport",
+                        "id": "OTP",
+                        "time": "2026-06-28 12:45"
+                    },
+                    "duration": 175,
+                    "airplane": "Airbus A220-300 Passenger",
+                    "airline": "Air France",
+                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/AF.png",
+                    "travel_class": "Economy",
+                    "flight_number": "AF 1888",
+                    "legroom": "30 in",
+                    "extensions": [
+                        "Average legroom (30 in)",
+                        "Wi-Fi for a fee",
+                        "In-seat USB outlet",
+                        "Carbon emissions estimate: 175 kg"
                     ]
                 }
             ],
-            "total_duration": 140,
+            "total_duration": 175,
             "carbon_emissions": {
-                "this_flight": 165000,
-                "typical_for_this_route": 190000,
+                "this_flight": 176000,
+                "typical_for_this_route": 202000,
                 "difference_percent": -13
             },
-            "price": 1026,
+            "price": 1649,
             "type": "Round trip",
-            "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/W4.png",
-            "departure_token": "WyJDalJJV1VsRmJVdHZiVFpOUWtsQlJrbEpUVUZDUnkwdExTMHRMUzB0TFc5NWFITTFORUZCUVVGQlIyNTZWMTlyUTJsUVZGRkJFZ1pYTkRNeE5ERWFDd2p0b0FZUUFob0RVazlPT0J4dzJMUUIiLFtbIk9UUCIsIjIwMjYtMDYtMjIiLCJGQ08iLG51bGwsIlc0IiwiMzE0MSJdXV0="
+            "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/AF.png",
+            "extensions": [
+                "Checked baggage for a fee",
+                "Fare non-refundable, taxes may be refundable",
+                "Ticket changes for a fee",
+                "Bag and fare conditions depend on the return flight"
+            ],
+            "booking_token": "WyJDalJJVURoeldFUlplVkExYVZGQlZESk1hbEZDUnkwdExTMHRMUzB0TFhaM2VXUXlNa0ZCUVVGQlIyNDBiazVaUjBORk4wZEJFZ1pCUmpFNE9EZ2FDd2lraUFvUUFob0RVazlPT0J4d3U2SUMiLFtbIk9UUCIsIjIwMjYtMDYtMjIiLCJDREciLG51bGwsIk9FIiwiNzIzNSJdXSxbWyJDREciLCIyMDI2LTA2LTI4IiwiT1RQIixudWxsLCJBRiIsIjE4ODgiXV1d"
+        },
+        {
+            "flights": [
+                {
+                    "departure_airport": {
+                        "name": "Paris Charles de Gaulle Airport",
+                        "id": "CDG",
+                        "time": "2026-06-28 19:35"
+                    },
+                    "arrival_airport": {
+                        "name": "Bucharest Henri Coand\u0103 International Airport",
+                        "id": "OTP",
+                        "time": "2026-06-28 23:25"
+                    },
+                    "duration": 170,
+                    "airplane": "Airbus A220-300 Passenger",
+                    "airline": "Air France",
+                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/AF.png",
+                    "travel_class": "Economy",
+                    "flight_number": "AF 1088",
+                    "legroom": "30 in",
+                    "extensions": [
+                        "Average legroom (30 in)",
+                        "Wi-Fi for a fee",
+                        "In-seat USB outlet",
+                        "Carbon emissions estimate: 175 kg"
+                    ]
+                }
+            ],
+            "total_duration": 170,
+            "carbon_emissions": {
+                "this_flight": 176000,
+                "typical_for_this_route": 202000,
+                "difference_percent": -13
+            },
+            "price": 1649,
+            "type": "Round trip",
+            "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/AF.png",
+            "extensions": [
+                "Checked baggage for a fee",
+                "Fare non-refundable, taxes may be refundable",
+                "Ticket changes for a fee",
+                "Bag and fare conditions depend on the return flight"
+            ],
+            "booking_token": "WyJDalJJVURoeldFUlplVkExYVZGQlZESk1hbEZDUnkwdExTMHRMUzB0TFhaM2VXUXlNa0ZCUVVGQlIyNDBiazVaUjBORk4wZEJFZ1pCUmpFd09EZ2FDd2lraUFvUUFob0RVazlPT0J4d3U2SUMiLFtbIk9UUCIsIjIwMjYtMDYtMjIiLCJDREciLG51bGwsIk9FIiwiNzIzNSJdXSxbWyJDREciLCIyMDI2LTA2LTI4IiwiT1RQIixudWxsLCJBRiIsIjEwODgiXV1d"
+        },
+        {
+            "flights": [
+                {
+                    "departure_airport": {
+                        "name": "Paris Charles de Gaulle Airport",
+                        "id": "CDG",
+                        "time": "2026-06-28 12:00"
+                    },
+                    "arrival_airport": {
+                        "name": "Bucharest Henri Coand\u0103 International Airport",
+                        "id": "OTP",
+                        "time": "2026-06-28 15:50"
+                    },
+                    "duration": 170,
+                    "airplane": "Boeing 737",
+                    "airline": "TAROM",
+                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/RO.png",
+                    "travel_class": "Economy",
+                    "flight_number": "RO 382",
+                    "legroom": "30 in",
+                    "extensions": [
+                        "Average legroom (30 in)",
+                        "Carbon emissions estimate: 168 kg"
+                    ]
+                }
+            ],
+            "total_duration": 170,
+            "carbon_emissions": {
+                "this_flight": 169000,
+                "typical_for_this_route": 202000,
+                "difference_percent": -16
+            },
+            "price": 1654,
+            "type": "Round trip",
+            "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/RO.png",
+            "extensions": [
+                "Checked baggage for a fee",
+                "Fare non-refundable, taxes may be refundable",
+                "Ticket changes for a fee",
+                "Bag and fare conditions depend on the return flight"
+            ],
+            "booking_token": "WyJDalJJVURoeldFUlplVkExYVZGQlZESk1hbEZDUnkwdExTMHRMUzB0TFhaM2VXUXlNa0ZCUVVGQlIyNDBiazVaUjBORk4wZEJFZ1ZTVHpNNE1ob0xDSmlNQ2hBQ0dnTlNUMDQ0SEhDc293ST0iLFtbIk9UUCIsIjIwMjYtMDYtMjIiLCJDREciLG51bGwsIk9FIiwiNzIzNSJdXSxbWyJDREciLCIyMDI2LTA2LTI4IiwiT1RQIixudWxsLCJSTyIsIjM4MiJdXV0="
         }
     ],
     "airports": [
@@ -105,8 +285,8 @@
             "departure": [
                 {
                     "airport": {
-                        "id": "BBU",
-                        "name": "Bucharest B\u0103neasa - Aurel Vlaicu International Airport"
+                        "id": "OTP",
+                        "name": "Bucharest Henri Coand\u0103 International Airport"
                     },
                     "city": "Bucharest",
                     "country": "Romania",
@@ -116,8 +296,8 @@
                 },
                 {
                     "airport": {
-                        "id": "OTP",
-                        "name": "Bucharest Henri Coand\u0103 International Airport"
+                        "id": "BBU",
+                        "name": "Bucharest B\u0103neasa - Aurel Vlaicu International Airport"
                     },
                     "city": "Bucharest",
                     "country": "Romania",
@@ -129,14 +309,36 @@
             "arrival": [
                 {
                     "airport": {
-                        "id": "FCO",
-                        "name": "Leonardo da Vinci International Airport"
+                        "id": "LBG",
+                        "name": "Paris Airport-Le Bourget"
                     },
-                    "city": "Rome",
-                    "country": "Italy",
-                    "country_code": "IT",
-                    "image": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcT2IU9ZUmvhvThfVJdnmh0sazh2RYI04-GSv0_GLCW7m3TnPpi1XYRNkIuXyL-bdJRgPn7Akcbg6zmDzw",
-                    "thumbnail": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcRM_5snkSVZsnpG8dhW0NGx_Pdwk592nbBjmyqu-UxZDclvuBr6HXfXd0Fm7TYGVQpVCCr4RC6TGTmOgyP6KwpvZr0tGGnpZ7ukzP8RPLA"
+                    "city": "Paris",
+                    "country": "France",
+                    "country_code": "FR",
+                    "image": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcQGx8ii2KbSDdbdzfKye5oDN2bwBA6audqI7XUEf2iMRZezpn_ZbQe1ZIuvUSH-8XOMe958umDwSsAF1w",
+                    "thumbnail": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcSyQJ-woNs0iO22mPSkmRUM5gcsTbbYeypQ6BBTeFxXr90mqTxZl57Fdq2CDuLn4w7cKZ8TT9_zZhOpF57rIpA7yWKQnqKvkKIf9Y-qJDo"
+                },
+                {
+                    "airport": {
+                        "id": "CDG",
+                        "name": "Paris Charles de Gaulle Airport"
+                    },
+                    "city": "Paris",
+                    "country": "France",
+                    "country_code": "FR",
+                    "image": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcQGx8ii2KbSDdbdzfKye5oDN2bwBA6audqI7XUEf2iMRZezpn_ZbQe1ZIuvUSH-8XOMe958umDwSsAF1w",
+                    "thumbnail": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcSyQJ-woNs0iO22mPSkmRUM5gcsTbbYeypQ6BBTeFxXr90mqTxZl57Fdq2CDuLn4w7cKZ8TT9_zZhOpF57rIpA7yWKQnqKvkKIf9Y-qJDo"
+                },
+                {
+                    "airport": {
+                        "id": "ORY",
+                        "name": "Paris Orly Airport"
+                    },
+                    "city": "Paris",
+                    "country": "France",
+                    "country_code": "FR",
+                    "image": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcQGx8ii2KbSDdbdzfKye5oDN2bwBA6audqI7XUEf2iMRZezpn_ZbQe1ZIuvUSH-8XOMe958umDwSsAF1w",
+                    "thumbnail": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcSyQJ-woNs0iO22mPSkmRUM5gcsTbbYeypQ6BBTeFxXr90mqTxZl57Fdq2CDuLn4w7cKZ8TT9_zZhOpF57rIpA7yWKQnqKvkKIf9Y-qJDo"
                 }
             ]
         },
@@ -144,21 +346,43 @@
             "departure": [
                 {
                     "airport": {
-                        "id": "FCO",
-                        "name": "Leonardo da Vinci International Airport"
+                        "id": "LBG",
+                        "name": "Paris Airport-Le Bourget"
                     },
-                    "city": "Rome",
-                    "country": "Italy",
-                    "country_code": "IT",
-                    "image": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcT2IU9ZUmvhvThfVJdnmh0sazh2RYI04-GSv0_GLCW7m3TnPpi1XYRNkIuXyL-bdJRgPn7Akcbg6zmDzw",
-                    "thumbnail": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcRM_5snkSVZsnpG8dhW0NGx_Pdwk592nbBjmyqu-UxZDclvuBr6HXfXd0Fm7TYGVQpVCCr4RC6TGTmOgyP6KwpvZr0tGGnpZ7ukzP8RPLA"
+                    "city": "Paris",
+                    "country": "France",
+                    "country_code": "FR",
+                    "image": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcQGx8ii2KbSDdbdzfKye5oDN2bwBA6audqI7XUEf2iMRZezpn_ZbQe1ZIuvUSH-8XOMe958umDwSsAF1w",
+                    "thumbnail": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcSyQJ-woNs0iO22mPSkmRUM5gcsTbbYeypQ6BBTeFxXr90mqTxZl57Fdq2CDuLn4w7cKZ8TT9_zZhOpF57rIpA7yWKQnqKvkKIf9Y-qJDo"
+                },
+                {
+                    "airport": {
+                        "id": "CDG",
+                        "name": "Paris Charles de Gaulle Airport"
+                    },
+                    "city": "Paris",
+                    "country": "France",
+                    "country_code": "FR",
+                    "image": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcQGx8ii2KbSDdbdzfKye5oDN2bwBA6audqI7XUEf2iMRZezpn_ZbQe1ZIuvUSH-8XOMe958umDwSsAF1w",
+                    "thumbnail": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcSyQJ-woNs0iO22mPSkmRUM5gcsTbbYeypQ6BBTeFxXr90mqTxZl57Fdq2CDuLn4w7cKZ8TT9_zZhOpF57rIpA7yWKQnqKvkKIf9Y-qJDo"
+                },
+                {
+                    "airport": {
+                        "id": "ORY",
+                        "name": "Paris Orly Airport"
+                    },
+                    "city": "Paris",
+                    "country": "France",
+                    "country_code": "FR",
+                    "image": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcQGx8ii2KbSDdbdzfKye5oDN2bwBA6audqI7XUEf2iMRZezpn_ZbQe1ZIuvUSH-8XOMe958umDwSsAF1w",
+                    "thumbnail": "https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcSyQJ-woNs0iO22mPSkmRUM5gcsTbbYeypQ6BBTeFxXr90mqTxZl57Fdq2CDuLn4w7cKZ8TT9_zZhOpF57rIpA7yWKQnqKvkKIf9Y-qJDo"
                 }
             ],
             "arrival": [
                 {
                     "airport": {
-                        "id": "BBU",
-                        "name": "Bucharest B\u0103neasa - Aurel Vlaicu International Airport"
+                        "id": "OTP",
+                        "name": "Bucharest Henri Coand\u0103 International Airport"
                     },
                     "city": "Bucharest",
                     "country": "Romania",
@@ -168,8 +392,8 @@
                 },
                 {
                     "airport": {
-                        "id": "OTP",
-                        "name": "Bucharest Henri Coand\u0103 International Airport"
+                        "id": "BBU",
+                        "name": "Bucharest B\u0103neasa - Aurel Vlaicu International Airport"
                     },
                     "city": "Bucharest",
                     "country": "Romania",

@@ -117,6 +117,7 @@ class AccomodationBookingRequest(BaseModel):
 class AccomodationBookingResponse(BaseModel):
     """Schema for accomodation booking response."""
     message: str
+    booking_url: str
 
 
 # class ExploreResponse(BaseModel):
