@@ -764,7 +764,7 @@ export default function ItineraryStage() {
                   )}
                   {dayItems.length === 0 ? (
                     <div className="text-xs text-gray-400 border border-dashed border-gray-200 rounded-lg px-3 py-4 text-center">
-                      Drag items here
+                      No items scheduled yet
                     </div>
                   ) : (
                     <div className="space-y-3">

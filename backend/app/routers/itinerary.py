@@ -26,6 +26,16 @@ def poi_point(poi: schemas.ItineraryPOI) -> tuple[float, float]:
     return (poi.coordinates.lat, poi.coordinates.lng)
 
 def kmeans_cluster(pois: list[schemas.ItineraryPOI], days: int, iterations: int = 12) -> list[list[schemas.ItineraryPOI]]:
+    """Cluster POIs into day buckets using a lightweight k-means approach.
+
+    Args:
+        pois: List of POIs to cluster.
+        days: Target number of clusters (days).
+        iterations: Max refinement passes when updating centroids.
+
+    Returns:
+        A list of clusters sized to the requested day count.
+    """
     if days <= 0:
         return []
     if not pois:
@@ -64,6 +74,11 @@ def enforce_daily_limit(
     days: list[list[schemas.ItineraryPOI]],
     daily_limit_mins: int
 ) -> tuple[list[list[schemas.ItineraryPOI]], list[schemas.ItineraryPOI]]:
+    """Trim each day to stay within the daily time limit.
+
+    Removes lower-priority or longer-duration items first, returning the
+    adjusted days and the overflow list to keep in the unscheduled bucket.
+    """
     overflow: list[schemas.ItineraryPOI] = []
     adjusted_days: list[list[schemas.ItineraryPOI]] = []
 
@@ -89,6 +104,10 @@ def enforce_daily_limit(
     return adjusted_days, overflow
 
 def nearest_neighbor_route(pois: list[schemas.ItineraryPOI]) -> list[schemas.ItineraryPOI]:
+    """Greedy nearest-neighbor routing heuristic.
+
+    Starts from the first POI and repeatedly visits the closest remaining POI.
+    """
     if len(pois) <= 2:
         return pois
 
