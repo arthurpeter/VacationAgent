@@ -3,6 +3,33 @@
 from typing import Any, Optional
 from pydantic import BaseModel
 
+class Coordinates(BaseModel):
+    lat: float
+    lng: float
+
+class ItineraryPOI(BaseModel):
+    id: str
+    name: str
+    priority: int = 3
+    durationMins: int
+    todPreference: Optional[str] = "any"
+    coordinates: Coordinates
+
+class ItineraryAllocateRequest(BaseModel):
+    unscheduled: list[ItineraryPOI]
+    days: int
+    transitMode: str
+    pace: Optional[str] = None
+
+class ItineraryAllocateResponse(BaseModel):
+    days: list[list[ItineraryPOI]]
+    unscheduled: list[ItineraryPOI]
+    daily_limit_mins: int
+
+class ItineraryRouteDayRequest(BaseModel):
+    pois: list[ItineraryPOI]
+    transitMode: Optional[str] = None
+
 class SessionDataUpdate(BaseModel):
     currency: Optional[str] = None
     from_date: Optional[str] = None
