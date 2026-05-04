@@ -8,7 +8,7 @@ from sqlalchemy import select, update
 from authx import TokenPayload
 from app.core.auth import access_token_header
 from datetime import datetime
-from urllib.parse import urlparse, urlencode, parse_qsl, urlunparse
+from urllib.parse import parse_qs, urlparse, urlencode, parse_qsl, urlunparse
 from app.core.airport_data import AIRPORTS_DB
 
 
@@ -605,29 +605,28 @@ async def get_hotel_details(
 
         if base_url:
             url_parts = list(urlparse(base_url))
-            query = dict(parse_qsl(url_parts[4]))
             
-            query.update({
-                'checkin': data.arrival_date,
-                'checkout': data.departure_date,
-                'group_adults': data.adults,
-                'req_adults': data.adults,
-                'no_rooms': data.room_qty,
-            })
+            query = parse_qs(url_parts[4])
+            
+            query['checkin'] = [data.arrival_date]
+            query['checkout'] = [data.departure_date]
+            query['group_adults'] = [data.adults]
+            query['req_adults'] = [data.adults]
+            query['no_rooms'] = [data.room_qty]
             
             if data.children:
-                child_list = data.children.split(',')
-                num_children = len(child_list)
-                query['group_children'] = num_children
-                query['req_children'] = num_children
-                for age in child_list:
-                    query['age'] = age.strip()
-                    query['req_age'] = age.strip()
-            else:
-                query['group_children'] = 0
-                query['req_children'] = 0
+                child_list = [age.strip() for age in data.children.split(',')]
                 
-            url_parts[4] = urlencode(query)
+                query['group_children'] = [len(child_list)]
+                query['req_children'] = [len(child_list)]
+                
+                query['age'] = child_list
+                query['req_age'] = child_list
+            else:
+                query['group_children'] = [0]
+                query['req_children'] = [0]
+                
+            url_parts[4] = urlencode(query, doseq=True)
             deep_link_url = urlunparse(url_parts)
 
         response = schemas.HotelDetailsResponse(
