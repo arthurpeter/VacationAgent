@@ -172,6 +172,11 @@ export default function ItineraryStage() {
     days: []
   });
   const [transitStrategy, setTransitStrategy] = useState(null);
+  const [manualDays, setManualDays] = useState(1);
+  const [isAllocating, setIsAllocating] = useState(false);
+  const [allocationError, setAllocationError] = useState(null);
+  const [optimizingDayIndex, setOptimizingDayIndex] = useState(null);
+  const [optimizationErrors, setOptimizationErrors] = useState({});
 
   useEffect(() => {
     const loadTransitStrategy = async () => {
@@ -191,6 +196,20 @@ export default function ItineraryStage() {
 
     loadTransitStrategy();
   }, [sessionId]);
+
+  const computedDays = useMemo(() => {
+    if (!session?.from_date || !session?.to_date) return 1;
+    const start = new Date(session.from_date);
+    const end = new Date(session.to_date);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 1;
+    const diffMs = end.getTime() - start.getTime();
+    if (diffMs < 0) return 1;
+    return Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1);
+  }, [session?.from_date, session?.to_date]);
+
+  useEffect(() => {
+    setManualDays(computedDays);
+  }, [computedDays]);
 
   const selectedPoiIds = useMemo(() => {
     const ids = new Set(tripState.unscheduled.map((poi) => poi.id));
@@ -246,6 +265,178 @@ export default function ItineraryStage() {
       ...prev,
       unscheduled: prev.unscheduled.filter((poi) => poi.id !== poiId)
     }));
+  };
+
+  const ensureDayCount = (days, count) => {
+    const nextDays = days.map((day) => [...day]);
+    while (nextDays.length < count) {
+      nextDays.push([]);
+    }
+    return nextDays;
+  };
+
+  const handleAllocateItinerary = async () => {
+    if (tripState.unscheduled.length === 0) {
+      setAllocationError('Select at least one place before generating the itinerary.');
+      return;
+    }
+    if (!manualDays || manualDays < 1) {
+      setAllocationError('Please set a valid number of days.');
+      return;
+    }
+
+    setIsAllocating(true);
+    setAllocationError(null);
+    const payload = {
+      unscheduled: tripState.unscheduled,
+      days: manualDays,
+      transitMode: tripState.preferences.transitMode,
+      pace: tripState.preferences.pace
+    };
+    console.log('Itinerary allocate payload:', payload);
+
+    try {
+      const response = await fetchWithAuth(`${API_BASE_URL}/itinerary/allocate`, payload, 'POST');
+      if (!response) {
+        throw new Error('No response received for allocation.');
+      }
+      if (!response.ok) {
+        throw new Error(`Allocation failed with status ${response.status}`);
+      }
+      const data = await response.json();
+      console.log('Itinerary allocate response:', data);
+
+      setTripState((prev) => ({
+        ...prev,
+        days: data.days || [],
+        unscheduled: data.unscheduled || []
+      }));
+      setCurrentStage(4);
+    } catch (error) {
+      console.error('Failed to allocate itinerary:', error);
+      setAllocationError('Unable to allocate the itinerary. Please try again.');
+    } finally {
+      setIsAllocating(false);
+    }
+  };
+
+  const moveUnscheduledToDay = (poiId, dayIndex) => {
+    setTripState((prev) => {
+      const poi = prev.unscheduled.find((item) => item.id === poiId);
+      if (!poi) return prev;
+
+      const targetCount = Math.max(manualDays, prev.days.length || 0);
+      const nextDays = ensureDayCount(prev.days, targetCount);
+      nextDays[dayIndex] = [...nextDays[dayIndex], poi];
+
+      return {
+        ...prev,
+        unscheduled: prev.unscheduled.filter((item) => item.id !== poiId),
+        days: nextDays
+      };
+    });
+  };
+
+  const moveDayToUnscheduled = (dayIndex, poiIndex) => {
+    setTripState((prev) => {
+      if (!prev.days[dayIndex]) return prev;
+      const targetCount = Math.max(manualDays, prev.days.length || 0);
+      const nextDays = ensureDayCount(prev.days, targetCount);
+      const dayItems = [...nextDays[dayIndex]];
+      const [removed] = dayItems.splice(poiIndex, 1);
+      if (!removed) return prev;
+
+      nextDays[dayIndex] = dayItems;
+
+      return {
+        ...prev,
+        unscheduled: [...prev.unscheduled, removed],
+        days: nextDays
+      };
+    });
+  };
+
+  const moveDayToDay = (fromDay, toDay, poiIndex) => {
+    setTripState((prev) => {
+      if (!prev.days[fromDay]) return prev;
+      const targetCount = Math.max(manualDays, prev.days.length || 0);
+      const nextDays = ensureDayCount(prev.days, targetCount);
+      const originItems = [...nextDays[fromDay]];
+      const [moved] = originItems.splice(poiIndex, 1);
+      if (!moved) return prev;
+
+      nextDays[fromDay] = originItems;
+      nextDays[toDay] = [...nextDays[toDay], moved];
+
+      return {
+        ...prev,
+        days: nextDays
+      };
+    });
+  };
+
+  const movePoiWithinDay = (dayIndex, poiIndex, direction) => {
+    setTripState((prev) => {
+      if (!prev.days[dayIndex]) return prev;
+      const targetCount = Math.max(manualDays, prev.days.length || 0);
+      const nextDays = ensureDayCount(prev.days, targetCount);
+      const dayItems = [...nextDays[dayIndex]];
+      const nextIndex = poiIndex + direction;
+      if (nextIndex < 0 || nextIndex >= dayItems.length) return prev;
+
+      const [moved] = dayItems.splice(poiIndex, 1);
+      dayItems.splice(nextIndex, 0, moved);
+      nextDays[dayIndex] = dayItems;
+
+      return {
+        ...prev,
+        days: nextDays
+      };
+    });
+  };
+
+  const handleOptimizeDay = async (dayIndex) => {
+    const dayItems = tripState.days[dayIndex] || [];
+    if (dayItems.length < 2) return;
+
+    setOptimizingDayIndex(dayIndex);
+    setOptimizationErrors((prev) => ({ ...prev, [dayIndex]: null }));
+
+    const payload = {
+      pois: dayItems,
+      transitMode: tripState.preferences.transitMode
+    };
+    console.log('Route-day payload:', payload);
+
+    try {
+      const response = await fetchWithAuth(`${API_BASE_URL}/itinerary/route-day`, payload, 'POST');
+      if (!response) {
+        throw new Error('No response received for route optimization.');
+      }
+      if (!response.ok) {
+        throw new Error(`Routing failed with status ${response.status}`);
+      }
+      const data = await response.json();
+      console.log('Route-day response:', data);
+
+      setTripState((prev) => {
+        const targetCount = Math.max(manualDays, prev.days.length || 0);
+        const nextDays = ensureDayCount(prev.days, targetCount);
+        nextDays[dayIndex] = data;
+        return {
+          ...prev,
+          days: nextDays
+        };
+      });
+    } catch (error) {
+      console.error('Failed to optimize route:', error);
+      setOptimizationErrors((prev) => ({
+        ...prev,
+        [dayIndex]: 'Unable to optimize this day. Keeping your current order.'
+      }));
+    } finally {
+      setOptimizingDayIndex(null);
+    }
   };
 
   const renderStageIndicator = () => (
@@ -422,6 +613,233 @@ export default function ItineraryStage() {
     </div>
   );
 
+  const renderStageThree = () => (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+        <h2 className="text-xl font-black text-gray-800 flex items-center gap-2 mb-2">
+          <Sparkles size={20} className="text-blue-600" />
+          Smart Allocator
+        </h2>
+        <p className="text-sm text-gray-500">
+          We’ll cluster your picks into day-sized groups based on location and time.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+          <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+            <div className="text-xs text-gray-400 uppercase tracking-widest font-bold">Stops Selected</div>
+            <div className="text-2xl font-black text-gray-800 mt-2">{tripState.unscheduled.length}</div>
+          </div>
+          <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+            <div className="text-xs text-gray-400 uppercase tracking-widest font-bold">Transit Mode</div>
+            <div className="text-lg font-bold text-gray-800 mt-2 capitalize">{tripState.preferences.transitMode}</div>
+          </div>
+          <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+            <div className="text-xs text-gray-400 uppercase tracking-widest font-bold">Pace</div>
+            <div className="text-lg font-bold text-gray-800 mt-2 capitalize">{tripState.preferences.pace}</div>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-col md:flex-row md:items-end gap-4">
+          <div className="flex-1">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Trip Days</label>
+            <div className="mt-2 flex items-center gap-3">
+              <input
+                type="number"
+                min="1"
+                value={manualDays}
+                onChange={(e) => setManualDays(Math.max(1, Number(e.target.value) || 1))}
+                className="w-24 rounded-lg border border-gray-200 px-3 py-2 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-500">Auto-detected: {computedDays} days</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleAllocateItinerary}
+            disabled={isAllocating}
+            className="flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+          >
+            {isAllocating ? 'Allocating...' : 'Generate Itinerary'}
+          </button>
+        </div>
+
+        {allocationError && (
+          <div className="mt-4 bg-red-50 border border-red-100 text-red-600 text-sm font-medium rounded-xl px-4 py-3">
+            {allocationError}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderTimelineBoard = (showOptimize) => {
+    if (tripState.days.length === 0) {
+      return (
+        <div className="text-center py-12 text-gray-500">
+          <h2 className="text-xl font-black text-gray-800">Generate an Itinerary First</h2>
+          <p className="text-sm mt-2">Use the Smart Allocator to create day columns.</p>
+        </div>
+      );
+    }
+
+    const dayCount = Math.max(tripState.days.length, manualDays);
+    const dayIndices = Array.from({ length: dayCount }, (_, idx) => idx);
+
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-gray-500">
+          Use the controls below to move items between days. This keeps the MVP lightweight without extra drag-and-drop dependencies.
+        </p>
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr,3fr] gap-4">
+          <div className="bg-gray-50 rounded-2xl border border-gray-200 p-4 h-fit">
+            <h3 className="text-sm font-black text-gray-800 uppercase tracking-widest mb-4">
+              Unscheduled / Parking Lot
+            </h3>
+            {tripState.unscheduled.length === 0 ? (
+              <p className="text-sm text-gray-500">All selected places are scheduled.</p>
+            ) : (
+              <div className="space-y-3">
+                {tripState.unscheduled.map((poi) => (
+                  <div key={poi.id} className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-sm font-bold text-gray-800">{poi.name}</div>
+                        <div className="text-[10px] text-gray-400 uppercase tracking-widest">
+                          {getPriorityLabel(poi.priority)} · {formatDuration(poi.durationMins)}
+                        </div>
+                      </div>
+                    </div>
+                    <select
+                      defaultValue=""
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        if (!Number.isNaN(value)) {
+                          moveUnscheduledToDay(poi.id, value);
+                        }
+                        e.target.value = "";
+                      }}
+                      className="mt-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600"
+                    >
+                      <option value="" disabled>
+                        Move to day...
+                      </option>
+                      {dayIndices.map((dayIndex) => (
+                        <option key={dayIndex} value={dayIndex}>
+                          Day {dayIndex + 1}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {dayIndices.map((dayIndex) => {
+              const dayItems = tripState.days[dayIndex] || [];
+              const dayDuration = dayItems.reduce((sum, item) => sum + item.durationMins, 0);
+              return (
+                <div key={`day-${dayIndex}`} className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="text-sm font-black text-gray-800">Day {dayIndex + 1}</h4>
+                      <span className="text-xs text-gray-400">{formatDuration(dayDuration)}</span>
+                    </div>
+                    {showOptimize && (
+                      <button
+                        type="button"
+                        onClick={() => handleOptimizeDay(dayIndex)}
+                        disabled={optimizingDayIndex === dayIndex}
+                        className="px-3 py-2 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold hover:bg-blue-600 hover:text-white transition disabled:opacity-60"
+                      >
+                        {optimizingDayIndex === dayIndex ? 'Optimizing...' : '✨ Optimize Route'}
+                      </button>
+                    )}
+                  </div>
+                  {optimizationErrors[dayIndex] && (
+                    <div className="mb-3 text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                      {optimizationErrors[dayIndex]}
+                    </div>
+                  )}
+                  {dayItems.length === 0 ? (
+                    <div className="text-xs text-gray-400 border border-dashed border-gray-200 rounded-lg px-3 py-4 text-center">
+                      Drag items here
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {dayItems.map((poi, poiIndex) => (
+                        <div key={poi.id} className="border border-gray-100 rounded-xl p-3 bg-gray-50">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <div className="text-sm font-bold text-gray-800">{poi.name}</div>
+                              <div className="text-[10px] text-gray-400 uppercase tracking-widest">
+                                {getPriorityLabel(poi.priority)} · {formatDuration(poi.durationMins)}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            <button
+                              type="button"
+                              onClick={() => movePoiWithinDay(dayIndex, poiIndex, -1)}
+                              className="px-3 py-1 rounded-lg border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100"
+                            >
+                              Up
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => movePoiWithinDay(dayIndex, poiIndex, 1)}
+                              className="px-3 py-1 rounded-lg border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100"
+                            >
+                              Down
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveDayToUnscheduled(dayIndex, poiIndex)}
+                              className="px-3 py-1 rounded-lg border border-red-100 text-xs font-bold text-red-500 hover:bg-red-50"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          {dayIndices.length > 1 && (
+                            <select
+                              defaultValue=""
+                              onChange={(e) => {
+                                const value = Number(e.target.value);
+                                if (!Number.isNaN(value)) {
+                                  moveDayToDay(dayIndex, value, poiIndex);
+                                }
+                                e.target.value = "";
+                              }}
+                              className="mt-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600"
+                            >
+                              <option value="" disabled>
+                                Move to day...
+                              </option>
+                              {dayIndices.filter((idx) => idx !== dayIndex).map((idx) => (
+                                <option key={idx} value={idx}>
+                                  Day {idx + 1}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderStageFour = () => renderTimelineBoard(false);
+
+  const renderStageFive = () => renderTimelineBoard(true);
+
   return (
     <PageTransition className="flex w-full h-full bg-gray-50/50 overflow-y-auto font-sans">
       <div className="max-w-6xl mx-auto w-full px-6 py-8 space-y-8">
@@ -444,24 +862,9 @@ export default function ItineraryStage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
           {currentStage === 1 && renderStageOne()}
           {currentStage === 2 && renderStageTwo()}
-          {currentStage === 3 && (
-            <div className="text-center py-12 text-gray-500">
-              <h2 className="text-xl font-black text-gray-800">Allocator Coming Next</h2>
-              <p className="text-sm mt-2">We will cluster your picks into day plans here.</p>
-            </div>
-          )}
-          {currentStage === 4 && (
-            <div className="text-center py-12 text-gray-500">
-              <h2 className="text-xl font-black text-gray-800">Timeline Editor Coming Next</h2>
-              <p className="text-sm mt-2">Drag, drop, and reorder your daily cards.</p>
-            </div>
-          )}
-          {currentStage === 5 && (
-            <div className="text-center py-12 text-gray-500">
-              <h2 className="text-xl font-black text-gray-800">Daily Optimizer Coming Next</h2>
-              <p className="text-sm mt-2">Optimize each day with a single click.</p>
-            </div>
-          )}
+          {currentStage === 3 && renderStageThree()}
+          {currentStage === 4 && renderStageFour()}
+          {currentStage === 5 && renderStageFive()}
         </div>
 
         <div className="flex items-center justify-between">
