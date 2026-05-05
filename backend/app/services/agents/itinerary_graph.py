@@ -15,6 +15,13 @@ from app.core.logger import get_logger
 
 log = get_logger(__name__)
 
+def route_action(state: ItineraryState):
+    """Routes based on explicit action flags from the UI."""
+    action = state.get("action")
+    if action == "fetch_initial_pois":
+        return "fetching_initial_pois"
+    return route_phase(state)
+
 def route_phase(state: ItineraryState):
     """
     The Gatekeeper: Routes the graph based on the user's UI action.
@@ -70,6 +77,7 @@ def route_transit(state: ItineraryState):
 def generate_graph(checkpointer=None):
     
     builder = StateGraph(ItineraryState)
+    builder.add_node("fetching_initial_pois", fetching_initial_pois)
     builder.add_node("global_architect", global_architect)
     builder.add_node("transit_advisor", transit_advisor)
     builder.add_node("transit_tools", ToolNode([web_search_tool]))
@@ -84,10 +92,12 @@ def generate_graph(checkpointer=None):
     # builder.add_node("detailer_guard", detailer_guard)
     # builder.add_node("link_finder_guard", link_finder_guard)
 
-    builder.add_conditional_edges(START, route_phase, {
+    builder.add_conditional_edges(START, route_action, {
+            "fetching_initial_pois": "fetching_initial_pois",
             "focused_detailer": "focused_detailer",
             "global_architect": "global_architect"
         })
+    builder.add_edge("fetching_initial_pois", END)
     builder.add_edge("global_architect", "transit_advisor")
     builder.add_conditional_edges("transit_advisor", route_transit, {
             "transit_tools": "transit_tools",
@@ -119,10 +129,11 @@ def generate_graph(checkpointer=None):
     return builder.compile(checkpointer=checkpointer)
 
 async def stream_itinerary_message(
-    session_id: int, 
-    user_message: str, 
-    db: AsyncSession, 
-    checkpointer: AsyncPostgresSaver
+    session_id: int,
+    user_message: str | None,
+    db: AsyncSession,
+    checkpointer: AsyncPostgresSaver,
+    action: str | None = None
 ):
     graph = generate_graph(checkpointer) 
     config = {"configurable": {"thread_id": f"itinerary_{session_id}"}}
@@ -132,12 +143,17 @@ async def stream_itinerary_message(
     if not current_state.values:
         log.info(f"Starting new LangGraph itinerary thread for session {session_id}...")
         input_data = await get_initial_itinerary_state(db, session_id)
-        input_data["messages"].append(HumanMessage(content=user_message))
+        if action:
+            input_data["action"] = action
+        if user_message:
+            input_data["messages"].append(HumanMessage(content=user_message))
     else:
         log.info(f"Resuming existing LangGraph itinerary thread for session {session_id}...")
-        input_data = {
-            "messages": [HumanMessage(content=user_message)]
-        }
+        input_data = {}
+        if action:
+            input_data["action"] = action
+        if user_message:
+            input_data["messages"] = [HumanMessage(content=user_message)]
 
     final_ai_text = ""
 
@@ -160,6 +176,7 @@ async def stream_itinerary_message(
                 "daily_plans": node_updates.get("daily_plans"),
                 "daily_links": node_updates.get("daily_links"),
                 "transit_strategy": node_updates.get("transit_strategy"),
+                "pois": node_updates.get("pois"),
             }
             
             yield f"data: {orjson.dumps(payload, option=orjson.OPT_NON_STR_KEYS).decode()}\n\n"

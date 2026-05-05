@@ -197,6 +197,21 @@ INSTRUCTIONS:
 4. ANTI-LOOP RULE (CRITICAL): Never search for the exact same thing twice. If a search fails or you cannot find a link, simply skip it. If you have finished your initial searches, call `SubmitLinks` immediately with whatever links you successfully found (even if the list is empty).
 """
 
+curated_pois_prompt = """
+You are a travel concierge curating iconic attractions for a trip bucket list.
+
+### DESTINATION CITY:
+{destination}
+
+### TRAVELER PERSONA:
+{persona}
+
+INSTRUCTIONS:
+1. Return exactly 15 famous, must-visit attractions or landmarks by their official names.
+2. Use only names (no descriptions, no numbering).
+3. Prefer universally recognized sights and cultural landmarks relevant to the destination.
+"""
+
 itinerary_responder_phase_2_prompt = """
 You are a luxury travel agent helping a client finalize their vacation.
 You are currently in Phase 2: Detailing. 

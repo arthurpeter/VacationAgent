@@ -26,6 +26,8 @@ class ItineraryState(TypedDict):
     
     persona_context: Optional[str] = None
     data: Optional[dict] = None
+    action: Optional[str] = None
+    pois: Optional[List[dict]] = None
     daily_themes: Optional[dict[int, str]] = None
     daily_plans: Optional[dict[int, str]] = None
     daily_links: Optional[dict[int, List[dict[str, str]]]] = None

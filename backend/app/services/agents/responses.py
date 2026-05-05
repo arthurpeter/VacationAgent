@@ -59,3 +59,7 @@ class SaveTransitStrategy(BaseModel):
     description: str = Field(description="A brief explanation of why this is the best option and what it covers.")
     price: str = Field(description="The estimated cost (e.g., '€29.90', '£15.00').")
     purchase_url: str = Field(description="The official website URL where the user can buy or read more about this exact pass.")
+
+class CuratedPoiNames(BaseModel):
+    """Structured response for initial POI names."""
+    places: List[str] = Field(description="List of must-visit attraction names.")

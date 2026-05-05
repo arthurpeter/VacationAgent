@@ -5,16 +5,25 @@ from app.services.agents.prompts import *
 from langgraph.store.base import BaseStore
 from langgraph.graph import END
 
-from app.services.agents.responses import ArchitectResult, ExtractionResult, DetailerResult, SaveTransitStrategy, SubmitLinks
+from app.services.agents.responses import (
+    ArchitectResult,
+    CuratedPoiNames,
+    ExtractionResult,
+    DetailerResult,
+    SaveTransitStrategy,
+    SubmitLinks
+)
 from app.core.config import settings
 
 from datetime import datetime
-from sqlalchemy import update, select
+from sqlalchemy import update, select, func
 from app.core.database import SessionLocal
 from app.models.vacation_session import VacationSession
+from app.models.global_attraction import GlobalAttraction
 from app.services.agents.utils import is_llm_null, resolve_location, get_resumed_state
 from langchain_core.messages import HumanMessage, RemoveMessage, SystemMessage
 from app.services.agents.tools import responder_tools, link_finder_tools, detailer_tools, web_search_tool
+from app.services.agents.opentripmap import get_city_coordinates, resolve_curated_places
 
 
 llm = settings.llm
@@ -191,6 +200,121 @@ async def responder(state: DiscoveryState) -> dict:
 
 
 # Itinerary Graph Nodes
+
+def _format_poi_payload(place: GlobalAttraction | dict) -> dict:
+    if isinstance(place, GlobalAttraction):
+        return {
+            "id": place.external_place_id or place.id,
+            "name": place.name,
+            "category": place.category,
+            "durationMins": place.duration_mins or 90,
+            "image": place.image_url,
+            "latitude": place.latitude,
+            "longitude": place.longitude
+        }
+
+    return {
+        "id": place.get("external_place_id"),
+        "name": place.get("name"),
+        "category": place.get("category"),
+        "durationMins": 90,
+        "image": place.get("image"),
+        "latitude": place.get("latitude"),
+        "longitude": place.get("longitude")
+    }
+
+
+async def fetching_initial_pois(state: ItineraryState) -> dict:
+    """
+    Stage 0: Fetches the initial curated POIs for the Trip Bucket.
+    """
+    trip_data = state.get("data", {})
+    destination = (trip_data.get("destination") or "").strip()
+    if not destination:
+        return {"pois": [], "action": None}
+
+    async with SessionLocal() as db:
+        stmt = (
+            select(GlobalAttraction)
+            .where(func.lower(GlobalAttraction.city_name) == destination.lower())
+            .limit(15)
+        )
+        result = await db.execute(stmt)
+        cached_places = result.scalars().all()
+
+        if len(cached_places) >= 10:
+            formatted = [_format_poi_payload(place) for place in cached_places]
+            return {"pois": formatted, "action": None}
+
+    coords = await get_city_coordinates(destination)
+    if not coords:
+        return {"pois": [], "action": None}
+
+    instructions = curated_pois_prompt.format(
+        destination=destination,
+        persona=state.get("persona_context", "No persona provided.")
+    )
+    structured_llm = llm.with_structured_output(CuratedPoiNames)
+    response: CuratedPoiNames = await structured_llm.ainvoke(instructions)
+
+    curated_names = []
+    seen = set()
+    for name in response.places:
+        cleaned = name.strip()
+        if not cleaned:
+            continue
+        lowered = cleaned.lower()
+        if lowered in seen:
+            continue
+        seen.add(lowered)
+        curated_names.append(cleaned)
+        if len(curated_names) >= 15:
+            break
+
+    if not curated_names:
+        return {"pois": [], "action": None}
+
+    resolved_places = await resolve_curated_places(
+        curated_names,
+        coords["lat"],
+        coords["lon"]
+    )
+    if not resolved_places:
+        return {"pois": [], "action": None}
+
+    async with SessionLocal() as db:
+        external_ids = [place["external_place_id"] for place in resolved_places if place.get("external_place_id")]
+        if external_ids:
+            existing = await db.execute(
+                select(GlobalAttraction.external_place_id).where(
+                    GlobalAttraction.external_place_id.in_(external_ids)
+                )
+            )
+            existing_ids = set(existing.scalars().all())
+        else:
+            existing_ids = set()
+
+        for place in resolved_places:
+            if place.get("external_place_id") in existing_ids:
+                continue
+            db.add(
+                GlobalAttraction(
+                    external_place_id=place.get("external_place_id"),
+                    city_name=destination,
+                    name=place.get("name") or "",
+                    category=place.get("category"),
+                    description=place.get("description"),
+                    image_url=place.get("image"),
+                    latitude=place.get("latitude") or coords["lat"],
+                    longitude=place.get("longitude") or coords["lon"],
+                    duration_mins=90
+                )
+            )
+        await db.commit()
+
+    formatted_places = [_format_poi_payload(place) for place in resolved_places]
+    return {"pois": formatted_places, "action": None}
+
 
 async def global_architect(state: ItineraryState) -> dict:
     """
