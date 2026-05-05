@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Union
 
 from app.services.agents.memory import DiscoveryState, ItineraryState
 from app.services.agents.prompts import *
@@ -201,7 +201,7 @@ async def responder(state: DiscoveryState) -> dict:
 
 # Itinerary Graph Nodes
 
-def _format_poi_payload(place: GlobalAttraction | dict) -> dict:
+def _format_poi_payload(place: Union[GlobalAttraction, dict]) -> dict:
     if isinstance(place, GlobalAttraction):
         return {
             "id": place.external_place_id or place.id,

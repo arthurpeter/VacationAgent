@@ -1,4 +1,5 @@
 import orjson
+from typing import Optional
 
 from langgraph.graph import START, END, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
@@ -130,10 +131,10 @@ def generate_graph(checkpointer=None):
 
 async def stream_itinerary_message(
     session_id: int,
-    user_message: str | None,
+    user_message: Optional[str],
     db: AsyncSession,
     checkpointer: AsyncPostgresSaver,
-    action: str | None = None
+    action: Optional[str] = None
 ):
     graph = generate_graph(checkpointer) 
     config = {"configurable": {"thread_id": f"itinerary_{session_id}"}}

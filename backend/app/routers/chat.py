@@ -7,6 +7,7 @@ from sqlalchemy import select, text, update
 from authx import TokenPayload
 from app.core.auth import access_token_header
 from datetime import datetime
+from typing import Optional
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
@@ -22,8 +23,8 @@ log = get_logger(__name__)
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
 class ChatRequest(BaseModel):
-    message: str | None = None
-    action: str | None = None
+    message: Optional[str] = None
+    action: Optional[str] = None
 
 @router.get("/discovery/messages/{session_id}")
 async def get_discovery_messages(
