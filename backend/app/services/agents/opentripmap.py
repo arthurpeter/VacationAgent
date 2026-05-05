@@ -9,7 +9,7 @@ from app.core.logger import get_logger
 
 OTM_BASE_URL = "https://api.opentripmap.com/0.1/en/places"
 OTM_API_KEY = settings.OPENTRIPMAP_API_KEY
-AUTOSUGGEST_RADIUS_METERS = 20000  # Broad radius to catch landmark matches near city center.
+AUTOSUGGEST_RADIUS_METERS = 20000  # 20km radius in meters to catch landmark matches near city center.
 KINDS_SEPARATOR = ","
 CATEGORY_WORD_SEPARATOR = "_"
 log = get_logger(__name__)

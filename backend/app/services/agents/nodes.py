@@ -306,6 +306,8 @@ async def fetching_initial_pois(state: ItineraryState) -> dict:
         for place in resolved_places:
             if place.get("external_place_id") in existing_ids:
                 continue
+            latitude = place.get("latitude")
+            longitude = place.get("longitude")
             db.add(
                 GlobalAttraction(
                     external_place_id=place.get("external_place_id"),
@@ -314,8 +316,8 @@ async def fetching_initial_pois(state: ItineraryState) -> dict:
                     category=place.get("category"),
                     description=place.get("description"),
                     image_url=place.get("image"),
-                    latitude=place.get("latitude") or coords["lat"],
-                    longitude=place.get("longitude") or coords["lon"],
+                    latitude=latitude if latitude is not None else coords["lat"],
+                    longitude=longitude if longitude is not None else coords["lon"],
                     duration_mins=DEFAULT_POI_DURATION_MINS
                 )
             )
