@@ -15,106 +15,22 @@ from app.core.logger import get_logger
 
 log = get_logger(__name__)
 
-def route_phase(state: ItineraryState):
-    """
-    The Gatekeeper: Routes the graph based on the user's UI action.
-    """
-    if state.get("are_themes_confirmed"):
-        return "focused_detailer"
-    return "global_architect"
-
-def route_link_finder(state: ItineraryState):
-    """The Traffic Cop for the ReAct loop."""
-    messages = state.get("messages", [])
-    if not messages:
-        return "itinerary_responder"
-    
-    last_message = messages[-1]
-    
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        if any(tc["name"] == "SubmitLinks" for tc in last_message.tool_calls):
-            return "save_links_and_cleanup"
-        
-        return "link_finder_tools"
-        
-    return "link_finder_guard"
-
-def route_detailer(state: ItineraryState):
-    """Decides whether to call detailer tools or not."""
-    messages = state.get("messages", [])
-    if not messages:
-        return "itinerary_responder"
-    
-    last_message = messages[-1]
-    
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        if any(tc["name"] == "DetailerResult" for tc in last_message.tool_calls):
-            return "save_details_and_cleanup"
-        
-        return "detailer_tools"
-        
-    return "detailer_guard"
-
-def route_transit(state: ItineraryState):
-    """Transit Advisor ReAct loop."""
-    messages = state.get("messages", [])
-    if not messages: return "itinerary_responder"
-    last_message = messages[-1]
-    
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        if any(tc["name"] == "SaveTransitStrategy" for tc in last_message.tool_calls):
-            return "save_transit_and_cleanup"
-        return "transit_tools"
-    return "itinerary_responder"
+def route_stage(state: ItineraryState):
+    if state.stage == 0:
+        return "picking_attractions"
+    elif state.stage == 1:
+        return "picking_transit"
+    elif state.stage == 2:
+        return "organizing_days"
+    elif state.stage == 3:
+        return "organizing_attractions"
+    else:
+        return "picking_attractions"
 
 def generate_graph(checkpointer=None):
     
     builder = StateGraph(ItineraryState)
-    builder.add_node("global_architect", global_architect)
-    builder.add_node("transit_advisor", transit_advisor)
-    builder.add_node("transit_tools", ToolNode([web_search_tool]))
-    builder.add_node("save_transit_and_cleanup", save_transit_and_cleanup)
-    builder.add_node("focused_detailer", focused_detailer)
-    builder.add_node("link_finder", link_finder)
-    builder.add_node("itinerary_responder", itinerary_responder)
-    builder.add_node("link_finder_tools", ToolNode(link_finder_tools))
-    builder.add_node("detailer_tools", ToolNode(detailer_tools))
-    builder.add_node("save_links_and_cleanup", save_links_and_cleanup)
-    builder.add_node("save_details_and_cleanup", save_details_and_cleanup)
-    # builder.add_node("detailer_guard", detailer_guard)
-    # builder.add_node("link_finder_guard", link_finder_guard)
-
-    builder.add_conditional_edges(START, route_phase, {
-            "focused_detailer": "focused_detailer",
-            "global_architect": "global_architect"
-        })
-    builder.add_edge("global_architect", "transit_advisor")
-    builder.add_conditional_edges("transit_advisor", route_transit, {
-            "transit_tools": "transit_tools",
-            "save_transit_and_cleanup": "save_transit_and_cleanup",
-            "itinerary_responder": "itinerary_responder"
-        })
-    builder.add_edge("transit_tools", "transit_advisor")
-    builder.add_edge("save_transit_and_cleanup", "itinerary_responder")
-    builder.add_conditional_edges("link_finder", route_link_finder, {
-            "save_links_and_cleanup": "save_links_and_cleanup",
-            "link_finder_tools": "link_finder_tools",
-            "itinerary_responder": "itinerary_responder",
-            "link_finder_guard": "itinerary_responder"
-        })
-    builder.add_conditional_edges("focused_detailer", route_detailer, {
-            "detailer_tools": "detailer_tools",
-            "save_details_and_cleanup": "save_details_and_cleanup",
-            "itinerary_responder": "itinerary_responder",
-            "detailer_guard": "itinerary_responder"
-        })
-    # builder.add_edge("link_finder_guard", "link_finder")
-    # builder.add_edge("detailer_guard", "focused_detailer")
-    builder.add_edge("link_finder_tools", "link_finder")
-    builder.add_edge("detailer_tools", "focused_detailer")
-    builder.add_edge("save_details_and_cleanup", "link_finder")
-    builder.add_edge("save_links_and_cleanup", "itinerary_responder")
-    builder.add_edge("itinerary_responder", END)
+    
 
     return builder.compile(checkpointer=checkpointer)
 

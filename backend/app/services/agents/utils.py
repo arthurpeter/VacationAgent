@@ -222,10 +222,9 @@ async def get_initial_itinerary_state(db: AsyncSession, session_id: int) -> Itin
         "messages": [], 
         "user_id": str(session.user_id),
         "session_id": session.id,
+        "stage": 0,
+        "action": None,
         "persona_context": persona,
         "data": itinerary_db_context,
-        "daily_themes": {},
-        "daily_plans": {},
-        "daily_links": {},
-        "are_themes_confirmed": False
+        "pois": []
     }

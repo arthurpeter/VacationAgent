@@ -1,4 +1,4 @@
-from typing import Optional, Annotated, List, Union
+from typing import Any, Optional, Annotated, List, Union
 from typing_extensions import TypedDict
 from pydantic import BaseModel, Field
 from langgraph.graph.message import add_messages
@@ -23,12 +23,9 @@ class ItineraryState(TypedDict):
     messages: Annotated[List[Union[dict, str]], add_messages]
     user_id: str
     session_id: int
+    stage: int = 0
+    action: Optional[str] = None
     
     persona_context: Optional[str] = None
     data: Optional[dict] = None
-    daily_themes: Optional[dict[int, str]] = None
-    daily_plans: Optional[dict[int, str]] = None
-    daily_links: Optional[dict[int, List[dict[str, str]]]] = None
-    recently_detailed_days: Optional[List[int]] = None
-    are_themes_confirmed: bool = False
-    transit_strategy: Optional[dict] = None
+    pois: List[dict[str, Any]] = []
