@@ -112,9 +112,15 @@ async def _resolve_place(
     return {
         "external_place_id": xid,
         "name": details.get("name") or name,
-        "category": kinds.split(KINDS_SEPARATOR)[0].replace(CATEGORY_WORD_SEPARATOR, " ") if kinds else None,
+        "category": _extract_category(kinds),
         "description": wiki.get("text") or details.get("info", {}).get("descr"),
         "image": preview.get("source"),
         "latitude": point.get("lat") or latitude,
         "longitude": point.get("lon") or longitude
     }
+
+
+def _extract_category(kinds: str) -> Optional[str]:
+    if not kinds:
+        return None
+    return kinds.split(KINDS_SEPARATOR)[0].replace(CATEGORY_WORD_SEPARATOR, " ")

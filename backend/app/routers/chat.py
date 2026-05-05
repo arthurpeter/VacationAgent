@@ -16,6 +16,7 @@ from app.services.agents.discovery_graph import generate_graph as generate_disco
 from app.services.agents.itinerary_graph import generate_graph as generate_itinerary_graph
 from app.services.agents.discovery_graph import stream_discovery_message
 from app.services.agents.itinerary_graph import stream_itinerary_message
+from app.services.agents.constants import FETCH_INITIAL_POIS_ACTION
 
 
 log = get_logger(__name__)
@@ -267,7 +268,7 @@ async def chat_itinerary(
     if not request.message and not request.action:
         raise HTTPException(
             status_code=422,
-            detail="Message or action is required. Valid actions include: fetch_initial_pois."
+            detail=f"Message or action is required. Valid actions include: {FETCH_INITIAL_POIS_ACTION}."
         )
     
     log.info(f"User {token.sub} initiated itinerary chat for session {session_id}")

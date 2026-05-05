@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.agents.memory import ItineraryState
 from app.services.agents.nodes import *
+from app.services.agents.constants import FETCH_INITIAL_POIS_ACTION
 from app.services.agents.utils import get_initial_itinerary_state
 from app.services.agents.tools import link_finder_tools, detailer_tools
 from app.core.logger import get_logger
@@ -19,7 +20,7 @@ log = get_logger(__name__)
 def route_action(state: ItineraryState):
     """Routes based on explicit action flags from the UI."""
     action = state.get("action")
-    if action == "fetch_initial_pois":
+    if action == FETCH_INITIAL_POIS_ACTION:
         return "fetching_initial_pois"
     return route_phase(state)
 
