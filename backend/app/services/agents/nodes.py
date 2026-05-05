@@ -204,7 +204,7 @@ async def responder(state: DiscoveryState) -> dict:
 
 # Itinerary Graph Nodes
 
-def _format_poi_payload(place: Union[GlobalAttraction, dict]) -> dict:
+def _format_poi_for_response(place: Union[GlobalAttraction, dict]) -> dict:
     if isinstance(place, GlobalAttraction):
         return {
             "id": place.external_place_id or place.id,
@@ -226,7 +226,7 @@ def _format_poi_payload(place: Union[GlobalAttraction, dict]) -> dict:
         "longitude": place.get("longitude")
     }
 
-def _deduplicate_names(names: list[str], max_count: int) -> list[str]:
+def _deduplicate_and_limit_names(names: list[str], max_count: int) -> list[str]:
     deduped = []
     seen = set()
     for name in names:
@@ -264,7 +264,7 @@ async def fetching_initial_pois(state: ItineraryState) -> dict:
         cached_places = result.scalars().all()
 
         if len(cached_places) >= MIN_CACHED_POIS_FOR_REUSE:
-            formatted = [_format_poi_payload(place) for place in cached_places]
+            formatted = [_format_poi_for_response(place) for place in cached_places]
             return {"pois": formatted, "action": None}
 
     coords = await get_city_coordinates(destination)
@@ -278,7 +278,7 @@ async def fetching_initial_pois(state: ItineraryState) -> dict:
     )
     structured_llm = llm.with_structured_output(CuratedPoiNames)
     response: CuratedPoiNames = await structured_llm.ainvoke(instructions)
-    curated_names = _deduplicate_names(response.places, INITIAL_POI_FETCH_COUNT)
+    curated_names = _deduplicate_and_limit_names(response.places, INITIAL_POI_FETCH_COUNT)
 
     if not curated_names:
         return {"pois": [], "action": None}
@@ -323,7 +323,7 @@ async def fetching_initial_pois(state: ItineraryState) -> dict:
             )
         await db.commit()
 
-    formatted_places = [_format_poi_payload(place) for place in resolved_places]
+    formatted_places = [_format_poi_for_response(place) for place in resolved_places]
     return {"pois": formatted_places, "action": None}
 
 
