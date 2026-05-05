@@ -234,8 +234,8 @@ function TravelersInput({ counts, setCounts, childAges, setChildAges, onSave }) 
                 <div className="absolute top-full left-0 w-72 bg-white border border-gray-200 rounded-xl shadow-2xl mt-2 z-50 p-4">
                     <div className="space-y-4 mb-4">
                         {[
-                            { id: 'adults', label: 'Adults', sub: 'Age 12+' },
-                            { id: 'children', label: 'Children', sub: 'Age 2-11' },
+                            { id: 'adults', label: 'Adults', sub: 'Age 18+' },
+                            { id: 'children', label: 'Youths & Children', sub: 'Age 2-17' },
                             { id: 'infantsSeat', label: 'Infants', sub: 'In seat' },
                             { id: 'infantsLap', label: 'Infants', sub: 'On lap' },
                         ].map((type) => (
@@ -665,6 +665,22 @@ export default function OptionsStage() {
   const [selectedInbound, setSelectedInbound] = useState(null);
   const [selectedHotel, setSelectedHotel] = useState(null);
 
+  const getFlightTravelerCounts = () => {
+      let flightAdults = travelerCounts.adults;
+      let flightChildren = 0;
+
+      childAges.forEach(ageStr => {
+          const age = parseInt(ageStr) || 0;
+          if (age >= 12) {
+              flightAdults += 1;
+          } else {
+              flightChildren += 1;
+          }
+      });
+
+      return { flightAdults, flightChildren };
+  };
+
   const saveToSession = async (payload) => {
     if (!sessionData?.id) return;
     try {
@@ -753,14 +769,16 @@ export default function OptionsStage() {
     setSelectedOutbound(null);
     setSelectedInbound(null);
 
+    const { flightAdults, flightChildren } = getFlightTravelerCounts();
+
     const flightsBody = {
       session_id: parseInt(sessionData?.id) || 0,
       departure: origin,
       arrival: destination,
       outbound_date: dates.start,
       return_date: dates.end,
-      adults: travelerCounts.adults,
-      children: travelerCounts.children,
+      adults: flightAdults,
+      children: flightChildren,
       infants_in_seat: travelerCounts.infantsSeat,
       infants_on_lap: travelerCounts.infantsLap,
       stops: parseInt(maxStops),
@@ -805,6 +823,8 @@ export default function OptionsStage() {
     setSelectedOutbound(flight);
     setLoading(true);
 
+    const { flightAdults, flightChildren } = getFlightTravelerCounts();
+
     const flightsBody = {
         session_id: parseInt(sessionData?.id) || 0,
         token: flight.token,
@@ -812,8 +832,8 @@ export default function OptionsStage() {
         arrival: destination,
         outbound_date: dates.start,
         return_date: dates.end,
-        adults: travelerCounts.adults,
-        children: travelerCounts.children,
+        adults: flightAdults,
+        children: flightChildren,
         infants_in_seat: travelerCounts.infantsSeat,
         infants_on_lap: travelerCounts.infantsLap,
     };
@@ -892,6 +912,8 @@ export default function OptionsStage() {
             const inboundSegments = selectedInbound.flights;
             const destDeparture = inboundSegments[0].departure_time;
 
+            const { flightAdults, flightChildren } = getFlightTravelerCounts();
+
             bookingPromises.push(
                 fetchWithAuth(`${API_BASE_URL}/search/bookFlight`, {
                     session_id: parseInt(sessionData?.id) || 0,
@@ -900,7 +922,8 @@ export default function OptionsStage() {
                     arrival: destination,
                     outbound_date: dates.start,
                     return_date: dates.end,
-                    adults: travelerCounts.adults,
+                    adults: flightAdults,
+                    children: flightChildren,
                     price: selectedInbound.price,
                     destination_arrival: destArrival,
                     destination_departure: destDeparture

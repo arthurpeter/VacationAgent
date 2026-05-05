@@ -22,7 +22,7 @@ async def get_formatted_travel_history(db: AsyncSession, user_id: str) -> str:
     vacations = result.scalars().all()
 
     if not vacations:
-        return "No prior travel history recorded with TuRAG."
+        return "No prior travel history recorded with us."
 
     history_lines = []
     for v in vacations:

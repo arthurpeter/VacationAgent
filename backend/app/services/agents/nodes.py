@@ -109,7 +109,7 @@ async def db_validator(state: DiscoveryState) -> dict:
         ages_list = [int(a.strip()) for a in ages_str.split(",") if a.strip().isdigit()]
         
         infants_from_ages = len([a for a in ages_list if a < 2])
-        children_from_ages = len([a for a in ages_list if 2 <= a < 12])
+        children_from_ages = len([a for a in ages_list if 2 <= a < 18])
         
         infant_total_count = (refreshed_data.get("infants_in_seat") or 0) + (refreshed_data.get("infants_on_lap") or 0)
         child_total_count = refreshed_data.get("children") or 0
@@ -188,9 +188,6 @@ async def responder(state: DiscoveryState) -> dict:
     response = await llm_with_tools.ainvoke([SystemMessage(content=system_instructions)] + current_messages)
     
     return {"messages": [response]}
-
-if __name__ == "__main__":
-    print("This module is not meant to be run directly. It provides the agent nodes and decisional edges.")
 
 
 # Itinerary Graph Nodes
@@ -512,3 +509,7 @@ async def save_transit_and_cleanup(state: ItineraryState) -> dict:
         "transit_strategy": strategy_data,
         "messages": messages_to_remove
     }
+
+
+if __name__ == "__main__":
+    print("This module is not meant to be run directly. It provides the agent nodes and decisional edges.")

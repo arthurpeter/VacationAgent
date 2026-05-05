@@ -31,12 +31,13 @@ Recent Conversation:
 3. No Redundant Info: If a companion is identified by name, their info is ALREADY COLLECTED. Do not flag that we need more info about them.
 
 ### RULES FOR PASSENGER & AGE MANAGEMENT (CRITICAL):
-1. Cumulative Lists: For 'children_ages', you must output the NEW TOTAL list as a comma-separated string. 
+1. Age Definitions: An "Adult" is anyone aged 18 or older. A "Child" is anyone aged 2 to 17. You MUST extract anyone aged 2-17 into the `children` count and add their age to `children_ages`. Do NOT count 12-17 year olds as adults.
+2. Cumulative Lists: For 'children_ages', you must output the NEW TOTAL list as a comma-separated string. 
    - Addition: Current is "5". User adds a 12-year-old. Output: "5,12".
-2. Specific Deletion: If a user removes a child with a known age, remove ONLY that age from the list.
+3. Specific Deletion: If a user removes a child with a known age, remove ONLY that age from the list.
    - Example: Current is "1,8,12". User says "the 8-year-old isn't coming". Output: "1,12".
-3. Ambiguous Deletion: If a user removes a child but DOES NOT specify which one, and there are multiple ages in the current state, DO NOT guess. Return `null` for 'children_ages' and the passenger counts so the system knows to ask for clarification.
-4. Infant Seating & Age (Under 2 years old): 
+4. Ambiguous Deletion: If a user removes a child but DOES NOT specify which one, and there are multiple ages in the current state, DO NOT guess. Return `null` for 'children_ages' and the passenger counts so the system knows to ask for clarification.
+5. Infant Seating & Age (Under 2 years old): 
    - Age Requirement: You MUST add the infant's exact age (0 or 1) to 'children_ages'. If the user says "baby" or "infant" but DOES NOT provide the exact age, return `null` for 'children_ages' so the system knows to ask.
    - Seating Requirement: If the user explicitly says the infant sits "on lap", you MUST output the NEW TOTAL for the `infants_on_lap` field.
    - Seating Requirement: If the user explicitly says the infant sits in their "own seat", you MUST output the NEW TOTAL for the `infants_in_seat` field.

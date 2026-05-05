@@ -11,8 +11,8 @@ class ExtractionResult(BaseModel):
     currency: Optional[str] = Field(None, description="ISO currency code, e.g., 'USD', 'EUR'")
     budget: Optional[int] = Field(None, description="The maximum total budget the user wants to spend for the trip, as an integer (e.g., 5000)")
     
-    adults: Optional[int] = Field(None, description="Number of adults (12+ years old)")
-    children: Optional[int] = Field(None, description="Number of children (2-11 years old)")
+    adults: Optional[int] = Field(None, description="Number of adults (18+ years old)")
+    children: Optional[int] = Field(None, description="Number of children (2-17 years old)")
     infants_in_seat: Optional[int] = Field(None, description="Number of infants (0-2 years old) with their own seat")
     infants_on_lap: Optional[int] = Field(None, description="Number of infants (0-2 years old) sitting on an adult's lap")
     children_ages: Optional[str] = Field(

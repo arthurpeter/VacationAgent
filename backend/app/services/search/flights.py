@@ -193,8 +193,8 @@ def call_flights_api(
                     key=lambda x: float(x.get("price", 0))
                 )
 
-        with open("output.json", "w") as f:
-            json.dump(results, f, indent=4)
+        # with open("output.json", "w") as f:
+        #     json.dump(results, f, indent=4)
         
         return results
         
