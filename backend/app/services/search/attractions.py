@@ -39,7 +39,6 @@ async def fetch_attractions_by_radius(lat: float, lon: float, radius: int = 1500
     api_key = settings.OPENTRIPMAP_API_KEY
     if not api_key: return []
 
-    # Filter 1: Only major categories. (Drop 'tourist_facilities' which includes shops/benches)
     target_kinds = "museums,monuments_and_memorials,towers,historic_districts,palaces,castles"
 
     async with httpx.AsyncClient() as client:
@@ -51,8 +50,8 @@ async def fetch_attractions_by_radius(lat: float, lon: float, radius: int = 1500
                     "lon": lon, 
                     "lat": lat,
                     "kinds": target_kinds,
-                    "rate": "3h", # 3h means rating 3 AND recognized as cultural heritage!
-                    "limit": 300, # Fetch a solid pool of high-quality items
+                    "rate": "3h",
+                    "limit": 300,
                     "format": "json", 
                     "apikey": api_key
                 }
@@ -60,20 +59,13 @@ async def fetch_attractions_by_radius(lat: float, lon: float, radius: int = 1500
             res.raise_for_status()
             places = res.json()
             
-            # Filter 2: Remove tiny nodes (N). Keep Ways (W) and Relations (R).
-            # The Louvre Museum is a Relation. The Eiffel Tower is a Way. 
-            # A specific painting inside the Louvre is a Node.
             major_places = [p for p in places if p.get("osm", "").startswith(("way", "relation"))]
             
-            # If our strict filter removed too much, fall back to the original list
             if len(major_places) < limit:
                  major_places = places
 
-            # Filter 3: We have a list of high-quality, major places. 
-            # Shuffle them so we get a diverse spread across the city, not just the center pin.
             random.shuffle(major_places)
             
-            # Finally, sort the shuffled list to ensure the absolute highest ratings (7s) bubble to the top.
             sorted_places = sorted(major_places[:limit * 3], key=lambda x: -x.get("rate", 0))
             
             return sorted_places[:limit]
@@ -95,7 +87,7 @@ async def autosuggest_places(query: str, lat: float, lon: float, radius: int = 5
                 params={
                     "name": query, "radius": radius, "lon": lon, "lat": lat,
                     "rate": min_rate,
-                    "limit": 50, # Fetch more so we can filter
+                    "limit": 50,
                     "format": "json", "apikey": api_key
                 }
             )
@@ -103,8 +95,6 @@ async def autosuggest_places(query: str, lat: float, lon: float, radius: int = 5
             
             places = res.json()
             
-            # Apply the same OSM filter to autosuggest. If someone searches "Louvre", 
-            # we want the Relation (the museum), not the Node (a door to the museum).
             major_places = [p for p in places if p.get("osm", "").startswith(("way", "relation"))]
             if len(major_places) < limit:
                  major_places = places
@@ -134,17 +124,34 @@ async def get_place_details(xid: str) -> Optional[Dict]:
                 parts.pop()
                 image_url = "/".join(parts).replace("/thumb/", "/")
 
-            print(data)  # Debug log to inspect the raw API response
+            addr = data.get("address", {})
+            street = addr.get("pedestrian") or addr.get("road") or ""
+            house_num = addr.get("house_number", "")
+            postcode = addr.get("postcode", "")
+            city = addr.get("city", "")
+            formatted_addr = f"{house_num} {street}, {postcode} {city}".strip(" ,")
+
+            raw_rate = str(data.get("rate", "0"))
+            clean_rate = float("".join(c for c in raw_rate if c.isdigit()) or 0)
 
             return {
-                "xid": data.get("xid"),
-                "name": data.get("name"),
-                "lat": data.get("point", {}).get("lat"),
-                "lon": data.get("point", {}).get("lon"),
-                "image_url": image_url, # Use our cleaned URL
+                "external_place_id": data.get("xid"),
+                "official_name": data.get("name"),
+                "city": addr.get("city", ""),
+                "state_province": addr.get("state", ""),
+                "country": addr.get("country", ""),
+                "formatted_address": formatted_addr if len(formatted_addr) > 5 else None,
+                "latitude": data.get("point", {}).get("lat"),
+                "longitude": data.get("point", {}).get("lon"),
+                
+                "image_url": image_url,
                 "description": data.get("wikipedia_extracts", {}).get("text"),
                 "website_url": data.get("url"),
-                "category": data.get("kinds", "").split(",")[0].replace("_", " ").title() if data.get("kinds") else "Attraction"
+                "rating": clean_rate,
+                
+                "tags": data.get("kinds", ""),
+                "category": data.get("kinds", "").split(",")[0].replace("_", " ").title() if data.get("kinds") else "Attraction",
+                "wikidata_id": data.get("wikidata")
             }
         except httpx.HTTPError as e:
             log.error(f"OTM /xid error for {xid}: {str(e)}")
@@ -186,7 +193,6 @@ if __name__ == "__main__":
             osm_type = s.get("osm", "unknown").split("/")[0] if s.get("osm") else "unknown"
             print(f"  {i+1}. {s.get('name')} | Rate: {s.get('rate')} | OSM: {osm_type} | XID: {s.get('xid')}")
 
-        # 3. Deep dive into the #1 result
         top_match = suggestions[0]
         test_xid = top_match.get("xid")
         test_name = top_match.get("name")
@@ -194,23 +200,21 @@ if __name__ == "__main__":
         print(f"\n[3] Fetching deep details for the #1 match: '{test_name}' (XID: {test_xid})...")
         details = await get_place_details(test_xid)
         
-        # if details:
-        #     print("\n--- THE FINAL DATABASE OBJECT ---")
-        #     print(json.dumps(details, indent=2, ensure_ascii=False))
-        #     print("---------------------------------")
+        if details:
+            print("\n--- THE FINAL DATABASE OBJECT ---")
+            print(json.dumps(details, indent=2, ensure_ascii=False))
+            print("---------------------------------")
             
-        #     # A quick sanity check
-        #     if details.get("description"):
-        #         print("✅ Wikipedia Description Found!")
-        #     else:
-        #         print("❌ WARNING: No Description Found.")
+            if details.get("description"):
+                print("✅ Wikipedia Description Found!")
+            else:
+                print("❌ WARNING: No Description Found.")
                 
-        #     if details.get("image_url"):
-        #         print("✅ Image URL Found!")
-        #     else:
-        #         print("❌ WARNING: No Image URL Found.")
-        # else:
-        #     print("Failed to fetch details.")
+            if details.get("image_url"):
+                print("✅ Image URL Found!")
+            else:
+                print("❌ WARNING: No Image URL Found.")
+        else:
+            print("Failed to fetch details.")
 
-    # Run the async tests
     asyncio.run(run_tests())

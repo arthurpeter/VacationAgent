@@ -8,6 +8,7 @@ class GlobalAttraction(Base):
     id = Column(Integer, primary_key=True, index=True)
     
     external_place_id = Column(String, unique=True, index=True, nullable=True) # Google/OSM ID
+    wikidata_id = Column(String, nullable=True)
     official_name = Column(String, index=True, nullable=False)
     
     city = Column(String, index=True, nullable=False)
@@ -19,6 +20,7 @@ class GlobalAttraction(Base):
     longitude = Column(Float, nullable=False)
     
     category = Column(String, index=True)
+    tags = Column(String, nullable=True)
     description = Column(Text)
     image_url = Column(String, nullable=True)
     website_url = Column(String, nullable=True)
