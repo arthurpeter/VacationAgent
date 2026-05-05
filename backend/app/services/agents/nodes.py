@@ -16,7 +16,7 @@ from app.services.agents.responses import (
 from app.core.config import settings
 
 from datetime import datetime
-from sqlalchemy import update, select, func
+from sqlalchemy import update, select
 from app.core.database import SessionLocal
 from app.models.vacation_session import VacationSession
 from app.models.global_attraction import GlobalAttraction, DEFAULT_POI_DURATION_MINS
@@ -226,6 +226,22 @@ def _format_poi_payload(place: Union[GlobalAttraction, dict]) -> dict:
         "longitude": place.get("longitude")
     }
 
+def _deduplicate_names(names: list[str], max_count: int) -> list[str]:
+    deduped = []
+    seen = set()
+    for name in names:
+        cleaned = name.strip()
+        if not cleaned:
+            continue
+        lowered = cleaned.lower()
+        if lowered in seen:
+            continue
+        seen.add(lowered)
+        deduped.append(cleaned)
+        if len(deduped) >= max_count:
+            break
+    return deduped
+
 
 async def fetching_initial_pois(state: ItineraryState) -> dict:
     """
@@ -236,10 +252,12 @@ async def fetching_initial_pois(state: ItineraryState) -> dict:
     if not destination:
         return {"pois": [], "action": None}
 
+    normalized_destination = destination.lower()
+
     async with SessionLocal() as db:
         stmt = (
             select(GlobalAttraction)
-            .where(func.lower(GlobalAttraction.city_name) == destination.lower())
+            .where(GlobalAttraction.city_name == normalized_destination)
             .limit(INITIAL_POI_FETCH_COUNT)
         )
         result = await db.execute(stmt)
@@ -260,20 +278,7 @@ async def fetching_initial_pois(state: ItineraryState) -> dict:
     )
     structured_llm = llm.with_structured_output(CuratedPoiNames)
     response: CuratedPoiNames = await structured_llm.ainvoke(instructions)
-
-    curated_names = []
-    seen = set()
-    for name in response.places:
-        cleaned = name.strip()
-        if not cleaned:
-            continue
-        lowered = cleaned.lower()
-        if lowered in seen:
-            continue
-        seen.add(lowered)
-        curated_names.append(cleaned)
-        if len(curated_names) >= INITIAL_POI_FETCH_COUNT:
-            break
+    curated_names = _deduplicate_names(response.places, INITIAL_POI_FETCH_COUNT)
 
     if not curated_names:
         return {"pois": [], "action": None}
@@ -304,7 +309,7 @@ async def fetching_initial_pois(state: ItineraryState) -> dict:
             db.add(
                 GlobalAttraction(
                     external_place_id=place.get("external_place_id"),
-                    city_name=destination,
+                    city_name=normalized_destination,
                     name=place.get("name") or "",
                     category=place.get("category"),
                     description=place.get("description"),

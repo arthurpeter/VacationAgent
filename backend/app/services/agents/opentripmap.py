@@ -10,6 +10,8 @@ from app.core.logger import get_logger
 OTM_BASE_URL = "https://api.opentripmap.com/0.1/en/places"
 OTM_API_KEY = settings.OPENTRIPMAP_API_KEY
 AUTOSUGGEST_RADIUS_METERS = 20000  # Broad radius to catch landmark matches near city center.
+KINDS_SEPARATOR = ","
+CATEGORY_WORD_SEPARATOR = "_"
 log = get_logger(__name__)
 
 
@@ -110,7 +112,7 @@ async def _resolve_place(
     return {
         "external_place_id": xid,
         "name": details.get("name") or name,
-        "category": kinds.split(",")[0].replace("_", " ") if kinds else None,
+        "category": kinds.split(KINDS_SEPARATOR)[0].replace(CATEGORY_WORD_SEPARATOR, " ") if kinds else None,
         "description": wiki.get("text") or details.get("info", {}).get("descr"),
         "image": preview.get("source"),
         "latitude": point.get("lat") or latitude,

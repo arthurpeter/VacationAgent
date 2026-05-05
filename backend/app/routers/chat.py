@@ -265,7 +265,10 @@ async def chat_itinerary(
         raise HTTPException(status_code=404, detail="Session not found")
 
     if not request.message and not request.action:
-        raise HTTPException(status_code=422, detail="Message or action is required.")
+        raise HTTPException(
+            status_code=422,
+            detail="Message or action is required. Valid actions include: fetch_initial_pois."
+        )
     
     log.info(f"User {token.sub} initiated itinerary chat for session {session_id}")
     
