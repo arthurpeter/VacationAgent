@@ -1,3 +1,4 @@
 initial apis:
 Accomodation: https://serpapi.com/google-hotels-api
 Flights: https://serpapi.com/google-flights-api
+Attractions: https://opentripmap.io/
