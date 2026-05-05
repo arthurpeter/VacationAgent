@@ -4,16 +4,18 @@ from typing import Optional, Sequence
 import httpx
 
 from app.core.config import settings
+from app.core.logger import get_logger
 
 
 OTM_BASE_URL = "https://api.opentripmap.com/0.1/en/places"
 OTM_API_KEY = settings.OPENTRIPMAP_API_KEY
 AUTOSUGGEST_RADIUS_METERS = 20000  # Broad radius to catch landmark matches near city center.
+log = get_logger(__name__)
 
 
 async def get_city_coordinates(city_name: str) -> Optional[dict]:
     if not city_name or not OTM_API_KEY:
-        print("OpenTripMap API key missing or city name empty.")
+        log.warning("OpenTripMap API key missing or city name empty.")
         return None
 
     url = f"{OTM_BASE_URL}/geoname"
@@ -23,11 +25,11 @@ async def get_city_coordinates(city_name: str) -> Optional[dict]:
         async with httpx.AsyncClient() as client:
             response = await client.get(url, params=params, timeout=10.0)
             if response.status_code != 200:
-                print(f"OpenTripMap geoname failed: {response.status_code}")
+                log.warning("OpenTripMap geoname failed: %s", response.status_code)
                 return None
             payload = response.json()
     except httpx.HTTPError as exc:
-        print(f"OpenTripMap geoname error: {exc}")
+        log.warning("OpenTripMap geoname error: %s", exc)
         return None
 
     lat = payload.get("lat")
@@ -45,7 +47,7 @@ async def resolve_curated_places(
 ) -> list[dict]:
     if not place_names or not OTM_API_KEY:
         if not OTM_API_KEY:
-            print("OpenTripMap API key missing.")
+            log.warning("OpenTripMap API key missing.")
         return []
 
     async with httpx.AsyncClient() as client:

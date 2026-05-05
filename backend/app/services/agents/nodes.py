@@ -28,8 +28,8 @@ from app.services.agents.opentripmap import get_city_coordinates, resolve_curate
 
 llm = settings.llm
 
-CACHE_POI_MIN_COUNT = 10
-CURATED_POI_COUNT = 15
+MIN_CACHED_POIS_FOR_REUSE = 10
+INITIAL_POI_FETCH_COUNT = 15
 
 # Discovery Graph Nodes
 
@@ -240,12 +240,12 @@ async def fetching_initial_pois(state: ItineraryState) -> dict:
         stmt = (
             select(GlobalAttraction)
             .where(func.lower(GlobalAttraction.city_name) == destination.lower())
-            .limit(CURATED_POI_COUNT)
+            .limit(INITIAL_POI_FETCH_COUNT)
         )
         result = await db.execute(stmt)
         cached_places = result.scalars().all()
 
-        if len(cached_places) >= CACHE_POI_MIN_COUNT:
+        if len(cached_places) >= MIN_CACHED_POIS_FOR_REUSE:
             formatted = [_format_poi_payload(place) for place in cached_places]
             return {"pois": formatted, "action": None}
 
@@ -256,7 +256,7 @@ async def fetching_initial_pois(state: ItineraryState) -> dict:
     instructions = curated_pois_prompt.format(
         destination=destination,
         persona=state.get("persona_context", "No persona provided."),
-        max_pois=CURATED_POI_COUNT
+        max_pois=INITIAL_POI_FETCH_COUNT
     )
     structured_llm = llm.with_structured_output(CuratedPoiNames)
     response: CuratedPoiNames = await structured_llm.ainvoke(instructions)
@@ -272,7 +272,7 @@ async def fetching_initial_pois(state: ItineraryState) -> dict:
             continue
         seen.add(lowered)
         curated_names.append(cleaned)
-        if len(curated_names) >= CURATED_POI_COUNT:
+        if len(curated_names) >= INITIAL_POI_FETCH_COUNT:
             break
 
     if not curated_names:
