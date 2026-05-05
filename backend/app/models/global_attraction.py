@@ -6,6 +6,8 @@ from sqlalchemy.sql import func
 
 from app.core.database import Base
 
+DEFAULT_POI_DURATION_MINS = 90
+
 
 class GlobalAttraction(Base):
     __tablename__ = "global_attractions"
@@ -19,7 +21,7 @@ class GlobalAttraction(Base):
     image_url = Column(Text, nullable=True)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
-    duration_mins = Column(Integer, nullable=True, default=90)
+    duration_mins = Column(Integer, nullable=True, default=DEFAULT_POI_DURATION_MINS)
 
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(

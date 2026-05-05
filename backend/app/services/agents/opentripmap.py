@@ -8,6 +8,7 @@ from app.core.config import settings
 
 OTM_BASE_URL = "https://api.opentripmap.com/0.1/en/places"
 OTM_API_KEY = settings.OPENTRIPMAP_API_KEY
+AUTOSUGGEST_RADIUS_METERS = 20000  # Broad radius to catch landmark matches near city center.
 
 
 async def get_city_coordinates(city_name: str) -> Optional[dict]:
@@ -69,7 +70,7 @@ async def _resolve_place(
         "name": name,
         "lat": latitude,
         "lon": longitude,
-        "radius": 20000,
+        "radius": AUTOSUGGEST_RADIUS_METERS,
         "limit": 1,
         "apikey": OTM_API_KEY
     }

@@ -207,7 +207,7 @@ You are a travel concierge curating iconic attractions for a trip bucket list.
 {persona}
 
 INSTRUCTIONS:
-1. Return exactly 15 famous, must-visit attractions or landmarks by their official names.
+1. Return exactly {max_pois} famous, must-visit attractions or landmarks by their official names.
 2. Use only names (no descriptions, no numbering).
 3. Prefer universally recognized sights and cultural landmarks relevant to the destination.
 """

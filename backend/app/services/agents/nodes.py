@@ -19,7 +19,7 @@ from datetime import datetime
 from sqlalchemy import update, select, func
 from app.core.database import SessionLocal
 from app.models.vacation_session import VacationSession
-from app.models.global_attraction import GlobalAttraction
+from app.models.global_attraction import GlobalAttraction, DEFAULT_POI_DURATION_MINS
 from app.services.agents.utils import is_llm_null, resolve_location, get_resumed_state
 from langchain_core.messages import HumanMessage, RemoveMessage, SystemMessage
 from app.services.agents.tools import responder_tools, link_finder_tools, detailer_tools, web_search_tool
@@ -27,6 +27,9 @@ from app.services.agents.opentripmap import get_city_coordinates, resolve_curate
 
 
 llm = settings.llm
+
+CACHE_POI_MIN_COUNT = 10
+CURATED_POI_COUNT = 15
 
 # Discovery Graph Nodes
 
@@ -207,7 +210,7 @@ def _format_poi_payload(place: Union[GlobalAttraction, dict]) -> dict:
             "id": place.external_place_id or place.id,
             "name": place.name,
             "category": place.category,
-            "durationMins": place.duration_mins or 90,
+            "durationMins": place.duration_mins or DEFAULT_POI_DURATION_MINS,
             "image": place.image_url,
             "latitude": place.latitude,
             "longitude": place.longitude
@@ -217,7 +220,7 @@ def _format_poi_payload(place: Union[GlobalAttraction, dict]) -> dict:
         "id": place.get("external_place_id"),
         "name": place.get("name"),
         "category": place.get("category"),
-        "durationMins": 90,
+        "durationMins": DEFAULT_POI_DURATION_MINS,
         "image": place.get("image"),
         "latitude": place.get("latitude"),
         "longitude": place.get("longitude")
@@ -237,12 +240,12 @@ async def fetching_initial_pois(state: ItineraryState) -> dict:
         stmt = (
             select(GlobalAttraction)
             .where(func.lower(GlobalAttraction.city_name) == destination.lower())
-            .limit(15)
+            .limit(CURATED_POI_COUNT)
         )
         result = await db.execute(stmt)
         cached_places = result.scalars().all()
 
-        if len(cached_places) >= 10:
+        if len(cached_places) >= CACHE_POI_MIN_COUNT:
             formatted = [_format_poi_payload(place) for place in cached_places]
             return {"pois": formatted, "action": None}
 
@@ -252,7 +255,8 @@ async def fetching_initial_pois(state: ItineraryState) -> dict:
 
     instructions = curated_pois_prompt.format(
         destination=destination,
-        persona=state.get("persona_context", "No persona provided.")
+        persona=state.get("persona_context", "No persona provided."),
+        max_pois=CURATED_POI_COUNT
     )
     structured_llm = llm.with_structured_output(CuratedPoiNames)
     response: CuratedPoiNames = await structured_llm.ainvoke(instructions)
@@ -268,7 +272,7 @@ async def fetching_initial_pois(state: ItineraryState) -> dict:
             continue
         seen.add(lowered)
         curated_names.append(cleaned)
-        if len(curated_names) >= 15:
+        if len(curated_names) >= CURATED_POI_COUNT:
             break
 
     if not curated_names:
@@ -307,7 +311,7 @@ async def fetching_initial_pois(state: ItineraryState) -> dict:
                     image_url=place.get("image"),
                     latitude=place.get("latitude") or coords["lat"],
                     longitude=place.get("longitude") or coords["lon"],
-                    duration_mins=90
+                    duration_mins=DEFAULT_POI_DURATION_MINS
                 )
             )
         await db.commit()
