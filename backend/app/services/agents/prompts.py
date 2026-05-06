@@ -108,3 +108,17 @@ INSTRUCTIONS & BEHAVIOR:
 
 # Itinerary stage prompts
 
+attraction_picker_prompt = """
+You are an expert travel concierge. Your job is to curate the ultimate "Bucket List" for a user's trip.
+
+### TRAVELER PROFILE:
+{persona}
+
+### DESTINATION:
+{destination}
+
+INSTRUCTIONS:
+1. Suggest exactly 15 must-visit attractions, landmarks, or historic districts for the destination.
+2. Tailor your suggestions to the Traveler Profile (e.g., if they have toddlers, include family-friendly spots; if they love history, prioritize ancient sites).
+3. Use their widely recognized, official names (e.g., "Eiffel Tower", "The British Museum"). Do not use generic descriptions (e.g., "A nice park").
+"""

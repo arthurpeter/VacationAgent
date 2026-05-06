@@ -32,4 +32,7 @@ class ExtractionResult(BaseModel):
         description="True if the user is explicitly correcting or changing existing info"
     )
 
-
+class AttractionList(BaseModel):
+    attractions: List[str] = Field(
+        description="A list of 10 to 15 specific, highly famous tourist attractions, museums, or landmarks."
+    )

@@ -16,13 +16,16 @@ from app.core.logger import get_logger
 log = get_logger(__name__)
 
 def route_stage(state: ItineraryState):
-    if state.stage == 0:
+    """Routes the graph from START based on the current stage of the funnel."""
+    stage = state.get("stage", 0)
+    
+    if stage == 0:
         return "picking_attractions"
-    elif state.stage == 1:
+    elif stage == 1:
         return "picking_transit"
-    elif state.stage == 2:
+    elif stage == 2:
         return "organizing_days"
-    elif state.stage == 3:
+    elif stage == 3:
         return "organizing_attractions"
     else:
         return "picking_attractions"
@@ -30,7 +33,20 @@ def route_stage(state: ItineraryState):
 def generate_graph(checkpointer=None):
     
     builder = StateGraph(ItineraryState)
+
+    builder.add_node("picking_attractions", picking_attractions)
+    builder.add_node("picking_transit", picking_transit)
+    builder.add_node("organizing_days", organizing_days)
+    builder.add_node("organizing_attractions", organizing_attractions)
+
+    # 2. Add the Routing from START
+    builder.add_conditional_edges(START, route_stage)
     
+    # 3. All nodes currently just return the state to the user (END)
+    builder.add_edge("picking_attractions", END)
+    builder.add_edge("picking_transit", END)
+    builder.add_edge("organizing_days", END)
+    builder.add_edge("organizing_attractions", END)
 
     return builder.compile(checkpointer=checkpointer)
 

@@ -5,7 +5,7 @@ from app.services.agents.prompts import *
 from langgraph.store.base import BaseStore
 from langgraph.graph import END
 
-from app.services.agents.responses import ArchitectResult, ExtractionResult, DetailerResult, SaveTransitStrategy, SubmitLinks
+from app.services.agents.responses import *
 from app.core.config import settings
 
 from datetime import datetime
@@ -15,6 +15,11 @@ from app.models.vacation_session import VacationSession
 from app.services.agents.utils import is_llm_null, resolve_location, get_resumed_state
 from langchain_core.messages import HumanMessage, RemoveMessage, SystemMessage
 from app.services.agents.tools import responder_tools, link_finder_tools, detailer_tools, web_search_tool
+from app.core.logger import get_logger
+from app.models.global_attraction import GlobalAttraction
+from app.services.search.attractions import *
+
+log = get_logger(__name__)
 
 
 llm = settings.llm
@@ -192,6 +197,74 @@ async def responder(state: DiscoveryState) -> dict:
 
 # Itinerary Graph Nodes
 
+async def picking_attractions(state: ItineraryState) -> dict:
+    action = state.get("action")
+
+    if action == "initial_fetch":
+        destination = state["data"]["destination"].split(",")
+        city = destination[0].strip()
+        country = destination[1].strip()
+        log.info(f"Fetching initial POIs for {city}, {country}...")
+        async with SessionLocal() as db:
+            stmt = select(GlobalAttraction).where(GlobalAttraction.city.ilike(f"%{city}%") & GlobalAttraction.country.ilike(f"%{country}%")).limit(20)
+            result = await db.execute(stmt)
+            existing_places = result.scalars().all()
+
+            if len(existing_places) >= 6:
+                log.info(f"CACHE HIT: Found {len(existing_places)} places for {city}, {country} in DB.")
+                formatted_pois = [
+                    {
+                        "id": p.external_place_id,
+                        "bucket": None,
+                        "time_to_spend": p.recommended_duration_mins or 120,
+                    } for p in existing_places
+                ]
+            
+                existing_ids = {poi["id"] for poi in state.get("pois", [])}
+                new_pois = [p.id for p in existing_places if p.id not in existing_ids]
+                
+                return {"pois": state.get("pois", []) + new_pois}
+            
+            coords = await get_city_coordinates(city, country)
+            if not coords:
+                return {"pois": []}
+            
+            structured_llm = llm.with_structured_output(AttractionList)
+
+            prompt = attraction_picker_prompt.format(
+                persona=state.get("persona", "Traveler"),
+                destination = f"{city}, {country}",
+            )
+
+            response = await structured_llm.ainvoke(prompt)
+            attraction_names = response.attractions
+
+            resolved_pois = []
+            for name in attraction_names:
+                poi_data = await autosuggest_places(name, coords["lat"], coords["lon"], limit=1)
+                if not poi_data:
+                    continue
+                top_result = poi_data[0]
+                resolved = await get_place_details(top_result["xid"])
+                if resolved:
+                    resolved_pois.append(resolved)
+            
+            return {}
+                    
+    else:
+        return {}
+
+async def picking_transit(state: ItineraryState) -> dict:
+    print("Executing picking_transit node...")
+    return {}
+
+async def organizing_days(state: ItineraryState) -> dict:
+    print("Executing organizing_days node...")
+    return {}
+
+async def organizing_attractions(state: ItineraryState) -> dict:
+    print("Executing organizing_attractions node...")
+    return {}
 
 if __name__ == "__main__":
     print("This module is not meant to be run directly. It provides the agent nodes and decisional edges.")
