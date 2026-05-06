@@ -29,3 +29,4 @@ class ItineraryState(TypedDict):
     persona_context: Optional[str] = None
     data: Optional[dict] = None
     pois: List[dict[str, Any]] = []
+    unresolved_attractions: List[dict[str, Any]] = []

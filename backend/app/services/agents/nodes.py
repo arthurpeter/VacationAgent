@@ -214,14 +214,14 @@ async def picking_attractions(state: ItineraryState) -> dict:
                 log.info(f"CACHE HIT: Found {len(existing_places)} places for {city}, {country} in DB.")
                 formatted_pois = [
                     {
-                        "id": p.external_place_id,
+                        "id": p.id,
                         "bucket": None,
                         "time_to_spend": p.recommended_duration_mins or 120,
                     } for p in existing_places
                 ]
             
                 existing_ids = {poi["id"] for poi in state.get("pois", [])}
-                new_pois = [p.id for p in existing_places if p.id not in existing_ids]
+                new_pois = [p for p in formatted_pois if p["id"] not in existing_ids]
                 
                 return {"pois": state.get("pois", []) + new_pois}
             
@@ -249,7 +249,10 @@ async def picking_attractions(state: ItineraryState) -> dict:
                 if resolved:
                     resolved_pois.append(resolved)
             
-            return {}
+            return {
+                "unresolved_attractions": resolved_pois,
+                "action": "resolve_attractions"
+                }
                     
     else:
         return {}
