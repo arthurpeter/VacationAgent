@@ -1,3 +1,4 @@
+import operator
 from typing import Any, Optional, Annotated, List, Union
 from typing_extensions import TypedDict
 from pydantic import BaseModel, Field
@@ -30,3 +31,4 @@ class ItineraryState(TypedDict):
     data: Optional[dict] = None
     pois: List[dict[str, Any]] = []
     unresolved_attractions: List[dict[str, Any]] = []
+    resolved_attractions: Annotated[List[dict[str, Any]], operator.add] = []

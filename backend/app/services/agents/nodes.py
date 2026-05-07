@@ -18,6 +18,8 @@ from app.services.agents.tools import responder_tools, link_finder_tools, detail
 from app.core.logger import get_logger
 from app.models.global_attraction import GlobalAttraction
 from app.services.search.attractions import *
+from timezonefinder import TimezoneFinder
+from langchain_tavily import TavilySearch
 
 log = get_logger(__name__)
 
@@ -53,7 +55,6 @@ async def information_collector(state: DiscoveryState) -> dict:
 
     structured_llm = llm.with_structured_output(ExtractionResult)
     response = await structured_llm.ainvoke(instructions)
-    print("EXTRACTION RESULT:", response)    
     return {"newly_extracted_data": response.model_dump()}
 
 
@@ -256,6 +257,44 @@ async def picking_attractions(state: ItineraryState) -> dict:
                     
     else:
         return {}
+    
+async def enrich_single_attraction_node(poi_data: dict) -> dict:
+    name = poi_data.get("official_name", "Unknown Place")
+    city = poi_data.get("city", "Unknown City")
+    otm_description = poi_data.get("description", "No description available.")
+    
+    search_tool = TavilySearch(max_results=3)
+    search_query = f"{name} in {city} official website, ticket price, recommended duration, visitor reviews star rating"
+    search_results = await search_tool.ainvoke({"query": search_query})
+    context_text = "\n".join([result["content"] for result in search_results])
+
+    structured_llm = llm.with_structured_output(AttractionEnrichmentSchema)
+    prompt = extraction_prompt.format(
+        name=name,
+        otm_description=otm_description,
+        context=context_text
+    )
+
+    extracted_data = await structured_llm.ainvoke(prompt)
+
+    lat = poi_data.get("latitude")
+    lon = poi_data.get("longitude")
+    tf = TimezoneFinder()
+    tz_string = tf.timezone_at(lat=lat, lng=lon) if lat and lon else None
+
+    enriched_poi = {
+        **poi_data,
+        "price_tier": extracted_data.price_tier,
+        "recommended_duration_mins": extracted_data.recommended_duration_mins,
+        "tod_preference": extracted_data.tod_preference,
+        "timezone": tz_string,
+        "rating": extracted_data.rating,
+        "description": extracted_data.description,
+        "website_url": extracted_data.website_url or poi_data.get("website_url")
+    }
+
+    return {"resolved_attractions": [enriched_poi]}
+
 
 async def picking_transit(state: ItineraryState) -> dict:
     print("Executing picking_transit node...")

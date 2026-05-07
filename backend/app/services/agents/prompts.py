@@ -122,3 +122,14 @@ INSTRUCTIONS:
 2. Tailor your suggestions to the Traveler Profile (e.g., if they have toddlers, include family-friendly spots; if they love history, prioritize ancient sites).
 3. Use their widely recognized, official names (e.g., "Eiffel Tower", "The British Museum"). Do not use generic descriptions (e.g., "A nice park").
 """
+
+extraction_prompt = """
+You are a travel data agent. Read the search results and extract the requested fields.
+If the search context lacks a good description, use the provided Baseline Description to write a fresh, engaging 2-sentence summary.
+
+Attraction: {name}
+Baseline Description: {otm_description}
+
+Search Results:
+{context}
+"""

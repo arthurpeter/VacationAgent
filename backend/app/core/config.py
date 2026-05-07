@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     SERPAPI_API_KEY: str
     RAPIDAPI_KEY: str
     OPENTRIPMAP_API_KEY: str
+    TAVILY_API_KEY: str
 
     LLM_MODEL: str = "gemini-2.5-flash"
     LLM_TEMPERATURE: float = 0.0

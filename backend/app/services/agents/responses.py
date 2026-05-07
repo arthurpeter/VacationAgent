@@ -36,3 +36,25 @@ class AttractionList(BaseModel):
     attractions: List[str] = Field(
         description="A list of 10 to 15 specific, highly famous tourist attractions, museums, or landmarks."
     )
+
+
+class AttractionEnrichmentSchema(BaseModel):
+    price_tier: Optional[int] = Field(
+        description="A number from 1 to 4 representing the cost (1=Free/Cheap, 2=Moderate, 3=Expensive, 4=Very Expensive)."
+    )
+    recommended_duration_mins: int = Field(
+        default=120, 
+        description="Recommended time to spend at the attraction in minutes (e.g., 60, 120, 180)."
+    )
+    tod_preference: Optional[str] = Field(
+        description="Best time of day to visit (e.g., 'Morning', 'Afternoon', 'Evening', or 'Any')."
+    )
+    rating: Optional[float] = Field(
+        description="The standard user rating out of 5 stars (e.g., 4.5, 4.8). Look for Google Maps or TripAdvisor ratings in the text."
+    )
+    website_url: Optional[str] = Field(
+        description="The official website URL for tickets or visitor information."
+    )
+    description: str = Field(
+        description="Write a short, engaging 2-3 sentence travel description based on the search context."
+    )
