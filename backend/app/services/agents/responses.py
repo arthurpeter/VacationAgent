@@ -34,13 +34,19 @@ class ExtractionResult(BaseModel):
 
 class AttractionList(BaseModel):
     attractions: List[str] = Field(
-        description="A list of 10 to 15 specific, highly famous tourist attractions, museums, or landmarks."
+        description="A list of up to 15 specific, highly famous tourist attractions, museums, or landmarks."
     )
 
 
 class AttractionEnrichmentSchema(BaseModel):
+    city: str = Field(
+        description="The standard English name of the city this attraction is in (e.g., 'Rome' instead of 'Roma', 'Munich' instead of 'München')."
+    )
+    country: str = Field(
+        description="The standard 2-letter Country Code (e.g., 'IT' instead of 'Italy', 'DE' instead of 'Germany')."
+    )
     price_tier: Optional[int] = Field(
-        description="A number from 1 to 4 representing the cost (1=Free/Cheap, 2=Moderate, 3=Expensive, 4=Very Expensive)."
+        description="A number from 1 to 5 representing the cost (1=Free, 2=Cheap, 3=Moderate, 4=Expensive, 5=Very Expensive)."
     )
     recommended_duration_mins: int = Field(
         default=120, 

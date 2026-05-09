@@ -118,18 +118,43 @@ You are an expert travel concierge. Your job is to curate the ultimate "Bucket L
 {destination}
 
 INSTRUCTIONS:
-1. Suggest exactly 15 must-visit attractions, landmarks, or historic districts for the destination.
+1. Suggest about 15 must-visit attractions, landmarks, or historic districts for the destination.
 2. Tailor your suggestions to the Traveler Profile (e.g., if they have toddlers, include family-friendly spots; if they love history, prioritize ancient sites).
 3. Use their widely recognized, official names (e.g., "Eiffel Tower", "The British Museum"). Do not use generic descriptions (e.g., "A nice park").
 """
 
+custom_search_prompt = """
+You are an expert travel concierge. The user is looking for specific types of attractions for their trip.
+
+### DESTINATION:
+{destination}
+
+### USER REQUEST:
+{user_query}
+
+INSTRUCTIONS:
+1. Suggest up to 15 specific attractions, landmarks, or districts that perfectly match the USER REQUEST. You should choose the number of attractions to output based on the specificity of the request (e.g., if they ask for "family-friendly activities in Rome", you might output 10 highly relevant spots; if they ask for "museums in Paris", you might output 15).
+2. Use their widely recognized, official English names. Do not use generic descriptions.
+"""
+
 extraction_prompt = """
-You are a travel data agent. Read the search results and extract the requested fields.
-If the search context lacks a good description, use the provided Baseline Description to write a fresh, engaging 2-sentence summary.
+You are an expert travel data agent. Your job is to accurately extract specific details about an attraction from raw web search results to fill our database.
 
-Attraction: {name}
-Baseline Description: {otm_description}
+### ATTRACTION NAME:
+{name}
 
-Search Results:
+### MESSY BASELINE LOCATION:
+City: {otm_city}
+Country: {otm_country}
+
+### BASELINE DESCRIPTION:
+{otm_description}
+
+### WEB SEARCH RESULTS:
 {context}
+
+INSTRUCTIONS:
+1. Extract the requested fields (price tier, duration, tod, rating, website).
+2. Clean up the Messy Baseline Location. Output the standard, widely recognized ENGLISH name for the City and the standard 2-letter Country Code for the Country.
+3. Write a fresh, engaging 2-sentence travel description for the attraction.
 """

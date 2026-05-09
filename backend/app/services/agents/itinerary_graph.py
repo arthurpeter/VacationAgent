@@ -1,9 +1,12 @@
+import pprint
+
 import orjson
 
 from langgraph.graph import START, END, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langchain_core.messages import HumanMessage
+from langgraph.types import Send
 from psycopg_pool import AsyncConnectionPool
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +32,15 @@ def route_stage(state: ItineraryState):
         return "organizing_attractions"
     else:
         return "picking_attractions"
+    
+def route_unresolved_attractions(state: ItineraryState):
+    action = state.get("action")
+    unresolved = state.get("unresolved_attractions", [])
+    
+    if action == "resolve_attractions" and len(unresolved) > 0:
+        return [Send("enrich_single_attraction_node", poi) for poi in unresolved]
+        
+    return END
 
 def generate_graph(checkpointer=None):
     
@@ -39,11 +51,27 @@ def generate_graph(checkpointer=None):
     builder.add_node("organizing_days", organizing_days)
     builder.add_node("organizing_attractions", organizing_attractions)
 
-    # 2. Add the Routing from START
-    builder.add_conditional_edges(START, route_stage)
+    builder.add_node("enrich_single_attraction_node", enrich_single_attraction_node)
+    builder.add_node("save_attractions_to_db", save_attractions_to_db)
+
+    builder.add_conditional_edges(START, route_stage, {
+        "picking_attractions": "picking_attractions",
+        "picking_transit": "picking_transit",
+        "organizing_days": "organizing_days",
+        "organizing_attractions": "organizing_attractions"
+    })
+
+    builder.add_conditional_edges(
+        "picking_attractions",
+        route_unresolved_attractions,
+        {
+            "enrich_single_attraction_node": "enrich_single_attraction_node",
+            END: END
+        }
+    )
     
-    # 3. All nodes currently just return the state to the user (END)
-    builder.add_edge("picking_attractions", END)
+    builder.add_edge("enrich_single_attraction_node", "save_attractions_to_db")
+    builder.add_edge("save_attractions_to_db", END)
     builder.add_edge("picking_transit", END)
     builder.add_edge("organizing_days", END)
     builder.add_edge("organizing_attractions", END)
@@ -102,14 +130,50 @@ async def stream_itinerary_message(
     }
     yield f"data: {orjson.dumps(final_payload).decode()}\n\n"
 
+import asyncio
 
 if __name__ == "__main__":
-    print("This module is not meant to be run directly. It provides the execution graph for the itinerary process.\n\n")
-    my_graph = generate_graph()
+    # print("This module is not meant to be run directly. It provides the execution graph for the itinerary process.\n\n")
+    # my_graph = generate_graph()
     
-    png_bytes = my_graph.get_graph(xray=True).draw_mermaid_png()
+    # png_bytes = my_graph.get_graph(xray=True).draw_mermaid_png()
     
-    with open("itinerary_graph_v2.png", "wb") as f:
-        f.write(png_bytes)
+    # with open("itinerary_graph_v2.png", "wb") as f:
+    #     f.write(png_bytes)
         
-    print("Graph saved successfully to itinerary_graph_v2.png!")
+    # print("Graph saved successfully to itinerary_graph_v2.png!")
+
+    async def test_initial_fetch():
+        print("🚀 Compiling the Itinerary Graph...")
+        graph = generate_graph()
+
+        # Create a mock initial state imitating what your frontend/API would send
+        initial_state = {
+            "stage": 0,
+            "action": "initial_fetch",
+            "data": {
+                "destination": "Rome, It"
+            },
+            "persona": "History Buff", # Testing the prompt injection
+            "pois": [],
+            "unresolved_attractions": [],
+            "resolved_attractions": [],
+            "messages": []
+        }
+
+        print(f"🌍 Starting graph execution for {initial_state['data']['destination']}...")
+
+        # We use ainvoke because your nodes rely on async DB calls and async API calls
+        final_state = await graph.ainvoke(initial_state)
+
+        print("\n✅ Graph Execution Finished!\n")
+
+        print("--- Final POIs Collected ---")
+        pprint.pprint(final_state.get("pois"))
+
+        print("\n--- Final Graph State Keys ---")
+        print(f"Action: {final_state.get('action')}")
+        print(f"Unresolved Count: {len(final_state.get('unresolved_attractions', []))}")
+        print(f"Resolved Count: {len(final_state.get('resolved_attractions', []))}")
+
+    asyncio.run(test_initial_fetch())
