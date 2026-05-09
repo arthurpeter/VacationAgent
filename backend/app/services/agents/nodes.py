@@ -5,6 +5,7 @@ from app.services.agents.memory import DiscoveryState, ItineraryState
 from app.services.agents.prompts import *
 from langgraph.store.base import BaseStore
 from langgraph.graph import END
+from langgraph.types import Overwrite
 
 from app.services.agents.responses import *
 from app.core.config import settings
@@ -201,76 +202,113 @@ async def responder(state: DiscoveryState) -> dict:
 
 async def picking_attractions(state: ItineraryState) -> dict:
     action = state.get("action")
-
-    destination = state["data"]["destination"].split(",")
+    
+    destination = state.get("data", {}).get("destination", "").split(",")
+    if len(destination) < 2:
+        log.error("Invalid destination format in state['data']['destination']")
+        return {}
+        
     city = destination[0].strip()
     country = destination[1].strip()
 
+    updates = {
+        "resolved_attractions": Overwrite([]),
+        "unresolved_attractions": [],
+        "action": "idle"
+    }
+
+    def format_cached_poi(p):
+        return {
+            "external_place_id": p.external_place_id,
+            "wikidata_id": p.wikidata_id,
+            "official_name": p.official_name,
+            "city": p.city,
+            "state_province": p.state_province,
+            "country": p.country,
+            "formatted_address": p.formatted_address,
+            "timezone": p.timezone,
+            "latitude": p.latitude,
+            "longitude": p.longitude,
+            "category": p.category,
+            "tags": p.tags,
+            "description": p.description,
+            "image_url": p.image_url,
+            "website_url": p.website_url,
+            "rating": p.rating,
+            "price_tier": p.price_tier,
+            "recommended_duration_mins": p.recommended_duration_mins,
+            "tod_preference": p.tod_preference,
+            "id": p.id # Database Primary Key
+        }
+
     if action == "initial_fetch":
-        log.info(f"Fetching initial POIs for {city}, {country}...")
+        log.info(f"Starting Initial Fetch for {city}, {country}...")
+        
         async with SessionLocal() as db:
-            stmt = select(GlobalAttraction).where(GlobalAttraction.city.ilike(f"%{city}%") & GlobalAttraction.country.ilike(f"%{country}%")).limit(20)
+            stmt = select(GlobalAttraction).where(
+                GlobalAttraction.city.ilike(f"%{city}%") & 
+                GlobalAttraction.country.ilike(f"%{country}%")
+            ).limit(20)
             result = await db.execute(stmt)
             existing_places = result.scalars().all()
 
-            if len(existing_places) >= 6:
-                log.info(f"CACHE HIT: Found {len(existing_places)} places for {city}, {country} in DB.")
-                formatted_pois = [
-                    {
-                        "id": p.id,
-                        "bucket": None,
-                        "time_to_spend": p.recommended_duration_mins or 120,
-                    } for p in existing_places
-                ]
-            
-                existing_ids = {poi["id"] for poi in state.get("pois", [])}
-                new_pois = [p for p in formatted_pois if p["id"] not in existing_ids]
-                
-                return {"pois": state.get("pois", []) + new_pois}
-            
-            coords = await get_city_coordinates(city, country)
-            if not coords:
-                return {"pois": []}
-            
-            structured_llm = llm.with_structured_output(AttractionList)
+            if len(existing_places) >= 10:
+                log.info(f"CACHE HIT: Showing {len(existing_places)} existing places from DB.")
+                updates["resolved_attractions"] = Overwrite([format_cached_poi(p) for p in existing_places])
+                return updates
 
+            coords = await get_city_coordinates(city, country)
+            if not coords: return updates
+
+            structured_llm = llm.with_structured_output(AttractionList)
             prompt = attraction_picker_prompt.format(
                 persona=state.get("persona", "Traveler"),
-                destination = f"{city}, {country}",
+                destination=f"{city}, {country}",
             )
 
             response = await structured_llm.ainvoke(prompt)
             attraction_names = response.attractions
 
-            resolved_pois = []
+            db_hits = []
+            new_finds = []
+
             for name in attraction_names:
                 poi_data = await autosuggest_places(name, coords["lat"], coords["lon"], limit=1)
-                if not poi_data:
-                    continue
-                top_result = poi_data[0]
-                resolved = await get_place_details(top_result["xid"])
-                if resolved:
-                    resolved_pois.append(resolved)
+                if not poi_data: continue
+                
+                xid = poi_data[0]["xid"]
+                stmt = select(GlobalAttraction).where(GlobalAttraction.external_place_id == xid)
+                res = await db.execute(stmt)
+                cached = res.scalars().first()
 
+                if cached:
+                    db_hits.append(format_cached_poi(cached))
+                else:
+                    resolved = await get_place_details(xid)
+                    if resolved:
+                        resolved["city"] = city
+                        resolved["country"] = country 
+                        new_finds.append(resolved)
+                
                 await asyncio.sleep(0.5)
-            
-            return {
-                "unresolved_attractions": resolved_pois,
-                "action": "resolve_attractions"
-                }
-        
+
+            updates.update({
+                "unresolved_attractions": new_finds,
+                "resolved_attractions": Overwrite(db_hits),
+                "action": "resolve_attractions" if new_finds else "idle"
+            })
+
     elif action == "custom_search":
         log.info(f"Executing Custom Search for {city}, {country}...")
 
         messages = state.get("messages", [])
-        user_query = "Best things to do"
+        user_query = "Interesting places"
         if messages:
             last_message = messages[-1]
             user_query = last_message.content if hasattr(last_message, "content") else last_message.get("content", str(last_message))
 
         coords = await get_city_coordinates(city, country)
-        if not coords:
-            return {"pois": []}
+        if not coords: return updates
 
         structured_llm = llm.with_structured_output(AttractionList)
         prompt = custom_search_prompt.format(
@@ -281,47 +319,39 @@ async def picking_attractions(state: ItineraryState) -> dict:
         response = await structured_llm.ainvoke(prompt)
         attraction_names = response.attractions
 
-        resolved_pois = []
-        immediate_cache_hits = []
+        db_hits = []
+        new_finds = []
 
         async with SessionLocal() as db:
             for name in attraction_names:
                 poi_data = await autosuggest_places(name, coords["lat"], coords["lon"], limit=1)
-                if not poi_data:
-                    continue
+                if not poi_data: continue
                 
-                top_result = poi_data[0]
-                xid = top_result["xid"]
-
+                xid = poi_data[0]["xid"]
                 stmt = select(GlobalAttraction).where(GlobalAttraction.external_place_id == xid)
-                db_result = await db.execute(stmt)
-                cached_place = db_result.scalars().first()
+                res = await db.execute(stmt)
+                cached = res.scalars().first()
 
-                if cached_place:
+                if cached:
                     log.info(f"SMART CACHE HIT: {name} found in DB.")
-                    existing_ids = {poi["id"] for poi in state.get("pois", [])}
-                    if cached_place.id not in existing_ids:
-                        immediate_cache_hits.append({
-                            "id": cached_place.id,
-                            "bucket": None,
-                            "time_to_spend": cached_place.recommended_duration_mins or 120,
-                        })
+                    db_hits.append(format_cached_poi(cached))
                 else:
-                    log.info(f"NEW ATTRACTION: Fetching details for {name}...")
+                    log.info(f"NEW ATTRACTION: {name} not in DB, fetching OTM details...")
                     resolved = await get_place_details(xid)
                     if resolved:
-                        resolved_pois.append(resolved)
+                        resolved["city"] = city
+                        resolved["country"] = country 
+                        new_finds.append(resolved)
                 
                 await asyncio.sleep(0.5)
 
-        return {
-            "pois": state.get("pois", []) + immediate_cache_hits,
-            "unresolved_attractions": resolved_pois,
-            "action": "resolve_attractions" if resolved_pois else None
-        }
+        updates.update({
+            "unresolved_attractions": new_finds,
+            "resolved_attractions": Overwrite(db_hits),
+            "action": "resolve_attractions" if new_finds else "idle"
+        })
                     
-    else:
-        return {}
+    return updates
     
 async def enrich_single_attraction_node(poi_data: dict) -> dict:
     name = poi_data.get("official_name", "Unknown Place")
@@ -387,10 +417,7 @@ async def save_attractions_to_db(state: ItineraryState) -> dict:
             result = await db.execute(stmt)
             existing_place = result.scalars().first()
             
-            if existing_place:
-                db_id = existing_place.id
-                time_to_spend = existing_place.recommended_duration_mins
-            else:
+            if not existing_place:
                 new_attraction = GlobalAttraction(
                     external_place_id=poi_data.get("external_place_id"),
                     wikidata_id=poi_data.get("wikidata_id"),
@@ -414,24 +441,10 @@ async def save_attractions_to_db(state: ItineraryState) -> dict:
                 )
                 db.add(new_attraction)
                 await db.flush()
-                
-                db_id = new_attraction.id
-                time_to_spend = new_attraction.recommended_duration_mins
-
-            new_formatted_pois.append({
-                "id": db_id,
-                "bucket": None,
-                "time_to_spend": time_to_spend or 120,
-            })
             
         await db.commit()
-
-    existing_pois = state.get("pois", [])
     
-    return {
-        "pois": existing_pois + new_formatted_pois,
-        "action": "move_to_next_stage"
-    }
+    return {"action": "idle"}
 
 
 async def picking_transit(state: ItineraryState) -> dict:
