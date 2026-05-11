@@ -203,9 +203,9 @@ async def responder(state: DiscoveryState) -> dict:
 async def picking_attractions(state: ItineraryState) -> dict:
     action = state.get("action")
     
-    destination = state.get("data", {}).get("destination", "").split(",")
+    destination = state.get("search_location", "").split(",")
     if len(destination) < 2:
-        log.error("Invalid destination format in state['data']['destination']")
+        log.error("Invalid destination format in state['search_location']")
         return {}
         
     city = destination[0].strip()
@@ -359,8 +359,12 @@ async def enrich_single_attraction_node(poi_data: dict) -> dict:
     otm_country = poi_data.get("country", "Unknown")
     otm_description = poi_data.get("description", "No description available.")
     
-    search_tool = TavilySearch(max_results=3, tavily_api_key=settings.TAVILY_API_KEY)
-    search_query = f"{name} in {otm_city} {otm_country} official website, ticket price, recommended duration, visitor reviews star rating"
+    search_tool = TavilySearch(max_results=5, tavily_api_key=settings.TAVILY_API_KEY)
+    search_query = (
+        f"{name} in {otm_city} {otm_country} official website, "
+        f"opening hours for each day of the week, "
+        f"ticket price, recommended duration, rating"
+    )
     search_results = await search_tool.ainvoke({"query": search_query})
     
     if isinstance(search_results, str):
@@ -398,8 +402,9 @@ async def enrich_single_attraction_node(poi_data: dict) -> dict:
         "rating": extracted_data.rating,
         "description": extracted_data.description,
         "website_url": extracted_data.website_url or poi_data.get("website_url"),
-        "city": extracted_data.city,       
-        "country": extracted_data.country
+        "city": extracted_data.city,
+        "country": extracted_data.country,
+        "opening_hours": extracted_data.opening_hours.model_dump()
     }
 
     return {"resolved_attractions": [enriched_poi]}
@@ -437,7 +442,8 @@ async def save_attractions_to_db(state: ItineraryState) -> dict:
                     rating=poi_data.get("rating"),
                     price_tier=poi_data.get("price_tier"),
                     recommended_duration_mins=poi_data.get("recommended_duration_mins", 120),
-                    tod_preference=poi_data.get("tod_preference")
+                    tod_preference=poi_data.get("tod_preference"),
+                    opening_hours=poi_data.get("opening_hours")
                 )
                 db.add(new_attraction)
                 await db.flush()

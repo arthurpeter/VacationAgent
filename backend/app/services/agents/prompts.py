@@ -157,4 +157,5 @@ INSTRUCTIONS:
 1. Extract the requested fields (price tier, duration, tod, rating, website).
 2. Clean up the Messy Baseline Location. Output the standard, widely recognized ENGLISH name for the City and the standard 2-letter Country Code for the Country.
 3. Write a fresh, engaging 2-sentence travel description for the attraction.
+4. Weekly Opening Hours: Provide a JSON object with keys for all 7 days (monday-sunday).
 """

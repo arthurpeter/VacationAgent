@@ -19,6 +19,33 @@ log = get_logger(__name__)
 
 router = APIRouter(prefix="/itinerary", tags=["Itinerary"])
 
+@router.post("/update-search-location")
+async def update_search_location(
+    data: UpdateSearchLocationRequest,
+    db: AsyncSession = Depends(get_db),
+    checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
+    token: TokenPayload = Depends(access_token_header)
+):
+    stmt = select(models.VacationSession).where(
+        models.VacationSession.id == data.session_id,
+        models.VacationSession.user_id == token.sub
+    )
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
+
+    if not session:
+        log.warning(f"Unauthorized access attempt to session {data.session_id} by user {token.sub}")
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    graph = generate_itinerary_graph(checkpointer)
+    config = {"configurable": {"thread_id": f"itinerary_{data.session_id}"}}
+
+    current_state = await graph.aget_state(config)
+    current_state.values["search_location"] = data.new_location
+    await graph.aupdate_state(config, {"search_location": data.new_location})
+
+    return {"status": "success", "new_search_location": data.new_location}
+
 @router.get("/state/{session_id}")
 async def get_itinerary_state(
     session_id: int,
@@ -45,11 +72,12 @@ async def get_itinerary_state(
         return {
             "stage": 0,
             "pois": [],
-            "resolved_attractions": []
+            "resolved_attractions": [],
+            "search_location": session.destination
         }
     
     ui_keys = {
-        "stage", "pois", "resolved_attractions"
+        "stage", "pois", "resolved_attractions", "search_location"
     }
     
     return {k: v for k, v in state.values.items() if k in ui_keys}

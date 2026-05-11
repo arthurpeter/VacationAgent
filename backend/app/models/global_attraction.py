@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime
+from sqlalchemy import JSON, Column, Integer, String, Float, Text, DateTime
 from sqlalchemy.sql import func
 from app.core.database import Base
 
@@ -10,6 +10,7 @@ class GlobalAttraction(Base):
     external_place_id = Column(String, unique=True, index=True, nullable=True) # Google/OSM ID
     wikidata_id = Column(String, nullable=True)
     official_name = Column(String, index=True, nullable=False)
+    opening_hours = Column(JSON, nullable=True)
     
     city = Column(String, index=True, nullable=False)
     state_province = Column(String, index=True, nullable=True)

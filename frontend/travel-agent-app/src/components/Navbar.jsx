@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef  } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { fetchWithAuth } from "../authService";
@@ -13,6 +13,7 @@ export default function Navbar() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const notificationRef = useRef(null);
 
   const handleLogout = () => {
     logout();
@@ -67,6 +68,23 @@ export default function Navbar() {
     };
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target)
+      ) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   const handleMarkAllRead = async () => {
     if (unreadCount === 0) return;
     
@@ -114,7 +132,7 @@ export default function Navbar() {
 
             <div className="h-6 w-px bg-gray-200 mx-1"></div>
 
-            <div className="relative flex items-center">
+            <div ref={notificationRef} className="relative flex items-center">
               <button 
                 onClick={() => {
                   const newState = !showNotifications;

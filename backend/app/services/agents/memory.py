@@ -26,6 +26,7 @@ class ItineraryState(TypedDict):
     session_id: int
     stage: int = 0
     action: Optional[str] = None
+    search_location: Optional[str] = None
     
     persona_context: Optional[str] = None
     data: Optional[dict] = None

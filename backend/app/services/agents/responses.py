@@ -37,6 +37,14 @@ class AttractionList(BaseModel):
         description="A list of up to 15 specific, highly famous tourist attractions, museums, or landmarks."
     )
 
+class OperatingHours(BaseModel):
+    monday: Optional[str] = Field(description="e.g., 09:00-18:00 or Closed")
+    tuesday: Optional[str] = Field(description="e.g., 09:00-18:00 or Closed")
+    wednesday: Optional[str] = Field(description="e.g., 09:00-18:00 or Closed")
+    thursday: Optional[str] = Field(description="e.g., 09:00-18:00 or Closed")
+    friday: Optional[str] = Field(description="e.g., 09:00-18:00 or Closed")
+    saturday: Optional[str] = Field(description="e.g., 09:00-18:00 or Closed")
+    sunday: Optional[str] = Field(description="e.g., 09:00-18:00 or Closed")
 
 class AttractionEnrichmentSchema(BaseModel):
     city: str = Field(
@@ -63,4 +71,7 @@ class AttractionEnrichmentSchema(BaseModel):
     )
     description: str = Field(
         description="Write a short, engaging 2-3 sentence travel description based on the search context."
+    )
+    opening_hours: OperatingHours = Field(
+        description="The weekly opening hours for the attraction. Use the format 'HH:MM-HH:MM' for each day, or 'Closed' if not open that day."
     )

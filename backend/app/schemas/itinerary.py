@@ -2,6 +2,10 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+class UpdateSearchLocationRequest(BaseModel):
+    session_id: int
+    new_location: str
+
 class AddToBucketRequest(BaseModel):
     session_id: int
     attraction_id: int

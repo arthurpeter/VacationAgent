@@ -224,6 +224,7 @@ async def get_initial_itinerary_state(db: AsyncSession, session_id: int) -> Itin
         "session_id": session.id,
         "stage": 0,
         "action": None,
+        "search_location": session.destination,
         "persona_context": persona,
         "data": itinerary_db_context,
         "pois": []
