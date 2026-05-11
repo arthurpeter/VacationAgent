@@ -78,102 +78,82 @@ def generate_graph(checkpointer=None):
 
     return builder.compile(checkpointer=checkpointer)
 
-async def stream_itinerary_message(
-    session_id: int, 
-    user_message: str, 
-    db: AsyncSession, 
+async def run_itinerary_graph(
+    session_id: int,
+    action: str,
+    stage: int,
+    query: Optional[str],
+    db: AsyncSession,
     checkpointer: AsyncPostgresSaver
-):
-    graph = generate_graph(checkpointer) 
+) -> dict:
+    """
+    Executes the itinerary graph to completion for a specific action and stage.
+    Returns the full final state of the graph.
+    """
+    graph = generate_graph(checkpointer)
     config = {"configurable": {"thread_id": f"itinerary_{session_id}"}}
 
     current_state = await graph.aget_state(config)
 
     if not current_state.values:
-        log.info(f"Starting new LangGraph itinerary thread for session {session_id}...")
+        log.info(f"Initializing new itinerary state for session {session_id}...")
         input_data = await get_initial_itinerary_state(db, session_id)
-        input_data["messages"].append(HumanMessage(content=user_message))
     else:
-        log.info(f"Resuming existing LangGraph itinerary thread for session {session_id}...")
-        input_data = {
-            "messages": [HumanMessage(content=user_message)]
-        }
+        log.info(f"Resuming itinerary state for session {session_id}...")
+        input_data = {}
 
-    final_ai_text = ""
+    input_data["action"] = action
+    input_data["stage"] = stage
+    
+    if query:
+        input_data["messages"] = [HumanMessage(content=query)]
 
-    async for event in graph.astream(input_data, config=config, stream_mode="updates"):
-        for node_name, node_updates in event.items():
+    final_state = await graph.ainvoke(input_data, config=config)
+    
+    return final_state
 
-            if not node_updates or not isinstance(node_updates, dict):
-                continue
-            
-            new_messages = node_updates.get("messages", [])
-            if new_messages:
-                last_msg = new_messages[-1] if isinstance(new_messages, list) else new_messages
-                if getattr(last_msg, "type", "") == "ai":
-                    final_ai_text = last_msg.content
-            
-            payload = {
-                "status": "processing",
-                "current_node": node_name,
-                "daily_themes": node_updates.get("daily_themes"),
-                "daily_plans": node_updates.get("daily_plans"),
-                "daily_links": node_updates.get("daily_links"),
-                "transit_strategy": node_updates.get("transit_strategy"),
-            }
-            
-            yield f"data: {orjson.dumps(payload, option=orjson.OPT_NON_STR_KEYS).decode()}\n\n"
-
-    final_payload = {
-        "status": "complete", 
-        "ai_message": final_ai_text
-    }
-    yield f"data: {orjson.dumps(final_payload).decode()}\n\n"
-
-import asyncio
+# import asyncio
 
 if __name__ == "__main__":
-    # print("This module is not meant to be run directly. It provides the execution graph for the itinerary process.\n\n")
-    # my_graph = generate_graph()
+    print("This module is not meant to be run directly. It provides the execution graph for the itinerary process.\n\n")
+    my_graph = generate_graph()
     
-    # png_bytes = my_graph.get_graph(xray=True).draw_mermaid_png()
+    png_bytes = my_graph.get_graph(xray=True).draw_mermaid_png()
     
-    # with open("itinerary_graph_v2.png", "wb") as f:
-    #     f.write(png_bytes)
+    with open("itinerary_graph_v2.png", "wb") as f:
+        f.write(png_bytes)
         
-    # print("Graph saved successfully to itinerary_graph_v2.png!")
+    print("Graph saved successfully to itinerary_graph_v2.png!")
 
-    async def test_initial_fetch():
-        print("🚀 Compiling the Itinerary Graph...")
-        graph = generate_graph()
+    # async def test_initial_fetch():
+    #     print("🚀 Compiling the Itinerary Graph...")
+    #     graph = generate_graph()
 
-        # Create a mock initial state imitating what your frontend/API would send
-        initial_state = {
-            "stage": 0,
-            "action": "initial_fetch",
-            "data": {
-                "destination": "Rome, It"
-            },
-            "persona": "History Buff", # Testing the prompt injection
-            "pois": [],
-            "unresolved_attractions": [],
-            "resolved_attractions": [],
-            "messages": []
-        }
+    #     initial_state = {
+    #         "stage": 0,
+    #         "action": "initial_fetch",
+    #         "data": {
+    #             "destination": "Rome, It"
+    #         },
+    #         "persona": "History Buff",
+    #         "pois": [],
+    #         "unresolved_attractions": [],
+    #         "resolved_attractions": [],
+    #         "messages": []
+    #     }
 
-        print(f"🌍 Starting graph execution for {initial_state['data']['destination']}...")
+    #     print(f"🌍 Starting graph execution for {initial_state['data']['destination']}...")
 
-        # We use ainvoke because your nodes rely on async DB calls and async API calls
-        final_state = await graph.ainvoke(initial_state)
+    #     final_state = await graph.ainvoke(initial_state)
 
-        print("\n✅ Graph Execution Finished!\n")
+    #     print("\n✅ Graph Execution Finished!\n")
 
-        print("--- Final POIs Collected ---")
-        pprint.pprint(final_state.get("pois"))
+    #     print("--- Final POIs Collected ---")
+    #     pprint.pprint(final_state.get("pois"))
 
-        print("\n--- Final Graph State Keys ---")
-        print(f"Action: {final_state.get('action')}")
-        print(f"Unresolved Count: {len(final_state.get('unresolved_attractions', []))}")
-        print(f"Resolved Count: {len(final_state.get('resolved_attractions', []))}")
+    #     print("\n--- Final Graph State Keys ---")
+    #     print(f"Action: {final_state.get('action')}")
+    #     print(f"Unresolved Count: {len(final_state.get('unresolved_attractions', []))}")
+    #     print(f"Resolved Count: {len(final_state.get('resolved_attractions', []))}")
 
-    asyncio.run(test_initial_fetch())
+    # asyncio.run(test_initial_fetch())

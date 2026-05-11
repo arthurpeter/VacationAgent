@@ -238,7 +238,7 @@ async def picking_attractions(state: ItineraryState) -> dict:
             "price_tier": p.price_tier,
             "recommended_duration_mins": p.recommended_duration_mins,
             "tod_preference": p.tod_preference,
-            "id": p.id # Database Primary Key
+            "id": p.id
         }
 
     if action == "initial_fetch":
@@ -409,7 +409,7 @@ async def save_attractions_to_db(state: ItineraryState) -> dict:
     if not resolved:
         return {"action": "move_to_next_stage"}
 
-    new_formatted_pois = []
+    updated_resolved_list = []
     
     async with SessionLocal() as db:
         for poi_data in resolved:
@@ -441,10 +441,19 @@ async def save_attractions_to_db(state: ItineraryState) -> dict:
                 )
                 db.add(new_attraction)
                 await db.flush()
+
+                poi_data["id"] = new_attraction.id
+            else:
+                poi_data["id"] = existing_place.id
+            
+            updated_resolved_list.append(poi_data)
             
         await db.commit()
     
-    return {"action": "idle"}
+    return {
+        "resolved_attractions": Overwrite(updated_resolved_list),
+        "action": "idle"
+    }
 
 
 async def picking_transit(state: ItineraryState) -> dict:

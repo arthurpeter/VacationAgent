@@ -118,10 +118,15 @@ async def get_place_details(xid: str) -> Optional[Dict]:
             data = res.json()
             
             image_url = data.get("preview", {}).get("source")
-            if image_url and "wikimedia.org" in image_url and "/thumb/" in image_url:
+            if "/thumb/" in image_url:
                 parts = image_url.split("/")
-                parts.pop()
-                image_url = "/".join(parts).replace("/thumb/", "/")
+                filename = parts[-2]
+                parts[-1] = f"330px-{filename}"
+                image_url = "/".join(parts)
+            else:
+                parts = image_url.split("/")
+                filename = parts[-1]
+                image_url = image_url.replace("/commons/", "/commons/thumb/") + f"/330px-{filename}"
 
             addr = data.get("address", {})
             street = addr.get("pedestrian") or addr.get("road") or ""

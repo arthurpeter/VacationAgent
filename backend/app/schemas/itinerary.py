@@ -5,6 +5,8 @@ from pydantic import BaseModel
 class AddToBucketRequest(BaseModel):
     session_id: int
     attraction_id: int
+    name: str
+    image_url: Optional[str] = None
     time_to_spend: int
     bucket: str
 
