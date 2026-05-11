@@ -415,6 +415,24 @@ async def book_flight(
         hl=results.get("hl"),
         currency=results.get("currency")
     )
+    selected_outbound = booking_results.get("selected_flights", [{}])[0]
+    outbound_segments = selected_outbound.get("flights", [])
+
+    air_lat, air_lon, air_name = None, None, None
+
+    if outbound_segments:
+        final_arrival_airport = outbound_segments[-1].get("arrival_airport", {})
+        actual_iata_code = final_arrival_airport.get("id")
+        
+        if actual_iata_code:
+            airport_info = AIRPORTS_DB.get(actual_iata_code.upper())
+            if airport_info:
+                air_lat = airport_info.get('lat')
+                air_lon = airport_info.get('lon')
+                air_name = airport_info.get('name')
+            else:
+                air_name = final_arrival_airport.get("name")
+
     url = booking_results.get("search_metadata", {}).get("google_flights_url")
 
     if not url:
@@ -446,6 +464,9 @@ async def book_flight(
                 flight_ccy=results.get("currency"),
                 destination_arrival=arrival_dt,
                 destination_departure=departure_dt,
+                airport_latitude = air_lat,
+                airport_longitude = air_lon,
+                airport_name = air_name,
             )
         )
         await db.execute(stmt)
@@ -670,7 +691,10 @@ async def book_accomodation(
             .values(
                 accomodation_url=data.booking_url,
                 accomodation_price=data.price,
-                accomodation_ccy=data.currency
+                accomodation_ccy=data.currency,
+                accommodation_latitude=data.latitude,
+                accommodation_longitude=data.longitude,
+                accomodation_address=data.address,
             )
         )
         

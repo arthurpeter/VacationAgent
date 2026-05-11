@@ -1,0 +1,730 @@
+{
+    "search_metadata": {
+        "id": "6a0249516f1e40459609f8c0",
+        "status": "Success",
+        "json_endpoint": "https://serpapi.com/searches/sDcBf9eCaYLOfJLevqT-NA/6a0249516f1e40459609f8c0.json",
+        "created_at": "2026-05-11 21:25:37 UTC",
+        "processed_at": "2026-05-11 21:25:37 UTC",
+        "google_flights_url": "https://www.google.com/travel/flights?hl=en&gl=ro&curr=RON&tfs=CBwQAhonEgoyMDI2LTA2LTIyagcIARIDT1RQagcIARIDQkJVcgcIARIDRkNPGicSCjIwMjYtMDYtMjhqBwgBEgNGQ09yBwgBEgNPVFByBwgBEgNCQlVAAUgBcAGYAQE&tfu=EgIIAg",
+        "raw_html_file": "https://serpapi.com/searches/sDcBf9eCaYLOfJLevqT-NA/6a0249516f1e40459609f8c0.html",
+        "prettify_html_file": "https://serpapi.com/searches/sDcBf9eCaYLOfJLevqT-NA/6a0249516f1e40459609f8c0.prettify",
+        "total_time_taken": 10.67
+    },
+    "search_parameters": {
+        "engine": "google_flights",
+        "hl": "en",
+        "gl": "ro",
+        "type": "1",
+        "departure_id": "OTP,BBU",
+        "arrival_id": "FCO",
+        "outbound_date": "2026-06-22",
+        "return_date": "2026-06-28",
+        "adults": 1,
+        "children": 0,
+        "infants_in_seat": 0,
+        "infants_on_lap": 0,
+        "stops": 0,
+        "currency": "RON",
+        "deep_search": true,
+        "sort_by": "2"
+    },
+    "other_flights": [
+        {
+            "flights": [
+                {
+                    "departure_airport": {
+                        "name": "Bucharest Henri Coand\u0103 International Airport",
+                        "id": "OTP",
+                        "time": "2026-06-22 07:40"
+                    },
+                    "arrival_airport": {
+                        "name": "Leonardo da Vinci International Airport",
+                        "id": "FCO",
+                        "time": "2026-06-22 09:00"
+                    },
+                    "duration": 140,
+                    "airplane": "Airbus A321neo",
+                    "airline": "Wizz Air",
+                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/W4.png",
+                    "travel_class": "Economy",
+                    "flight_number": "W4 3141",
+                    "extensions": [
+                        "Carbon emissions estimate: 82 kg"
+                    ]
+                }
+            ],
+            "total_duration": 140,
+            "carbon_emissions": {
+                "this_flight": 83000,
+                "typical_for_this_route": 97000,
+                "difference_percent": -14
+            },
+            "price": 578,
+            "type": "Round trip",
+            "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/W4.png",
+            "departure_token": "WyJDalJJZUVScFVuRnJZak5sUTBsQlFWaEhaV2RDUnkwdExTMHRMUzB0TFMxMmRHWnhNa0ZCUVVGQlIyOURVMVpaUzFkTFlYZEJFZ1pYTkRNeE5ERWFDd2pJd3dNUUFob0RVazlPT0J4d21HWT0iLFtbIk9UUCIsIjIwMjYtMDYtMjIiLCJGQ08iLG51bGwsIlc0IiwiMzE0MSJdXV0="
+        },
+        {
+            "flights": [
+                {
+                    "departure_airport": {
+                        "name": "Bucharest Henri Coand\u0103 International Airport",
+                        "id": "OTP",
+                        "time": "2026-06-22 20:20"
+                    },
+                    "arrival_airport": {
+                        "name": "Leonardo da Vinci International Airport",
+                        "id": "FCO",
+                        "time": "2026-06-22 21:40"
+                    },
+                    "duration": 140,
+                    "airplane": "Airbus A321",
+                    "airline": "Wizz Air",
+                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/W4.png",
+                    "travel_class": "Economy",
+                    "flight_number": "W4 3145",
+                    "extensions": [
+                        "Carbon emissions estimate: 107 kg"
+                    ]
+                }
+            ],
+            "total_duration": 140,
+            "carbon_emissions": {
+                "this_flight": 107000,
+                "typical_for_this_route": 97000,
+                "difference_percent": 10
+            },
+            "price": 608,
+            "type": "Round trip",
+            "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/W4.png",
+            "departure_token": "WyJDalJJZUVScFVuRnJZak5sUTBsQlFWaEhaV2RDUnkwdExTMHRMUzB0TFMxMmRHWnhNa0ZCUVVGQlIyOURVMVpaUzFkTFlYZEJFZ1pYTkRNeE5EVWFDd2lBMndNUUFob0RVazlPT0J4d3Yycz0iLFtbIk9UUCIsIjIwMjYtMDYtMjIiLCJGQ08iLG51bGwsIlc0IiwiMzE0NSJdXV0="
+        },
+        {
+            "flights": [
+                {
+                    "departure_airport": {
+                        "name": "Bucharest Henri Coand\u0103 International Airport",
+                        "id": "OTP",
+                        "time": "2026-06-22 05:35"
+                    },
+                    "arrival_airport": {
+                        "name": "Warsaw Frederic Chopin",
+                        "id": "WAW",
+                        "time": "2026-06-22 06:20"
+                    },
+                    "duration": 105,
+                    "airplane": "Boeing 737MAX 8 Passenger",
+                    "airline": "LOT",
+                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/LO.png",
+                    "travel_class": "Economy",
+                    "flight_number": "LO 644",
+                    "legroom": "30 in",
+                    "extensions": [
+                        "Average legroom (30 in)",
+                        "In-seat power & USB outlets",
+                        "Stream media to your device",
+                        "Carbon emissions estimate: 81 kg"
+                    ]
+                },
+                {
+                    "departure_airport": {
+                        "name": "Warsaw Frederic Chopin",
+                        "id": "WAW",
+                        "time": "2026-06-22 07:20"
+                    },
+                    "arrival_airport": {
+                        "name": "Leonardo da Vinci International Airport",
+                        "id": "FCO",
+                        "time": "2026-06-22 09:45"
+                    },
+                    "duration": 145,
+                    "airplane": "Boeing 737MAX 8 Passenger",
+                    "airline": "LOT",
+                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/LO.png",
+                    "travel_class": "Economy",
+                    "flight_number": "LO 301",
+                    "legroom": "30 in",
+                    "extensions": [
+                        "Average legroom (30 in)",
+                        "In-seat power & USB outlets",
+                        "Stream media to your device",
+                        "Carbon emissions estimate: 106 kg"
+                    ]
+                }
+            ],
+            "layovers": [
+                {
+                    "duration": 60,
+                    "name": "Warsaw Frederic Chopin",
+                    "id": "WAW"
+                }
+            ],
+            "total_duration": 310,
+            "carbon_emissions": {
+                "this_flight": 189000,
+                "typical_for_this_route": 97000,
+                "difference_percent": 95
+            },
+            "price": 973,
+            "type": "Round trip",
+            "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/LO.png",
+            "departure_token": "WyJDalJJZUVScFVuRnJZak5sUTBsQlFWaEhaV2RDUnkwdExTMHRMUzB0TFMxMmRHWnhNa0ZCUVVGQlIyOURVMVpaUzFkTFlYZEJFZ3RNVHpZME5IeE1Uek13TVJvTENQajNCUkFDR2dOU1QwNDRISEQ5cXdFPSIsW1siT1RQIiwiMjAyNi0wNi0yMiIsIldBVyIsbnVsbCwiTE8iLCI2NDQiXSxbIldBVyIsIjIwMjYtMDYtMjIiLCJGQ08iLG51bGwsIkxPIiwiMzAxIl1dXQ=="
+        },
+        {
+            "flights": [
+                {
+                    "departure_airport": {
+                        "name": "Bucharest Henri Coand\u0103 International Airport",
+                        "id": "OTP",
+                        "time": "2026-06-22 04:30"
+                    },
+                    "arrival_airport": {
+                        "name": "Belgrade Nikola Tesla Airport",
+                        "id": "BEG",
+                        "time": "2026-06-22 05:00"
+                    },
+                    "duration": 90,
+                    "airplane": "ATR 72",
+                    "airline": "Air Serbia",
+                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/JU.png",
+                    "travel_class": "Economy",
+                    "flight_number": "JU 107",
+                    "ticket_also_sold_by": [
+                        "ITA"
+                    ],
+                    "legroom": "29 in",
+                    "extensions": [
+                        "Below average legroom (29 in)",
+                        "Carbon emissions estimate: 49 kg"
+                    ],
+                    "overnight": true
+                },
+                {
+                    "departure_airport": {
+                        "name": "Belgrade Nikola Tesla Airport",
+                        "id": "BEG",
+                        "time": "2026-06-22 06:50"
+                    },
+                    "arrival_airport": {
+                        "name": "Leonardo da Vinci International Airport",
+                        "id": "FCO",
+                        "time": "2026-06-22 08:25"
+                    },
+                    "duration": 95,
+                    "airplane": "Airbus A319",
+                    "airline": "Air Serbia",
+                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/JU.png",
+                    "travel_class": "Economy",
+                    "flight_number": "JU 400",
+                    "ticket_also_sold_by": [
+                        "ITA"
+                    ],
+                    "legroom": "30 in",
+                    "extensions": [
+                        "Average legroom (30 in)",
+                        "Carbon emissions estimate: 90 kg"
+                    ]
+                }
+            ],
+            "layovers": [
+                {
+                    "duration": 110,
+                    "name": "Belgrade Nikola Tesla Airport",
+                    "id": "BEG"
+                }
+            ],
+            "total_duration": 295,
+            "carbon_emissions": {
+                "this_flight": 140000,
+                "typical_for_this_route": 97000,
+                "difference_percent": 44
+            },
+            "price": 1124,
+            "type": "Round trip",
+            "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/JU.png",
+            "departure_token": "WyJDalJJZUVScFVuRnJZak5sUTBsQlFWaEhaV2RDUnkwdExTMHRMUzB0TFMxMmRHWnhNa0ZCUVVGQlIyOURVMVpaUzFkTFlYZEJFZ3RLVlRFd04zeEtWVFF3TUJvTENKRHVCaEFDR2dOU1QwNDRISERjeGdFPSIsW1siT1RQIiwiMjAyNi0wNi0yMiIsIkJFRyIsbnVsbCwiSlUiLCIxMDciXSxbIkJFRyIsIjIwMjYtMDYtMjIiLCJGQ08iLG51bGwsIkpVIiwiNDAwIl1dXQ=="
+        },
+        {
+            "flights": [
+                {
+                    "departure_airport": {
+                        "name": "Bucharest Henri Coand\u0103 International Airport",
+                        "id": "OTP",
+                        "time": "2026-06-22 16:05"
+                    },
+                    "arrival_airport": {
+                        "name": "Belgrade Nikola Tesla Airport",
+                        "id": "BEG",
+                        "time": "2026-06-22 16:20"
+                    },
+                    "duration": 75,
+                    "airplane": "Embraer 190",
+                    "airline": "Air Serbia",
+                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/JU.png",
+                    "travel_class": "Economy",
+                    "flight_number": "JU 103",
+                    "ticket_also_sold_by": [
+                        "ITA"
+                    ],
+                    "legroom": "31 in",
+                    "extensions": [
+                        "Average legroom (31 in)",
+                        "Carbon emissions estimate: 71 kg"
+                    ],
+                    "plane_and_crew_by": "Bulgaria Air for Air Serbia"
+                },
+                {
+                    "departure_airport": {
+                        "name": "Belgrade Nikola Tesla Airport",
+                        "id": "BEG",
+                        "time": "2026-06-22 18:10"
+                    },
+                    "arrival_airport": {
+                        "name": "Leonardo da Vinci International Airport",
+                        "id": "FCO",
+                        "time": "2026-06-22 19:45"
+                    },
+                    "duration": 95,
+                    "airplane": "Airbus A220-300 Passenger",
+                    "airline": "Air Serbia",
+                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/JU.png",
+                    "travel_class": "Economy",
+                    "flight_number": "JU 404",
+                    "ticket_also_sold_by": [
+                        "ITA"
+                    ],
+                    "legroom": "30 in",
+                    "extensions": [
+                        "Average legroom (30 in)",
+                        "Carbon emissions estimate: 87 kg"
+                    ],
+                    "plane_and_crew_by": "Airbaltic for Air Serbia"
+                }
+            ],
+            "layovers": [
+                {
+                    "duration": 110,
+                    "name": "Belgrade Nikola Tesla Airport",
+                    "id": "BEG"
+                }
+            ],
+            "total_duration": 280,
+            "carbon_emissions": {
+                "this_flight": 159000,
+                "typical_for_this_route": 97000,
+                "difference_percent": 64
+            },
+            "price": 1124,
+            "type": "Round trip",
+            "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/JU.png",
+            "departure_token": "WyJDalJJZUVScFVuRnJZak5sUTBsQlFWaEhaV2RDUnkwdExTMHRMUzB0TFMxMmRHWnhNa0ZCUVVGQlIyOURVMVpaUzFkTFlYZEJFZ3RLVlRFd00zeEtWVFF3TkJvTENKRHVCaEFDR2dOU1QwNDRISERjeGdFPSIsW1siT1RQIiwiMjAyNi0wNi0yMiIsIkJFRyIsbnVsbCwiSlUiLCIxMDMiXSxbIkJFRyIsIjIwMjYtMDYtMjIiLCJGQ08iLG51bGwsIkpVIiwiNDA0Il1dXQ=="
+        },
+        {
+            "flights": [
+                {
+                    "departure_airport": {
+                        "name": "Bucharest Henri Coand\u0103 International Airport",
+                        "id": "OTP",
+                        "time": "2026-06-22 13:15"
+                    },
+                    "arrival_airport": {
+                        "name": "Vienna International Airport",
+                        "id": "VIE",
+                        "time": "2026-06-22 13:55"
+                    },
+                    "duration": 100,
+                    "airplane": "Airbus A320neo",
+                    "airline": "Austrian",
+                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/OS.png",
+                    "travel_class": "Economy",
+                    "flight_number": "OS 694",
+                    "legroom": "28 in",
+                    "extensions": [
+                        "Below average legroom (28 in)",
+                        "In-seat USB outlet",
+                        "Carbon emissions estimate: 77 kg"
+                    ]
+                },
+                {
+                    "departure_airport": {
+                        "name": "Vienna International Airport",
+                        "id": "VIE",
+                        "time": "2026-06-22 15:20"
+                    },
+                    "arrival_airport": {
+                        "name": "Leonardo da Vinci International Airport",
+                        "id": "FCO",
+                        "time": "2026-06-22 16:55"
+                    },
+                    "duration": 95,
+                    "airplane": "Airbus A320",
+                    "airline": "Austrian",
+                    "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/OS.png",
+                    "travel_class": "Economy",
+                    "flight_number": "OS 555",
+                    "legroom": "28 in",
+                    "extensions": [
+                        "Below average legroom (28 in)",
+                        "In-seat USB outlet",
+                        "Carbon emissions estimate: 84 kg"
+                    ]
+                }
+            ],
+            "layovers": [
+                {
+                    "duration": 85,
+                    "name": "Vienna International Airport",
+                    "id": "VIE"
+                }
+            ],
+            "total_duration": 280,
+            "carbon_emissions": {
+                "this_flight": 162000,
+                "typical_for_this_route": 97000,
+                "difference_percent": 67
+            },
+            "price": 1336,
+            "type": "Round trip",
+            "airline_logo": "https://www.gstatic.com/flights/airline_logos/70px/OS.png",
+            "departure_token": "WyJDalJJZUVScFVuRnJZak5sUTBsQlFWaEhaV2RDUnkwdExTMHRMUzB0TFMxMmRHWnhNa0ZCUVVGQlIyOURVMVpaUzFkTFlYZEJFZ3RQVXpZNU5IeFBVelUxTlJvTENOcVRDQkFDR2dOU1QwNDRISENZN0FFPSIsW1siT1RQIiwiMjAyNi0wNi0yMiIsIlZJRSIsbnVsbCwiT1MiLCI2OTQiXSxbIlZJRSIsIjIwMjYtMDYtMjIiLCJGQ08iLG51bGwsIk9TIiwiNTU1Il1dXQ=="
+        }
+    ],
+    "price_insights": {
+        "lowest_price": 578,
+        "price_level": "high",
+        "typical_price_range": [
+            285,
+            550
+        ],
+        "price_history": [
+            [
+                1773266400,
+                675
+            ],
+            [
+                1773352800,
+                700
+            ],
+            [
+                1773439200,
+                701
+            ],
+            [
+                1773525600,
+                701
+            ],
+            [
+                1773612000,
+                651
+            ],
+            [
+                1773698400,
+                613
+            ],
+            [
+                1773784800,
+                613
+            ],
+            [
+                1773871200,
+                688
+            ],
+            [
+                1773957600,
+                651
+            ],
+            [
+                1774044000,
+                651
+            ],
+            [
+                1774130400,
+                650
+            ],
+            [
+                1774216800,
+                650
+            ],
+            [
+                1774303200,
+                631
+            ],
+            [
+                1774389600,
+                590
+            ],
+            [
+                1774476000,
+                591
+            ],
+            [
+                1774562400,
+                565
+            ],
+            [
+                1774648800,
+                578
+            ],
+            [
+                1774735200,
+                578
+            ],
+            [
+                1774818000,
+                518
+            ],
+            [
+                1774904400,
+                418
+            ],
+            [
+                1774990800,
+                418
+            ],
+            [
+                1775077200,
+                378
+            ],
+            [
+                1775163600,
+                378
+            ],
+            [
+                1775250000,
+                378
+            ],
+            [
+                1775336400,
+                378
+            ],
+            [
+                1775422800,
+                408
+            ],
+            [
+                1775509200,
+                373
+            ],
+            [
+                1775595600,
+                373
+            ],
+            [
+                1775682000,
+                376
+            ],
+            [
+                1775768400,
+                458
+            ],
+            [
+                1775854800,
+                428
+            ],
+            [
+                1775941200,
+                428
+            ],
+            [
+                1776027600,
+                448
+            ],
+            [
+                1776114000,
+                448
+            ],
+            [
+                1776200400,
+                448
+            ],
+            [
+                1776286800,
+                478
+            ],
+            [
+                1776373200,
+                448
+            ],
+            [
+                1776459600,
+                448
+            ],
+            [
+                1776546000,
+                488
+            ],
+            [
+                1776632400,
+                443
+            ],
+            [
+                1776718800,
+                443
+            ],
+            [
+                1776805200,
+                448
+            ],
+            [
+                1776891600,
+                448
+            ],
+            [
+                1776978000,
+                338
+            ],
+            [
+                1777064400,
+                338
+            ],
+            [
+                1777150800,
+                338
+            ],
+            [
+                1777237200,
+                338
+            ],
+            [
+                1777323600,
+                338
+            ],
+            [
+                1777410000,
+                368
+            ],
+            [
+                1777496400,
+                378
+            ],
+            [
+                1777582800,
+                398
+            ],
+            [
+                1777669200,
+                398
+            ],
+            [
+                1777755600,
+                428
+            ],
+            [
+                1777842000,
+                403
+            ],
+            [
+                1777928400,
+                378
+            ],
+            [
+                1778014800,
+                378
+            ],
+            [
+                1778101200,
+                386
+            ],
+            [
+                1778187600,
+                386
+            ],
+            [
+                1778274000,
+                425
+            ],
+            [
+                1778360400,
+                431
+            ],
+            [
+                1778446800,
+                458
+            ],
+            [
+                1778533200,
+                578
+            ]
+        ]
+    },
+    "airports": [
+        {
+            "departure": [
+                {
+                    "airport": {
+                        "id": "OTP",
+                        "name": "Bucharest Henri Coand\u0103 International Airport"
+                    },
+                    "city": "Bucharest",
+                    "country": "Romania",
+                    "country_code": "RO",
+                    "image": "https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcTtro49q0suNU_mFlbzav_vwG63KOadHLOYfS3XPKm2TWo72PhIJrk4V4gUj4Xz88LMHP5iXW0UlG_lxA",
+                    "thumbnail": "https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcQILXEW3dcfDml-EytZuvLURiGOXSqbG1BQEom060xahcpMd1XNdw75x6gBjEDvSsC3MbjP3ksIneKyb09JbhK6un13mXcEM677IH9RJHM"
+                },
+                {
+                    "airport": {
+                        "id": "BBU",
+                        "name": "Bucharest B\u0103neasa - Aurel Vlaicu International Airport"
+                    },
+                    "city": "Bucharest",
+                    "country": "Romania",
+                    "country_code": "RO",
+                    "image": "https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcTtro49q0suNU_mFlbzav_vwG63KOadHLOYfS3XPKm2TWo72PhIJrk4V4gUj4Xz88LMHP5iXW0UlG_lxA",
+                    "thumbnail": "https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcQILXEW3dcfDml-EytZuvLURiGOXSqbG1BQEom060xahcpMd1XNdw75x6gBjEDvSsC3MbjP3ksIneKyb09JbhK6un13mXcEM677IH9RJHM"
+                }
+            ],
+            "arrival": [
+                {
+                    "airport": {
+                        "id": "FCO",
+                        "name": "Leonardo da Vinci International Airport"
+                    },
+                    "city": "Rome",
+                    "country": "Italy",
+                    "country_code": "IT",
+                    "image": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcT2IU9ZUmvhvThfVJdnmh0sazh2RYI04-GSv0_GLCW7m3TnPpi1XYRNkIuXyL-bdJRgPn7Akcbg6zmDzw",
+                    "thumbnail": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcRM_5snkSVZsnpG8dhW0NGx_Pdwk592nbBjmyqu-UxZDclvuBr6HXfXd0Fm7TYGVQpVCCr4RC6TGTmOgyP6KwpvZr0tGGnpZ7ukzP8RPLA"
+                }
+            ]
+        },
+        {
+            "departure": [
+                {
+                    "airport": {
+                        "id": "FCO",
+                        "name": "Leonardo da Vinci International Airport"
+                    },
+                    "city": "Rome",
+                    "country": "Italy",
+                    "country_code": "IT",
+                    "image": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcT2IU9ZUmvhvThfVJdnmh0sazh2RYI04-GSv0_GLCW7m3TnPpi1XYRNkIuXyL-bdJRgPn7Akcbg6zmDzw",
+                    "thumbnail": "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcRM_5snkSVZsnpG8dhW0NGx_Pdwk592nbBjmyqu-UxZDclvuBr6HXfXd0Fm7TYGVQpVCCr4RC6TGTmOgyP6KwpvZr0tGGnpZ7ukzP8RPLA"
+                }
+            ],
+            "arrival": [
+                {
+                    "airport": {
+                        "id": "OTP",
+                        "name": "Bucharest Henri Coand\u0103 International Airport"
+                    },
+                    "city": "Bucharest",
+                    "country": "Romania",
+                    "country_code": "RO",
+                    "image": "https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcTtro49q0suNU_mFlbzav_vwG63KOadHLOYfS3XPKm2TWo72PhIJrk4V4gUj4Xz88LMHP5iXW0UlG_lxA",
+                    "thumbnail": "https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcQILXEW3dcfDml-EytZuvLURiGOXSqbG1BQEom060xahcpMd1XNdw75x6gBjEDvSsC3MbjP3ksIneKyb09JbhK6un13mXcEM677IH9RJHM"
+                },
+                {
+                    "airport": {
+                        "id": "BBU",
+                        "name": "Bucharest B\u0103neasa - Aurel Vlaicu International Airport"
+                    },
+                    "city": "Bucharest",
+                    "country": "Romania",
+                    "country_code": "RO",
+                    "image": "https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcTtro49q0suNU_mFlbzav_vwG63KOadHLOYfS3XPKm2TWo72PhIJrk4V4gUj4Xz88LMHP5iXW0UlG_lxA",
+                    "thumbnail": "https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcQILXEW3dcfDml-EytZuvLURiGOXSqbG1BQEom060xahcpMd1XNdw75x6gBjEDvSsC3MbjP3ksIneKyb09JbhK6un13mXcEM677IH9RJHM"
+                }
+            ]
+        }
+    ]
+}

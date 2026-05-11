@@ -113,6 +113,9 @@ class AccomodationBookingRequest(BaseModel):
     booking_url: str
     price: Optional[float] = None
     currency: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    address: Optional[str] = None
 
 class AccomodationBookingResponse(BaseModel):
     """Schema for accomodation booking response."""

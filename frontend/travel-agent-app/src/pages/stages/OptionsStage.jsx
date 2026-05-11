@@ -425,7 +425,7 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
 
                                 <button 
                                     disabled={isLoading}
-                                    onClick={() => onSelect({ ...hotel, booking_url: details.url })}
+                                    onClick={() => onSelect({ ...hotel, booking_url: details.url, address: details.address })}
                                     className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isLoading ? "Loading Details..." : "Select & Save this Hotel"}
@@ -942,7 +942,10 @@ export default function OptionsStage() {
                     session_id: parseInt(sessionData?.id),
                     booking_url: selectedHotel.booking_url,
                     price: selectedHotel.price,
-                    currency: selectedHotel.currency
+                    currency: selectedHotel.currency,
+                    latitude: selectedHotel.latitude,
+                    longitude: selectedHotel.longitude,
+                    address: selectedHotel.address
                 }, "POST").then(res => ({ type: 'hotel', res }))
             );
         }
