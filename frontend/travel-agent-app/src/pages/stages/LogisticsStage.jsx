@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ArrowLeft, ArrowRight, Zap, Settings, Footprints, Train, 
   Smartphone, Car, BusFront, Sparkles, Navigation, ShieldCheck, 
   Search, ExternalLink, Loader2, Check, Banknote, Info, X, 
-  ChevronUp, ChevronDown, AlertCircle, AlertTriangle, Moon, Plane, Clock
+  ChevronUp, ChevronDown, AlertCircle, AlertTriangle, Moon, Plane, Clock,
+  Trophy, Lightbulb, MapPin
 } from 'lucide-react';
 import PageTransition from '../../components/PageTransition';
 import { fetchWithAuth } from '../../authService'; 
@@ -51,14 +52,120 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
   const [searchingId, setSearchingId] = useState(null);
   const [activeOffer, setActiveOffer] = useState(null);
 
-  const isDistanceTriggerOn = strategies.taxi_uber?.min_dist_km < 10000;
-
   useEffect(() => {
     if (gameState.mobility_config?.strategies) {
       setStrategies(gameState.mobility_config.strategies);
       setPrefMode(gameState.mobility_config.preference_mode);
     }
   }, [gameState]);
+
+  // --- DYNAMIC INSIGHTS ENGINE ---
+  const insights = useMemo(() => {
+    const list = [];
+    const activeStrats = Object.keys(strategies).filter(k => strategies[k]?.enabled);
+    const location = gameState.search_location?.split(',')[0] || 'the city';
+    
+    // 1. SAFETY: Late Night Gap
+    if (activeStrats.includes('public_transport') && !strategies.taxi_uber?.trigger_late_night && !strategies.rental_car?.enabled) {
+      list.push({
+        type: 'warning', icon: Moon, title: 'Late Night Gap',
+        text: `Public transit in ${location} usually ends by midnight. Enable Taxi Late-Night triggers to avoid getting stranded.`,
+        color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30'
+      });
+    }
+
+    // 2. CRITICAL: Rental Car ZTL Warning
+    if (strategies.rental_car?.enabled && !strategies.rental_car?.ignore_ztl_zones) {
+      list.push({
+        type: 'alert', icon: AlertTriangle, title: 'ZTL Zones Active',
+        text: `Restricted Traffic Zones (ZTL) are strictly enforced in ${location}. Ensure your parking strategy is center-adjacent or verify permits.`,
+        color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30'
+      });
+    }
+
+    // 3. LOGISTICS: Rental Car + Parking Buffer
+    if (strategies.rental_car?.enabled && strategies.rental_car?.includes_parking_buffer) {
+      list.push({
+        type: 'info', icon: Clock, title: 'Parking Buffer',
+        text: 'The AI is adding a +15m buffer to every stop to account for finding parking and walking to attractions.',
+        color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30'
+      });
+    }
+
+    // 4. FINANCIAL: Ride-Share Cost
+    if (strategies.taxi_uber?.enabled && strategies.taxi_uber?.priority === 1) {
+      list.push({
+        type: 'warning', icon: Banknote, title: 'Cost Imbalance',
+        text: 'Prioritizing Ride-Share as #1 will significantly increase your daily budget. Use this only for maximum comfort.',
+        color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30'
+      });
+    }
+
+    // 5. FEASIBILITY: Distance Trigger
+    if (strategies.taxi_uber?.enabled && strategies.taxi_uber?.min_dist_km < 5) {
+      list.push({
+        type: 'tip', icon: MapPin, title: 'Short Trip Logic',
+        text: `You've set a low taxi distance trigger. You might miss the ${location} "street vibe" by skipping short walks.`,
+        color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30'
+      });
+    }
+
+    // 6. MODE LOGIC: Manual vs Smart
+    if (prefMode === 'manual_rules') {
+      list.push({
+        type: 'info', icon: Settings, title: 'Strict Hierarchy',
+        text: 'The engine will follow your priority order exactly. It will not switch modes to save money or time.',
+        color: 'text-gray-400', bg: 'bg-white/5', border: 'border-white/10'
+      });
+    }
+
+    // 7. HEALTH: High Walking Threshold
+    if (strategies.walking?.max_time_mins > 25) {
+      list.push({
+        type: 'success', icon: Trophy, title: 'Active Explorer',
+        text: 'Your 25m+ walking limit is high. This optimizes for health and cost-saving. Comfy shoes are mandatory.',
+        color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30'
+      });
+    }
+
+    // 8. DATA GAP: Public Transit Info
+    if (activeStrats.includes('public_transport') && !strategies.public_transport?.details_loaded) {
+      list.push({
+        type: 'tip', icon: Lightbulb, title: 'Fetch Real Data',
+        text: 'Click "Official Info" to let the AI find 2026 pass prices and operating hours for a more accurate schedule.',
+        color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30'
+      });
+    }
+
+    // 9. CONFLICT: Rental Car + Public Transport
+    if (strategies.rental_car?.enabled && activeStrats.includes('public_transport')) {
+      list.push({
+        type: 'warning', icon: AlertCircle, title: 'Redundant Modes',
+        text: 'Having both Rental Car and Public Transit enabled may lead to inefficient routing. Rental is usually all-or-nothing.',
+        color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30'
+      });
+    }
+
+    // 10. EFFICIENCY: Smart Optimization
+    if (prefMode === 'smart_optimization') {
+      list.push({
+        type: 'success', icon: Zap, title: 'Smart Mode Active',
+        text: 'The AI is balancing cost, time, and distance for every route segment. Sit back and enjoy the best path.',
+        color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30'
+      });
+    }
+
+    // 11. COMPLETION: All modes disabled (Edge case check)
+    if (activeStrats.length === 0) {
+      list.push({
+        type: 'alert', icon: AlertCircle, title: 'Logistics Deadlock',
+        text: 'No transit modes are active. The scheduler will not be able to generate your itinerary.',
+        color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30'
+      });
+    }
+
+    return list;
+  }, [strategies, prefMode, gameState.search_location]);
 
   const syncWithBackend = async (updatedMode, updatedStrategies) => {
     setIsSyncing(true);
@@ -150,7 +257,6 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
     syncWithBackend(prefMode, updatedStrategies);
   };
 
-  // --- POPUP COMPONENT ---
   const renderOfferPopup = () => {
     if (!activeOffer) return null;
     const isRental = activeOffer.type === 'rental_car';
@@ -184,17 +290,17 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
           )}
 
           <div className="bg-gray-50 rounded-3xl p-6 mb-6 flex items-center justify-between border border-gray-100">
-             <div>
+              <div>
                 <p className="text-[10px] font-black text-gray-400 uppercase mb-1">
                     {isRental ? "Estimated Daily Price" : "Estimated Full-Trip Price"}
                 </p>
                 <p className="text-3xl font-black text-gray-900">
                     {activeOffer.currency === 'EUR' ? '€' : activeOffer.currency}{activeOffer.price || '--'}
                 </p>
-             </div>
-             <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-green-500 shadow-sm border border-gray-100">
+              </div>
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-green-500 shadow-sm border border-gray-100">
                 <Banknote size={24} />
-             </div>
+              </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 mb-6">
@@ -247,8 +353,8 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
           </button>
           <div className="flex items-center gap-4">
              {isSyncing && <div className="flex items-center gap-2 text-[10px] font-black text-blue-500 uppercase animate-pulse"><Loader2 size={14} className="animate-spin"/> Syncing Rules...</div>}
-             <button className="bg-gray-900 text-white px-8 py-3 rounded-2xl font-black text-xs flex items-center gap-2 hover:bg-blue-600 shadow-lg active:scale-95 transition-all">
-               Generate Schedule <ArrowRight size={16} />
+             <button onClick={onNext} className="bg-gray-900 text-white px-8 py-3 rounded-2xl font-black text-xs flex items-center gap-2 hover:bg-blue-600 shadow-lg active:scale-95 transition-all">
+                Generate Schedule <ArrowRight size={16} />
              </button>
           </div>
         </div>
@@ -368,20 +474,41 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
             )}
           </div>
 
-          {/* SIDEBAR */}
+          {/* SIDEBAR - DYNAMIC INSIGHTS PANEL */}
           <div className="bg-gray-900 rounded-[3rem] p-10 text-white flex flex-col h-full shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-48 h-48 bg-blue-600/20 rounded-full -mr-24 -mt-24 blur-3xl" />
             <h3 className="font-black text-2xl flex items-center gap-3 relative z-10"><Sparkles className="text-blue-400" /> Logistics Insights</h3>
-            <div className="mt-10 space-y-6 relative z-10 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-               {strategies.rental_car?.enabled && (
-                 <div className="bg-orange-500/10 border border-orange-500/30 p-6 rounded-3xl border-l-4 border-l-orange-500 animate-in slide-in-from-right">
-                    <div className="flex items-center gap-3 mb-3 text-orange-400 font-black text-xs uppercase"><AlertTriangle size={16}/> Traffic Area Warning</div>
-                    <p className="text-[11px] text-gray-400 leading-relaxed">Central areas often have ZTL zones. Fines apply without permits.</p>
+            
+            <div className="mt-10 space-y-4 relative z-10 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+               {insights.length > 0 ? (
+                 insights.map((insight, idx) => (
+                   <div 
+                    key={idx} 
+                    className={`${insight.bg} border ${insight.border} p-5 rounded-3xl animate-in slide-in-from-right duration-500`}
+                    style={{ animationDelay: `${idx * 100}ms` }}
+                   >
+                      <div className={`flex items-center gap-3 mb-2 ${insight.color} font-black text-[10px] uppercase tracking-tighter`}>
+                        <insight.icon size={16}/> {insight.title}
+                      </div>
+                      <p className="text-[11px] text-gray-300 leading-relaxed font-medium">
+                        {insight.text}
+                      </p>
+                   </div>
+                 ))
+               ) : (
+                 <div className="bg-white/5 border border-white/10 p-6 rounded-3xl text-center">
+                    <ShieldCheck size={32} className="mx-auto text-blue-400 mb-3 opacity-50" />
+                    <p className="text-[11px] text-gray-500 font-bold uppercase">Logistics are solid</p>
+                    <p className="text-[9px] text-gray-600 mt-1">No conflicts detected in your current strategy.</p>
                  </div>
                )}
             </div>
-            <div className="mt-auto pt-8 border-t border-white/10 text-center relative z-10 text-[10px] font-black text-gray-500 uppercase tracking-widest">
-               thread_itinerary_{session.id}
+
+            <div className="mt-auto pt-8 border-t border-white/10 flex flex-col gap-2 relative z-10">
+                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
+                  <span>Session Status</span>
+                  <span className="text-green-500 flex items-center gap-1"><div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"/> Ready</span>
+                </div>
             </div>
           </div>
         </div>

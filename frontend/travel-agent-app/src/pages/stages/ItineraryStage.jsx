@@ -74,7 +74,18 @@ export default function ItineraryMaster() {
 
     // STAGE 2: Final Schedule (Placeholder for next step)
     if (gameState.stage === 2) {
-        return <div>Schedule Stage Implementation Coming Soon...</div>;
+        return (
+            <div className="p-6">
+                <button
+                    onClick={() => handleUpdateStage(1)}
+                    className="mb-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
+                >
+                    Back
+                </button>
+
+                <div>Schedule Stage Implementation Coming Soon...</div>
+            </div>
+        );
     }
 
     // DEFAULT (STAGE 0): Attractions Picker
