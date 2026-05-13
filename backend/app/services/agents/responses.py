@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Dict, Optional, List
 
 class ExtractionResult(BaseModel):
     """Reflects all mandatory and optional slots in VacationSession."""
@@ -74,4 +74,24 @@ class AttractionEnrichmentSchema(BaseModel):
     )
     opening_hours: OperatingHours = Field(
         description="The weekly opening hours for the attraction. Use the format 'HH:MM-HH:MM' for each day, or 'Closed' if not open that day."
+    )
+
+class TransitEnrichmentSchema(BaseModel):
+    official_link: str = Field(description="The URL to the official city public transport website or tourist pass page.")
+    pass_price_est: float = Field(description="The estimated cost for a standard 48h or 72h tourist transport pass. Numeric value only.")
+    currency: str = Field(description="The 3-letter ISO currency code for the price (e.g., EUR, RON, USD).")
+    operating_hours: Dict[str, str] = Field(
+        description="General daily operating window. Keys: 'open' and 'close'. Format: HH:MM",
+        default={"open": "05:30", "close": "23:30"}
+    )
+    details_found: bool = Field(description="Set to true if specific 2026 price data was found, false if estimated.")
+
+class RentalEnrichmentSchema(BaseModel):
+    official_link: str = Field(description="URL to a major rental aggregator or local provider in the city.")
+    daily_price_est: float = Field(description="Estimated daily cost for an economy car hire.")
+    currency: str = Field(description="ISO currency code (e.g., EUR).")
+    ztl_warning: bool = Field(description="True if the city has strict Limited Traffic Zones (ZTL) or high congestion fees.")
+    operating_hours: Dict[str, str] = Field(
+        description="Standard rental office hours. Keys: 'open', 'close'. Format: HH:MM",
+        default={"open": "08:00", "close": "20:00"}
     )

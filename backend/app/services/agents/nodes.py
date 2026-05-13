@@ -23,6 +23,8 @@ from app.services.search.attractions import *
 from timezonefinder import TimezoneFinder
 from langchain_tavily import TavilySearch
 
+from app.services.agents.mobility_strategies import MobilityConfig
+
 log = get_logger(__name__)
 
 
@@ -200,6 +202,8 @@ async def responder(state: DiscoveryState) -> dict:
 
 # Itinerary Graph Nodes
 
+search_tool = TavilySearch(max_results=5, tavily_api_key=settings.TAVILY_API_KEY)
+
 async def picking_attractions(state: ItineraryState) -> dict:
     action = state.get("action")
     
@@ -359,7 +363,6 @@ async def enrich_single_attraction_node(poi_data: dict) -> dict:
     otm_country = poi_data.get("country", "Unknown")
     otm_description = poi_data.get("description", "No description available.")
     
-    search_tool = TavilySearch(max_results=5, tavily_api_key=settings.TAVILY_API_KEY)
     search_query = (
         f"{name} in {otm_city} {otm_country} official website, "
         f"opening hours for each day of the week, "
@@ -463,8 +466,133 @@ async def save_attractions_to_db(state: ItineraryState) -> dict:
 
 
 async def picking_transit(state: ItineraryState) -> dict:
-    print("Executing picking_transit node...")
-    return {}
+    action = state.get("action")
+    location = state.get("data", {}).get("destination") or state.get("search_location", "Unknown Location")
+    from_date = state.get("data", {}).get("from_date")
+    to_date = state.get("data", {}).get("to_date")
+    
+    config_dict = state.get("mobility_config")
+    if not config_dict:
+        config_dict = MobilityConfig.create_default().model_dump(mode='json')
+    
+    log.info(f"Routing Logistics Action: {action} for {location}")
+
+    if action == "search_public_transport_offers":
+        if config_dict.get("strategies", {}).get("public_transport", {}).get("details_loaded"):
+            return {"action": "idle"}
+        return await _execute_transit_research(from_date, to_date, location, config_dict)
+    
+    elif action == "search_rental_car_offers":
+        if config_dict.get("strategies", {}).get("rental_car", {}).get("details_loaded"):
+            return {"action": "idle"}
+        return await _execute_rental_research(from_date, to_date, location, config_dict)
+    
+    elif action == "generate_logistics_audit":
+        return {"action": "idle"}
+
+    return {"action": "idle"}
+
+async def _execute_transit_research(from_date: str, to_date: str, location: str, config_dict: dict) -> dict:
+    duration_days = 7
+    month_year = datetime.now().strftime("%B %Y")
+
+    if from_date and to_date:
+        try:
+            d1 = datetime.fromisoformat(from_date)
+            d2 = datetime.fromisoformat(to_date)
+            duration_days = (d2 - d1).days + 1
+            month_year = d1.strftime("%B %Y")
+        except Exception:
+            log.warning("Failed to parse dates for transit research, using defaults.")
+
+    if duration_days <= 1:
+        pass_target = "24h / 1-day ticket"
+    elif duration_days <= 3:
+        pass_target = "48h or 72h tourist passes"
+    elif duration_days <= 7:
+        pass_target = "weekly pass or 7-day tourist card"
+    else:
+        pass_target = "monthly or long-term tourist passes"
+
+    search_query = (
+        f"official {location} public transport website, "
+        f"{location} transport {pass_target} prices {month_year}, "
+        f"cost of {duration_days} days of public transit in {location},"
+        f"operating hours for {location} public transit, "
+    )
+    search_results = await search_tool.ainvoke(search_query)
+
+    if isinstance(search_results, list):
+        context_text = "\n".join([res.get("content", "") for res in search_results if isinstance(res, dict)])
+    else:
+        context_text = str(search_results)
+    
+    structured_llm = llm.with_structured_output(TransitEnrichmentSchema)
+
+    prompt = transit_extraction_prompt.format(
+        location=location,
+        duration=duration_days,
+        dates=f"{from_date} to {to_date}",
+        pass_target=pass_target,
+        context=context_text
+    )
+
+    extracted_data = await structured_llm.ainvoke(prompt)
+
+    config_dict["strategies"]["public_transport"].update({
+        "official_link": extracted_data.official_link,
+        "pass_price_est": extracted_data.pass_price_est,
+        "currency": extracted_data.currency,
+        "operating_hours": extracted_data.operating_hours,
+        "details_loaded": True 
+    })
+
+    return {
+        "mobility_config": config_dict,
+        "action": "idle",
+    }
+
+async def _execute_rental_research(from_date: str, to_date: str, location: str, config_dict: dict) -> dict:
+    duration_days = 7
+    month_year = datetime.now().strftime("%B %Y")
+
+    if from_date and to_date:
+        try:
+            d1 = datetime.fromisoformat(from_date)
+            d2 = datetime.fromisoformat(to_date)
+            duration_days = (d2 - d1).days + 1
+            month_year = d1.strftime("%B %Y")
+        except Exception:
+            log.warning("Failed to parse dates for rental research, using defaults.")
+
+    search_query = (
+        f"car rental prices {location} {month_year}, "
+        f"is there a ZTL zone in {location} for tourists, "
+        f"average daily car rental cost {location}"
+    )
+    
+    search_results = await search_tool.ainvoke(search_query)
+    context_text = "\n".join([res.get("content", "") for res in search_results if isinstance(res, dict)])
+
+    structured_llm = llm.with_structured_output(RentalEnrichmentSchema)
+    prompt = rental_extraction_prompt.format(
+        location=location,
+        duration=duration_days,
+        dates=f"{from_date} to {to_date}",
+        context=context_text
+    )
+
+    extracted_data = await structured_llm.ainvoke(prompt)
+
+    config_dict["strategies"]["rental_car"].update({
+        "official_link": extracted_data.official_link,
+        "daily_price_est": extracted_data.daily_price_est,
+        "ztl_warning": extracted_data.ztl_warning,
+        "operating_hours": extracted_data.operating_hours,
+        "details_loaded": True 
+    })
+
+    return {"mobility_config": config_dict, "action": "idle"}
 
 async def organizing_days(state: ItineraryState) -> dict:
     print("Executing organizing_days node...")

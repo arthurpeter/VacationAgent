@@ -2,6 +2,10 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+class UpdateStageRequest(BaseModel):
+    session_id: int
+    stage: int
+
 class UpdateSearchLocationRequest(BaseModel):
     session_id: int
     new_location: str
@@ -19,3 +23,10 @@ class SearchAttractionsRequest(BaseModel):
     query: Optional[str] = None
     action: str
     
+class UpdateMobilityRequest(BaseModel):
+    session_id: int
+    config: dict
+
+class TransportRequest(BaseModel):
+    session_id: int
+    action: Optional[str] = "search_public_transport_offers"

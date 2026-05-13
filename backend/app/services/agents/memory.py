@@ -33,3 +33,5 @@ class ItineraryState(TypedDict):
     pois: List[dict[str, Any]] = []
     unresolved_attractions: List[dict[str, Any]] = []
     resolved_attractions: Annotated[List[dict[str, Any]], operator.add] = []
+
+    mobility_config: Optional[dict] = None

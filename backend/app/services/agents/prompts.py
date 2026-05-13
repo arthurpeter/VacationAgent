@@ -159,3 +159,47 @@ INSTRUCTIONS:
 3. Write a fresh, engaging 2-sentence travel description for the attraction.
 4. Weekly Opening Hours: Provide a JSON object with keys for all 7 days (monday-sunday).
 """
+
+transit_extraction_prompt = """
+You are a senior travel logistics analyst. Your goal is to find the best public transport ticket strategy for a user's specific trip duration.
+
+### TRIP DETAILS:
+- City: {location}
+- Duration: {duration} days
+- Dates: {dates}
+- Recommended Pass Type: {pass_target}
+
+### WEB SEARCH RESULTS:
+{context}
+
+INSTRUCTIONS:
+1. Identify the official public transport URL for {location}.
+2. Based on a {duration}-day stay, find the most cost-effective pass option mentioned in the results (e.g., if staying 5 days, a weekly pass might be cheaper than two 72h passes).
+3. Extract the total price for ONE adult to cover the entire {duration}-day duration using the best pass combo.
+4. If 2026 prices aren't found, use the latest available and add 5% for inflation.
+5. Identify the general daily operating hours for the main transit system (Metro/Bus). 
+   - If hours vary slightly, provide the standard weekday window.
+   - Use 'open' and 'close' keys in HH:MM format.
+   - If not found, default to 05:30 and 23:30.
+
+Return the data using the provided schema.
+"""
+
+rental_extraction_prompt = """
+You are a senior mobility consultant. Your goal is to find the best car rental strategy for a user's trip.
+
+### TRIP DETAILS:
+- City: {location}
+- Duration: {duration} days
+- Dates: {dates}
+
+### WEB SEARCH RESULTS:
+{context}
+
+INSTRUCTIONS:
+1. Identify a reliable car rental URL (local or major brand) for {location}.
+2. Estimate the daily price for an economy car in May 2026.
+3. CRITICAL: Check if {location} has a 'ZTL' (Zona Traffico Limitato) or 'Congestion Charge'. Set ztl_warning to True if tourists are restricted from driving in the city center.
+4. Identify standard pickup office hours (open/close).
+5. Provide output in the requested structured format.
+"""

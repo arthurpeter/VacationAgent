@@ -8,6 +8,8 @@ from app.utils.generic import calculate_age
 import httpx
 from typing import Optional
 
+from app.services.agents.mobility_strategies import MobilityConfig
+
 
 async def get_formatted_travel_history(db: AsyncSession, user_id: str) -> str:
     """
@@ -227,5 +229,6 @@ async def get_initial_itinerary_state(db: AsyncSession, session_id: int) -> Itin
         "search_location": session.destination,
         "persona_context": persona,
         "data": itinerary_db_context,
-        "pois": []
+        "pois": [],
+        "mobility_config": MobilityConfig.create_default().model_dump(mode='json')
     }
