@@ -242,7 +242,8 @@ async def picking_attractions(state: ItineraryState) -> dict:
             "price_tier": p.price_tier,
             "recommended_duration_mins": p.recommended_duration_mins,
             "tod_preference": p.tod_preference,
-            "id": p.id
+            "id": p.id,
+            "opening_hours": p.opening_hours
         }
 
     if action == "initial_fetch":
@@ -354,7 +355,8 @@ async def picking_attractions(state: ItineraryState) -> dict:
             "resolved_attractions": Overwrite(db_hits),
             "action": "resolve_attractions" if new_finds else "idle"
         })
-                    
+
+    log.info(updates)       
     return updates
     
 async def enrich_single_attraction_node(poi_data: dict) -> dict:
