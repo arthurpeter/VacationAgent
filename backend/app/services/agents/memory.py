@@ -1,6 +1,6 @@
 import operator
 from typing import Any, Optional, Annotated, List, Union
-from typing_extensions import TypedDict
+from typing_extensions import Literal, TypedDict
 from pydantic import BaseModel, Field
 from langgraph.graph.message import add_messages
 
@@ -39,4 +39,5 @@ class ItineraryState(TypedDict):
     mobility_config: Optional[dict] = None
     mobility_recommendation: Optional[MobilityRecommendationSchema] = None
     pace_recommendation: Optional[PaceRecommendationSchema] = None
+    pace: Literal["Relaxed", "Moderate", "Fast-Paced"] = "Moderate"
 

@@ -31,3 +31,7 @@ class UpdateMobilityRequest(BaseModel):
 class TransportRequest(BaseModel):
     session_id: int
     action: Optional[str] = "search_public_transport_offers"
+
+class PaceRequest(BaseModel):
+    session_id: int
+    pace: str

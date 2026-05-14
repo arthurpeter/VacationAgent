@@ -490,6 +490,8 @@ async def picking_transit(state: ItineraryState) -> dict:
         return await _execute_rental_research(from_date, to_date, location, config_dict)
     
     elif action == "mobility_recommendation":
+        if state.get("mobility_recommendation") is not None:
+            return {"action": "idle"}
         attraction_locations = set()
         for poi in state.get("pois", []):
             if poi.get("location"):
@@ -497,7 +499,10 @@ async def picking_transit(state: ItineraryState) -> dict:
         return await _execute_mobility_research(from_date, to_date, location, attraction_locations)
     
     elif action == "pace_recommendation":
-        return {"action": "idle"}
+        if state.get("pace_recommendation") is not None:
+            return {"action": "idle"}
+        pois = state.get("pois", [])
+        return await _execute_pace_research(from_date, to_date, location, pois)
 
     return {"action": "idle"}
 
@@ -645,7 +650,15 @@ async def _execute_pace_research(from_date: str, to_date: str, location: str, po
         except Exception:
             log.warning("Failed to parse dates for mobility research, using defaults.")
 
-    formated_pois = ""
+    formatted_pois = "\n\n".join([
+        f"""
+    {idx + 1}. {poi.get('name', 'Unknown Attraction')}
+    - Bucket: {poi.get('bucket', 'unknown')}
+    - Time To Spend: {poi.get('time_to_spend', 0)} minutes
+    - Location: {poi.get('location', 'Unknown')}
+    """.strip()
+        for idx, poi in enumerate(pois)
+    ])
 
     structured_llm = llm.with_structured_output(PaceRecommendationSchema)
     prompt = pace_recommendation_prompt.format(
@@ -661,9 +674,6 @@ async def _execute_pace_research(from_date: str, to_date: str, location: str, po
         "action": "idle"
     }
     
-
-    
-
 
 async def organizing_days(state: ItineraryState) -> dict:
     print("Executing organizing_days node...")

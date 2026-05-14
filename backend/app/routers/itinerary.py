@@ -237,3 +237,36 @@ async def trigger_public_transport_search(
     except Exception as e:
         log.error(f"Transit research failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal AI processing error")
+
+
+@router.post("/logistics/pace")
+async def trigger_pace_recommendation(
+    data: TransportRequest,
+    db: AsyncSession = Depends(get_db),
+    checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
+    token: TokenPayload = Depends(access_token_header)
+):
+    stmt = select(models.VacationSession).where(
+        models.VacationSession.id == data.session_id,
+        models.VacationSession.user_id == token.sub
+    )
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
+
+    if not session:
+        log.warning(f"Unauthorized pace access: {data.session_id} by user {token.sub}")
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    graph = generate_itinerary_graph(checkpointer)
+    config = {"configurable": {"thread_id": f"itinerary_{data.session_id}"}}
+
+    try:
+        await graph.aupdate_state(
+            config, 
+            {"pace": data.pace}
+        )
+
+        return {"status": "success", "new_pace": data.pace}
+    except Exception as e:
+        log.error(f"Pace update failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating pace")

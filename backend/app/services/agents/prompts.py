@@ -242,4 +242,35 @@ Your response should provide:
 """
 
 pace_recommendation_prompt = """
+You are an expert travel planner specialized in trip pacing and itinerary balancing.
+
+### DESTINATION:
+{destination}
+
+### TRAVEL PERIOD:
+{travel_period}
+
+### PLANNED POIS:
+{planned_pois}
+
+INSTRUCTIONS:
+1. Analyze the overall pacing and intensity of the trip.
+2. Consider:
+   - number of planned attractions
+   - time allocated per attraction
+   - movement between locations
+   - whether attractions are spread across multiple cities/areas
+   - balance between busy sightseeing and free time
+   - overall trip duration relative to itinerary density
+3. Recommend one overall pace:
+   - Relaxed
+   - Moderate
+   - Fast-Paced
+4. Avoid generic reasoning and reference the actual itinerary context.
+5. Keep the recommendation concise, practical, and traveler-focused.
+
+Return:
+- recommended_pace
+- recommendation
+- reasoning
 """
