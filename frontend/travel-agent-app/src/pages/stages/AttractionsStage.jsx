@@ -282,7 +282,13 @@ export default function AttractionsStage({ gameState, session, onFinalize }) {
         name: attraction.official_name,
         image_url: attraction.image_url || "",
         time_to_spend: parseInt(time) || 120,
-        bucket: bucket 
+        bucket: bucket,
+        location: [
+          attraction.city,
+          attraction.country
+        ]
+          .filter(Boolean)
+          .join(", ")
       };
       const res = await fetchWithAuth(`${API_BASE_URL}/itinerary/attractions/add-to-bucket`, payload, "POST");
       if (res && res.ok) {

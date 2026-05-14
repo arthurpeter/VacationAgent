@@ -4,6 +4,8 @@ from typing_extensions import TypedDict
 from pydantic import BaseModel, Field
 from langgraph.graph.message import add_messages
 
+from app.services.agents.responses import MobilityRecommendationSchema, PaceRecommendationSchema
+
 
 class DiscoveryState(TypedDict):
     messages: Annotated[List[Union[dict, str]], add_messages]
@@ -35,3 +37,6 @@ class ItineraryState(TypedDict):
     resolved_attractions: Annotated[List[dict[str, Any]], operator.add] = []
 
     mobility_config: Optional[dict] = None
+    mobility_recommendation: Optional[MobilityRecommendationSchema] = None
+    pace_recommendation: Optional[PaceRecommendationSchema] = None
+

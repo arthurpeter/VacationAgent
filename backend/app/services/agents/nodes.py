@@ -489,7 +489,14 @@ async def picking_transit(state: ItineraryState) -> dict:
             return {"action": "idle"}
         return await _execute_rental_research(from_date, to_date, location, config_dict)
     
-    elif action == "generate_logistics_audit":
+    elif action == "mobility_recommendation":
+        attraction_locations = set()
+        for poi in state.get("pois", []):
+            if poi.get("location"):
+                attraction_locations.add(poi["location"])
+        return await _execute_mobility_research(from_date, to_date, location, attraction_locations)
+    
+    elif action == "pace_recommendation":
         return {"action": "idle"}
 
     return {"action": "idle"}
@@ -595,6 +602,68 @@ async def _execute_rental_research(from_date: str, to_date: str, location: str, 
     })
 
     return {"mobility_config": config_dict, "action": "idle"}
+
+async def _execute_mobility_research(from_date: str, to_date: str, location: str, locations: set) -> dict:
+
+    search_query = (
+        f"do tourists in {location} typically rent cars, "
+        f"is there a ZTL zone in {location} for tourists, "
+        f"average daily car rental cost {location}"
+    )
+    search_results = await search_tool.ainvoke(search_query)
+
+    if isinstance(search_results, list):
+        context_text = "\n".join([res.get("content", "") for res in search_results if isinstance(res, dict)])
+    else:
+        context_text = str(search_results)
+
+    structured_llm = llm.with_structured_output(MobilityRecommendationSchema)
+    prompt = car_rental_recommendation_prompt.format(
+        destination=location,
+        travel_period=f"{from_date} to {to_date}",
+        planned_locations=", ".join(locations),
+        web_context=context_text
+    )
+    
+    recommendation = await structured_llm.ainvoke(prompt)
+
+    return {
+        "mobility_recommendation": recommendation,
+        "action": "idle"
+    }
+
+async def _execute_pace_research(from_date: str, to_date: str, location: str, pois: List[dict]) -> dict:
+    duration_days = 7
+    month_year = datetime.now().strftime("%B %Y")
+
+    if from_date and to_date:
+        try:
+            d1 = datetime.fromisoformat(from_date)
+            d2 = datetime.fromisoformat(to_date)
+            duration_days = (d2 - d1).days + 1
+            month_year = d1.strftime("%B %Y")
+        except Exception:
+            log.warning("Failed to parse dates for mobility research, using defaults.")
+
+    formated_pois = ""
+
+    structured_llm = llm.with_structured_output(PaceRecommendationSchema)
+    prompt = pace_recommendation_prompt.format(
+        destination=location,
+        travel_period=f"{from_date} to {to_date}",
+        planned_pois=formatted_pois,
+    )
+    
+    recommendation = await structured_llm.ainvoke(prompt)
+
+    return {
+        "pace_recommendation": recommendation,
+        "action": "idle"
+    }
+    
+
+    
+
 
 async def organizing_days(state: ItineraryState) -> dict:
     print("Executing organizing_days node...")

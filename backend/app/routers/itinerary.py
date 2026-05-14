@@ -135,7 +135,7 @@ async def add_to_bucket(
 
     pois = current_state.values.get("pois", [])
 
-    new_poi = {"id": data.attraction_id, "bucket": data.bucket, "time_to_spend": data.time_to_spend, "name": data.name, "image_url": data.image_url}
+    new_poi = {"id": data.attraction_id, "bucket": data.bucket, "time_to_spend": data.time_to_spend, "name": data.name, "image_url": data.image_url, "location": data.location}
     updated_pois = [p for p in pois if p['id'] != data.attraction_id] + [new_poi]
 
     await graph.aupdate_state(config, {"pois": updated_pois})

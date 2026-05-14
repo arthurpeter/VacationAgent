@@ -1,3 +1,5 @@
+from typing_extensions import Literal
+
 from pydantic import BaseModel, Field
 from typing import Dict, Optional, List
 
@@ -94,4 +96,18 @@ class RentalEnrichmentSchema(BaseModel):
     operating_hours: Dict[str, str] = Field(
         description="Standard rental office hours. Keys: 'open', 'close'. Format: HH:MM",
         default={"open": "08:00", "close": "20:00"}
+    )
+
+class RecommendationSchema(BaseModel):
+    recommendation: str = Field(description="A concise, actionable recommendation for the user based on the itinerary context.")
+    reasoning: str = Field(description="A brief explanation of why this recommendation was made, referencing specific itinerary details.")
+
+class MobilityRecommendationSchema(RecommendationSchema):
+    should_rent_car: bool = Field(
+        description="Whether renting a car is recommended for most of the trip."
+    )
+
+class PaceRecommendationSchema(RecommendationSchema):
+    recommended_pace: Literal["Relaxed", "Moderate", "Fast-Paced"] = Field(
+        description="A recommendation for the overall pace of the trip, e.g., 'Relaxed', 'Moderate', 'Fast-Paced'."
     )

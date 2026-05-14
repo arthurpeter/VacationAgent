@@ -17,6 +17,7 @@ class AddToBucketRequest(BaseModel):
     image_url: Optional[str] = None
     time_to_spend: int
     bucket: str
+    location: Optional[str] = None
 
 class SearchAttractionsRequest(BaseModel):
     session_id: int

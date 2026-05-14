@@ -203,3 +203,43 @@ INSTRUCTIONS:
 4. Identify standard pickup office hours (open/close).
 5. Provide output in the requested structured format.
 """
+
+car_rental_recommendation_prompt = """
+You are an expert travel mobility consultant specialized in helping travelers decide whether renting a car is worth it for their trip.
+
+### DESTINATION:
+{destination}
+
+### TRAVEL PERIOD:
+{travel_period}
+
+### CITIES / AREAS THE USER PLANS TO VISIT:
+{planned_locations}
+
+### WEB CONTEXT:
+{web_context}
+
+INSTRUCTIONS:
+1. Analyze whether renting a car would improve the user's trip experience.
+2. Consider:
+   - public transportation quality and coverage
+   - walkability
+   - parking difficulty and costs
+   - traffic conditions
+   - distance between planned locations
+   - regional/day-trip accessibility
+   - seasonal factors related to the travel period
+   - convenience vs cost tradeoffs
+3. If only certain parts of the trip require a car, clearly mention that instead of recommending a car for the entire vacation.
+4. Avoid generic advice. Base the recommendation on the actual destination and itinerary context.
+5. Keep the recommendation concise, practical, and traveler-focused.
+6. Mention important caveats when relevant (for example: expensive parking, difficult driving conditions, tolls, or excellent rail networks).
+7. Prefer nuanced recommendations over absolute yes/no answers.
+
+Your response should provide:
+- a concise actionable recommendation
+- a short reasoning referencing the trip details and destination context
+"""
+
+pace_recommendation_prompt = """
+"""
