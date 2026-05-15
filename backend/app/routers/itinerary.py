@@ -14,9 +14,6 @@ from app.services.agents.itinerary_graph import generate_graph as generate_itine
 from app.schemas.itinerary import *
 from app.services.agents.mobility_strategies import MobilityConfig
 
-
-
-
 log = get_logger(__name__)
 
 router = APIRouter(prefix="/itinerary", tags=["Itinerary"])
@@ -101,10 +98,14 @@ async def get_itinerary_state(
             "resolved_attractions": [],
             "search_location": session.destination,
             "mobility_config": None,
+            "pace": "moderate",
+            "mobility_recommendation": None,
+            "pace_recommendation": None
         }
     
     ui_keys = {
-        "stage", "pois", "resolved_attractions", "search_location", "mobility_config"
+        "stage", "pois", "resolved_attractions", "search_location", "mobility_config", "pace",
+        "mobility_recommendation", "pace_recommendation"
     }
     
     return {k: v for k, v in state.values.items() if k in ui_keys}
@@ -240,8 +241,8 @@ async def trigger_public_transport_search(
 
 
 @router.post("/logistics/pace")
-async def trigger_pace_recommendation(
-    data: TransportRequest,
+async def trigger_pace_change(
+    data: PaceRequest,
     db: AsyncSession = Depends(get_db),
     checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
     token: TokenPayload = Depends(access_token_header)
