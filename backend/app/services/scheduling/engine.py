@@ -1,12 +1,9 @@
-import numpy as np
-from sklearn.cluster import KMeans
+import math
 from datetime import datetime, timedelta, time
 from typing import List, Dict, Any
 import logging
 import json
-import math
 
-# Setup basic logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 log = logging.getLogger(__name__)
 
@@ -20,32 +17,48 @@ class ScheduleEngine:
         self.departure_dt = departure_dt
         self.hotel_coords = hotel_coords
         self.lunch_duration_mins = lunch_duration_mins
-        
         self.arrival_buffer_hours = 3.5 
         
         wakeup_t = datetime.strptime(wakeup_time, "%H:%M").time()
         self.morning_start_delta = timedelta(hours=wakeup_t.hour, minutes=wakeup_t.minute) + timedelta(minutes=90)
         
         self.priority_weights = {"must-see": 3, "want-to-see": 2, "optional": 1}
-        self.pace_mapping = {"relaxed": 5 * 60, "moderate": 7 * 60, "fast-paced": 9 * 60}
         
-        self.daily_active_budget = self.pace_mapping.get(self.pace, 7 * 60)
-        self.hard_day_cutoff = time(20, 0) # 8:00 PM
+        # Density mapping controls the Soft Budget
+        self.density_mapping = {
+            "relaxed": 0.70,   
+            "moderate": 0.85,  
+            "fast-paced": 1.0  
+        }
+        self.density_factor = self.density_mapping.get(self.pace, 0.85)
         
-        # Base walking/transit padding between nearby places
+        self.base_hard_budget_mins = 9 * 60 
+        self.hard_day_cutoff = time(20, 0) 
         self.base_padding_mins = 30
 
-    def _calculate_distance(self, lat1, lon1, lat2, lon2):
-        return (lat1 - lat2)**2 + (lon1 - lon2)**2
+    def _calculate_distance_degrees(self, lat1, lon1, lat2, lon2):
+        return math.sqrt((lat1 - lat2)**2 + (lon1 - lon2)**2)
 
-    def _estimate_transit_mins(self, lat1, lon1, lat2, lon2):
+    def _get_base_transit_mins(self, lat1, lon1, lat2, lon2):
+        dist_degrees = self._calculate_distance_degrees(lat1, lon1, lat2, lon2)
+        # ~70 mins per degree accounts for inter-city travel 
+        return self.base_padding_mins + int(dist_degrees * 70) 
+
+    def _get_effective_costs(self, raw_duration: int, raw_transit: int, rigidity: float) -> tuple[int, int, int]:
         """
-        Heuristic: 1 coordinate degree is ~111km. 
-        Calculates realistic travel times including high-speed inter-city transit.
+        Applies dynamic inflation based on the schedule rigidity.
+        Rigidity = 1.0 (Excursions) -> No inflation, strict packing.
+        Rigidity = 0.0 (City stays) -> Inflated transit, switch penalties added for natural slack.
         """
-        dist_degrees = math.sqrt((lat1 - lat2)**2 + (lon1 - lon2)**2)
-        added_transit = int(dist_degrees * 70) 
-        return self.base_padding_mins + added_transit
+        slack_factor = {"relaxed": 0.3, "moderate": 0.15, "fast-paced": 0.0}.get(self.pace, 0.15)
+        
+        inflation = 1.0 + (slack_factor * (1.0 - rigidity))
+        effective_transit = int(raw_transit * inflation)
+        
+        switch_penalty = int(15 * (1.0 - rigidity))
+        
+        effective_total_cost = raw_duration + effective_transit + switch_penalty
+        return effective_total_cost, effective_transit, switch_penalty
 
     def _is_open_interval(self, arrival_dt: datetime, departure_dt: datetime, opening_hours_str: str) -> tuple[bool, bool]:
         if not opening_hours_str: return True, True 
@@ -54,99 +67,42 @@ class ScheduleEngine:
         try:
             hours_dict = json.loads(opening_hours_str)
             day_hours = hours_dict.get(day_of_week)
-            
             if day_hours is None or str(day_hours).lower() == "null": return True, True
             if "closed" in str(day_hours).lower(): return False, False
             if "24" in str(day_hours).lower() or "00:00-24:00" in str(day_hours): return True, False
-                
             if "-" in str(day_hours):
                 open_str, close_str = str(day_hours).split("-")
                 open_t = datetime.strptime(open_str.strip(), "%H:%M").time()
                 close_t = datetime.strptime(close_str.strip(), "%H:%M").time()
-                
                 arr_t = arrival_dt.time()
                 dep_t = departure_dt.time()
-                
-                if open_t <= close_t:
-                    return (open_t <= arr_t and dep_t <= close_t), False
-                else:
-                    return (arr_t >= open_t or dep_t <= close_t), False
+                if open_t <= close_t: return (open_t <= arr_t and dep_t <= close_t), False
+                else: return (arr_t >= open_t or dep_t <= close_t), False
         except Exception:
             return True, True 
         return True, False
 
-    def _attempt_insert(self, poi: dict, day_state: dict) -> bool:
+    def _score_poi(self, poi: dict, current_loc: tuple, active_time: int, soft_budget: int, hard_budget: int, eff_cost: int) -> float:
         """
-        Tries to insert a single POI into a specific day's timeline.
-        Includes the "Wait/Coffee" mechanic if opening hours are slightly off.
+        The Unified Scoring Model.
+        Balances Priority, Geographic proximity, and Budget Constraints.
         """
-        current_clock = day_state['current_clock']
-        current_loc = day_state['current_loc']
+        # 1. Base Priority Score
+        score = poi['priority_score'] * 1000 
         
-        # 1. Meal Check
-        lunch_added_time = 0
-        if current_clock.hour >= 13 and not day_state['lunch_taken']:
-            lunch_added_time = self.lunch_duration_mins
-            
-        # 2. Transit Check
-        transit_mins = self._estimate_transit_mins(current_loc[0], current_loc[1], poi['latitude'], poi['longitude'])
-        base_arr_dt = current_clock + timedelta(minutes=lunch_added_time + transit_mins)
-        duration = poi.get('recommended_duration_mins', 120)
+        # 2. Distance Penalty (Prevents zig-zagging)
+        dist = self._calculate_distance_degrees(current_loc[0], current_loc[1], poi['latitude'], poi['longitude'])
+        score -= (dist * 500)
         
-        # 3. The "Wait" Mechanic (Try arrival times in 30 min increments up to 1.5 hrs)
-        wait_mins = 0
-        best_arr_dt = None
-        best_dep_dt = None
-        is_unk = False
-        
-        while wait_mins <= 90:
-            test_arr = base_arr_dt + timedelta(minutes=wait_mins)
-            test_dep = test_arr + timedelta(minutes=duration)
-            
-            # Constraints
-            if test_dep > day_state['hard_cutoff_dt']: break
-            if day_state['active_time'] + duration > self.daily_active_budget: break
+        # 3. Constraint Pressure
+        # If adding this item pushes us over the Soft Budget, heavily penalize it unless it is a MUST-SEE.
+        if active_time + eff_cost > soft_budget:
+            if poi['bucket'] != 'must-see':
+                score -= 5000 # Effectively bans it, stopping early to create slack
+            else:
+                score -= 500  # Allowed, but lightly penalized to indicate stress
                 
-            is_open, unk = self._is_open_interval(test_arr, test_dep, poi.get("opening_hours"))
-            if is_open:
-                best_arr_dt = test_arr
-                best_dep_dt = test_dep
-                is_unk = unk
-                break
-                
-            wait_mins += 30
-            
-        if not best_arr_dt: return False # Failed all checks
-        
-        # 4. Commit to State
-        if lunch_added_time > 0:
-            lunch_start = current_clock
-            lunch_end = current_clock + timedelta(minutes=lunch_added_time)
-            day_state['events'].append({
-                "type": "meal", "name": "Lunch Break", 
-                "start_time": lunch_start.strftime("%H:%M"), "end_time": lunch_end.strftime("%H:%M")
-            })
-            day_state['lunch_taken'] = True
-            
-        if wait_mins > 0:
-            wait_start = base_arr_dt
-            wait_end = base_arr_dt + timedelta(minutes=wait_mins)
-            day_state['events'].append({
-                "type": "free_time", "name": "Free Time / Wait for Opening", 
-                "start_time": wait_start.strftime("%H:%M"), "end_time": wait_end.strftime("%H:%M")
-            })
-
-        day_state['events'].append({
-            "type": "attraction",
-            "id": poi['id'], "name": poi['name'], "bucket": poi['bucket'],
-            "start_time": best_arr_dt.strftime("%H:%M"), "end_time": best_dep_dt.strftime("%H:%M"),
-            "transit_mins": transit_mins, "unknown_hours_warning": is_unk
-        })
-        
-        day_state['current_clock'] = best_dep_dt
-        day_state['current_loc'] = (poi['latitude'], poi['longitude'])
-        day_state['active_time'] += duration
-        return True
+        return score
 
     def generate_schedule(self, pois: List[Dict[str, Any]]) -> Dict[str, Any]:
         if not pois: return {"status": "success", "schedule": [], "excluded": {}}
@@ -156,122 +112,151 @@ class ScheduleEngine:
             p['bucket'] = p.get('bucket', 'want-to-see').lower()
             p['priority_score'] = self.priority_weights.get(p['bucket'], 2)
 
-        # --- PHASE 1: MACRO REGIONS (City Partitioning) ---
-        regions = []
+        # --- MACRO REGION CLASSIFICATION ---
+        # Instead of K-Means, simply identify POIs that are far from the hotel (> 0.5 degrees, ~55km)
+        home_pois = []
+        excursion_pois = []
         for p in pois:
-            placed = False
-            for r in regions:
-                if self._calculate_distance(p['latitude'], p['longitude'], r['center'][0], r['center'][1]) < 0.5:
-                    r['pois'].append(p)
-                    placed = True
-                    break
-            if not placed:
-                regions.append({'center': (p['latitude'], p['longitude']), 'pois': [p], 'is_base': False})
-                
-        # Identify Base Region
-        base_region = None
-        for r in regions:
-            if self._calculate_distance(r['center'][0], r['center'][1], self.hotel_coords[0], self.hotel_coords[1]) < 0.5:
-                r['is_base'] = True
-                base_region = r
-                break
-        
-        if not base_region:
-            # Fallback if hotel is miles away from everything
-            base_region = regions[0]
-            base_region['is_base'] = True
+            if self._calculate_distance_degrees(self.hotel_coords[0], self.hotel_coords[1], p['latitude'], p['longitude']) > 0.5:
+                excursion_pois.append(p)
+            else:
+                home_pois.append(p)
 
-        # --- PHASE 2: DAY ALLOCATION ---
-        budgets = [self.daily_active_budget] * total_days
-        hotel_arr = self.arrival_dt + timedelta(hours=self.arrival_buffer_hours)
-        if hotel_arr >= self.arrival_dt.replace(hour=self.hard_day_cutoff.hour, minute=self.hard_day_cutoff.minute): budgets[0] = 0
-        if (self.departure_dt - timedelta(hours=3)) <= self.departure_dt.replace(hour=9, minute=0): budgets[-1] = 0
+        # --- DAY ALLOCATION ---
+        active_days = []
+        for i in range(total_days):
+            h_arr = self.arrival_dt + timedelta(hours=self.arrival_buffer_hours)
+            if i == 0 and h_arr >= self.arrival_dt.replace(hour=self.hard_day_cutoff.hour, minute=self.hard_day_cutoff.minute): continue
+            if i == total_days - 1 and (self.departure_dt - timedelta(hours=3)) <= self.departure_dt.replace(hour=9, minute=0): continue
+            active_days.append(i)
 
-        active_days = [i for i, b in enumerate(budgets) if b > 0]
         if not active_days: return {"status": "error"}
 
-        day_assignments = {}
         available_days = list(active_days)
+        excursion_day_map = {}
         
-        # Give 1 Day to each Day Trip (Middle days preferred)
-        day_trip_regions = [r for r in regions if not r['is_base']]
-        for r in day_trip_regions:
-            if len(available_days) > 1:
-                assigned = available_days.pop(len(available_days) // 2)
-                r['assigned_days'] = [assigned]
-            else:
-                r['assigned_days'] = [] # Out of days!
-                
-        base_region['assigned_days'] = available_days
-
-        # --- PHASE 3: MICRO NEIGHBORHOODS (Base City Only) ---
-        if len(base_region['assigned_days']) > 0 and len(base_region['pois']) > 0:
-            n_clusters = min(len(base_region['assigned_days']), len(base_region['pois']))
-            coords = np.array([[p['latitude'], p['longitude']] for p in base_region['pois']])
-            kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init='auto').fit(coords)
+        # Assign excursion days (e.g., Florence gets the middle day of the trip)
+        if excursion_pois and len(available_days) > 1:
+            excursion_day_idx = available_days.pop(len(available_days) // 2)
+            excursion_day_map[excursion_day_idx] = excursion_pois
             
-            for i, p in enumerate(base_region['pois']):
-                p['target_day'] = base_region['assigned_days'][int(kmeans.labels_[i])]
-                p['region'] = base_region
-
-        for r in day_trip_regions:
-            for p in r['pois']:
-                p['target_day'] = r['assigned_days'][0] if r['assigned_days'] else None
-                p['region'] = r
-
-        # Initialize Daily States
-        day_states = {}
-        for d in active_days:
-            c_date = self.arrival_dt.date() + timedelta(days=d)
-            start_clk = max(hotel_arr, datetime.combine(c_date, time()) + self.morning_start_delta) if d == 0 else datetime.combine(c_date, time()) + self.morning_start_delta
-            end_clk = (self.departure_dt - timedelta(hours=3)) if d == total_days - 1 else datetime.combine(c_date, self.hard_day_cutoff)
-            
-            day_states[d] = {
-                "day_idx": d, "date": c_date.strftime("%Y-%m-%d"),
-                "current_clock": start_clk, "current_loc": self.hotel_coords,
-                "active_time": 0, "lunch_taken": False, "events": [],
-                "hard_cutoff_dt": end_clk
-            }
-
-        leftovers = []
-
-        # --- PASS 1: Strict Neighborhood Insertion ---
-        for p in pois:
-            target = p.get('target_day')
-            if target is None:
-                leftovers.append(p)
-                continue
-                
-            # If it fails its target day, it goes to leftovers
-            if not self._attempt_insert(p, day_states[target]):
-                leftovers.append(p)
-
-        # --- PASS 2: The Global Rescue (Priority-Driven) ---
-        leftovers.sort(key=lambda x: -x['priority_score']) # Save Must-Sees First!
-        excluded_pois = []
-        
-        for p in leftovers:
-            saved = False
-            # Only try to rescue within its assigned Macro-Region
-            valid_days = p['region']['assigned_days']
-            for d in valid_days:
-                if self._attempt_insert(p, day_states[d]):
-                    saved = True
-                    break
-            if not saved:
-                excluded_pois.append(p)
-
-        # Final Formatting
+        home_days = available_days
         schedule = []
-        for d in active_days:
-            if day_states[d]['events']:
-                schedule.append({"day_index": d, "date": day_states[d]['date'], "events": day_states[d]['events']})
+        unassigned_pois = list(pois)
 
+        # --- THE OPTIMIZER LOOP ---
+        for day_idx in active_days:
+            is_excursion = day_idx in excursion_day_map
+            rigidity = 1.0 if is_excursion else 0.0
+            
+            day_density = 1.0 if is_excursion else self.density_factor
+            soft_budget = int(self.base_hard_budget_mins * day_density)
+            hard_budget = self.base_hard_budget_mins
+            
+            current_date = self.arrival_dt.date() + timedelta(days=day_idx)
+            
+            # Start Clock
+            if day_idx == 0:
+                current_clock = max(self.arrival_dt + timedelta(hours=self.arrival_buffer_hours), 
+                                  datetime.combine(current_date, time()) + self.morning_start_delta)
+            else:
+                current_clock = datetime.combine(current_date, time()) + self.morning_start_delta
+            
+            end_clk = (self.departure_dt - timedelta(hours=3)) if day_idx == total_days - 1 else datetime.combine(current_date, self.hard_day_cutoff)
+
+            current_loc = self.hotel_coords
+            active_time_spent = 0
+            lunch_taken = False
+            day_plan = []
+            
+            # Isolate the POI pool for the day's mode
+            daily_pool = excursion_day_map[day_idx] if is_excursion else [p for p in unassigned_pois if p in home_pois]
+            
+            while daily_pool and current_clock < end_clk:
+                
+                if current_clock.hour >= 13 and not lunch_taken:
+                    day_plan.append({
+                        "type": "meal", "name": "Lunch Break",
+                        "start_time": current_clock.strftime("%H:%M"),
+                        "end_time": (current_clock + timedelta(minutes=self.lunch_duration_mins)).strftime("%H:%M")
+                    })
+                    current_clock += timedelta(minutes=self.lunch_duration_mins)
+                    lunch_taken = True
+                    continue
+                
+                best_candidate = None
+                best_score = -float('inf')
+                
+                for p in daily_pool:
+                    raw_dur = p.get('recommended_duration_mins', 120)
+                    raw_transit = self._get_base_transit_mins(current_loc[0], current_loc[1], p['latitude'], p['longitude'])
+                    
+                    eff_total, eff_transit, switch_pen = self._get_effective_costs(raw_dur, raw_transit, rigidity)
+                    
+                    arr_dt = current_clock + timedelta(minutes=eff_transit)
+                    
+                    # Wait Mechanic
+                    wait_mins = 0
+                    valid_arr, valid_dep, is_unk = None, None, False
+                    
+                    while wait_mins <= 90:
+                        test_arr = arr_dt + timedelta(minutes=wait_mins)
+                        test_dep = test_arr + timedelta(minutes=raw_dur + switch_pen)
+                        
+                        if test_dep > end_clk or (active_time_spent + eff_total > hard_budget): break
+                            
+                        is_open, unk = self._is_open_interval(test_arr, test_dep, p.get("opening_hours"))
+                        if is_open:
+                            valid_arr, valid_dep, is_unk = test_arr, test_dep, unk
+                            break
+                        wait_mins += 30
+                        
+                    if not valid_arr: continue
+                        
+                    score = self._score_poi(p, current_loc, active_time_spent, soft_budget, hard_budget, eff_total)
+                    
+                    if score > best_score:
+                        best_score = score
+                        best_candidate = {
+                            "poi": p, "arr": valid_arr, "dep": valid_dep, 
+                            "wait": wait_mins, "eff_total": eff_total, "unk": is_unk, "raw_transit": raw_transit
+                        }
+                
+                if not best_candidate:
+                    current_clock += timedelta(minutes=30)
+                    continue
+                    
+                b_poi = best_candidate['poi']
+                
+                if best_candidate['wait'] > 0:
+                    day_plan.append({
+                        "type": "free_time", "name": "Free Time / Wait for Opening",
+                        "start_time": (best_candidate['arr'] - timedelta(minutes=best_candidate['wait'])).strftime("%H:%M"),
+                        "end_time": best_candidate['arr'].strftime("%H:%M")
+                    })
+
+                day_plan.append({
+                    "type": "attraction", "id": b_poi['id'], "name": b_poi['name'], "bucket": b_poi['bucket'],
+                    "start_time": best_candidate['arr'].strftime("%H:%M"), 
+                    "end_time": (best_candidate['arr'] + timedelta(minutes=b_poi.get('recommended_duration_mins', 120))).strftime("%H:%M"),
+                    "transit_mins": best_candidate['raw_transit'], "unknown_hours_warning": best_candidate['unk']
+                })
+                
+                current_clock = best_candidate['dep']
+                current_loc = (b_poi['latitude'], b_poi['longitude'])
+                active_time_spent += best_candidate['eff_total']
+                
+                daily_pool = [p for p in daily_pool if p['id'] != b_poi['id']]
+                unassigned_pois = [p for p in unassigned_pois if p['id'] != b_poi['id']]
+
+            if day_plan:
+                schedule.append({"day_index": day_idx, "date": current_date.strftime("%Y-%m-%d"), "events": day_plan})
+
+        # --- EXCLUDED ---
         excluded = {"must-see": [], "want-to-see": [], "optional": []}
-        for p in excluded_pois: excluded[p['bucket']].append(p['name'])
+        for p in unassigned_pois: excluded[p['bucket']].append(p['name'])
 
         return {"status": "success", "schedule": schedule, "excluded": excluded}
-
 
 # ==========================================
 # TEST HARNESS
@@ -279,7 +264,6 @@ class ScheduleEngine:
 if __name__ == "__main__":
     arrival = datetime(2026, 6, 22, 9, 0)
     departure = datetime(2026, 6, 28, 9, 40)
-
     airport_coords = (41.8045, 12.2508)
     hotel_coords = (41.8255320603927, 12.4786448478699)
 
@@ -308,7 +292,7 @@ if __name__ == "__main__":
         {"id": 50, "name": "Conservatorio Cherubini", "bucket": "optional", "latitude": 43.776523, "longitude": 11.258512, "recommended_duration_mins": 120, "opening_hours": '{"monday": "Closed", "tuesday": "08:15-18:50", "wednesday": "08:15-18:50", "thursday": "08:15-18:50", "friday": "08:15-18:50", "saturday": "08:15-18:50", "sunday": "08:15-18:50"}'},
     ]
 
-    print("\n--- RUNNING THE MULTI-PASS HYBRID SCHEDULER ---")
+    print("\n--- RUNNING SCORING OPTIMIZER ---")
     result = engine.generate_schedule(pois)
 
     for day in result['schedule']:
