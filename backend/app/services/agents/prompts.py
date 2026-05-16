@@ -268,6 +268,8 @@ INSTRUCTIONS:
    - Fast-Paced
 4. Avoid generic reasoning and reference the actual itinerary context.
 5. Keep the recommendation concise, practical, and traveler-focused.
+6. If you ever recommend a "Fast-Paced" itinerary, you MUST include specific suggestions for how to slow it down and make it more enjoyable like attractions to prioritize or what to cut.
+   Also you should give out a disclaimer in this situation about how a fast-paced trip can lead to burnout and stress, and that it's often better to do fewer things well than to cram too much in.
 
 Return:
 - recommended_pace
