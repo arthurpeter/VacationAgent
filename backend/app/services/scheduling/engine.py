@@ -22,7 +22,7 @@ class ScheduleEngine:
         wakeup_t = datetime.strptime(wakeup_time, "%H:%M").time()
         self.morning_start_delta = timedelta(hours=wakeup_t.hour, minutes=wakeup_t.minute) + timedelta(minutes=90)
         
-        self.priority_weights = {"must-see": 3, "want-to-see": 2, "optional": 1}
+        self.priority_weights = {"must": 3, "want": 2, "optional": 1}
         
         # Density mapping controls the Soft Budget
         self.density_mapping = {
@@ -97,7 +97,7 @@ class ScheduleEngine:
         # 3. Constraint Pressure
         # If adding this item pushes us over the Soft Budget, heavily penalize it unless it is a MUST-SEE.
         if active_time + eff_cost > soft_budget:
-            if poi['bucket'] != 'must-see':
+            if poi['bucket'] != 'must':
                 score -= 5000 # Effectively bans it, stopping early to create slack
             else:
                 score -= 500  # Allowed, but lightly penalized to indicate stress
@@ -109,7 +109,7 @@ class ScheduleEngine:
         total_days = (self.departure_dt.date() - self.arrival_dt.date()).days + 1
         
         for p in pois:
-            p['bucket'] = p.get('bucket', 'want-to-see').lower()
+            p['bucket'] = p.get('bucket', 'want').lower()
             p['priority_score'] = self.priority_weights.get(p['bucket'], 2)
 
         # --- MACRO REGION CLASSIFICATION ---
@@ -253,7 +253,7 @@ class ScheduleEngine:
                 schedule.append({"day_index": day_idx, "date": current_date.strftime("%Y-%m-%d"), "events": day_plan})
 
         # --- EXCLUDED ---
-        excluded = {"must-see": [], "want-to-see": [], "optional": []}
+        excluded = {"must": [], "want": [], "optional": []}
         for p in unassigned_pois: excluded[p['bucket']].append(p['name'])
 
         return {"status": "success", "schedule": schedule, "excluded": excluded}
@@ -275,21 +275,21 @@ if __name__ == "__main__":
     )
 
     pois = [
-        {"id": 60, "name": "Colosseum", "bucket": "must-see", "latitude": 41.890262, "longitude": 12.493086, "recommended_duration_mins": 90, "opening_hours": '{"monday": "08:30-16:30", "tuesday": "08:30-16:30", "wednesday": "08:30-16:30", "thursday": "08:30-16:30", "friday": "08:30-16:30", "saturday": "08:30-16:30", "sunday": "08:30-16:30"}'},
-        {"id": 61, "name": "Roman Forum", "bucket": "must-see", "latitude": 41.891723, "longitude": 12.486671, "recommended_duration_mins": 120, "opening_hours": '{"monday": "09:00-19:15", "tuesday": "09:00-19:15", "wednesday": "09:00-19:15", "thursday": "09:00-19:15", "friday": "09:00-19:15", "saturday": "09:00-19:15", "sunday": "09:00-19:15"}'},
-        {"id": 66, "name": "Vatican Museums", "bucket": "must-see", "latitude": 41.904960, "longitude": 12.454661, "recommended_duration_mins": 180, "opening_hours": '{"monday": "08:00-20:00", "tuesday": "08:00-20:00", "wednesday": "08:00-20:00", "thursday": "08:00-20:00", "friday": "08:00-20:00", "saturday": "08:00-20:00", "sunday": "Closed"}'},
-        {"id": 63, "name": "Trevi Fountain", "bucket": "want-to-see", "latitude": 41.900978, "longitude": 12.483284, "recommended_duration_mins": 60, "opening_hours": '{"monday": "24/7", "tuesday": "24/7", "wednesday": "24/7", "thursday": "24/7", "friday": "24/7", "saturday": "24/7", "sunday": "24/7"}'},
-        {"id": 64, "name": "Spanish Steps", "bucket": "want-to-see", "latitude": 41.906051, "longitude": 12.482872, "recommended_duration_mins": 90, "opening_hours": '{"monday": "00:00-24:00", "tuesday": "00:00-24:00", "wednesday": "00:00-24:00", "thursday": "00:00-24:00", "friday": "00:00-24:00", "saturday": "00:00-24:00", "sunday": "00:00-24:00"}'},
-        {"id": 67, "name": "Sistine Chapel", "bucket": "must-see", "latitude": 41.902935, "longitude": 12.454403, "recommended_duration_mins": 120, "opening_hours": '{"monday": null, "tuesday": null, "wednesday": null, "thursday": null, "friday": null, "saturday": null, "sunday": "Closed"}'},
-        {"id": 69, "name": "Capitoline Museums", "bucket": "want-to-see", "latitude": 41.892669, "longitude": 12.482208, "recommended_duration_mins": 180, "opening_hours": '{"monday": "09:30-19:30", "tuesday": "09:30-19:30", "wednesday": "09:30-19:30", "thursday": "09:30-19:30", "friday": "09:30-19:30", "saturday": "09:30-19:30", "sunday": "09:30-19:30"}'},
+        {"id": 60, "name": "Colosseum", "bucket": "must", "latitude": 41.890262, "longitude": 12.493086, "recommended_duration_mins": 90, "opening_hours": '{"monday": "08:30-16:30", "tuesday": "08:30-16:30", "wednesday": "08:30-16:30", "thursday": "08:30-16:30", "friday": "08:30-16:30", "saturday": "08:30-16:30", "sunday": "08:30-16:30"}'},
+        {"id": 61, "name": "Roman Forum", "bucket": "must", "latitude": 41.891723, "longitude": 12.486671, "recommended_duration_mins": 120, "opening_hours": '{"monday": "09:00-19:15", "tuesday": "09:00-19:15", "wednesday": "09:00-19:15", "thursday": "09:00-19:15", "friday": "09:00-19:15", "saturday": "09:00-19:15", "sunday": "09:00-19:15"}'},
+        {"id": 66, "name": "Vatican Museums", "bucket": "must", "latitude": 41.904960, "longitude": 12.454661, "recommended_duration_mins": 180, "opening_hours": '{"monday": "08:00-20:00", "tuesday": "08:00-20:00", "wednesday": "08:00-20:00", "thursday": "08:00-20:00", "friday": "08:00-20:00", "saturday": "08:00-20:00", "sunday": "Closed"}'},
+        {"id": 63, "name": "Trevi Fountain", "bucket": "want", "latitude": 41.900978, "longitude": 12.483284, "recommended_duration_mins": 60, "opening_hours": '{"monday": "24/7", "tuesday": "24/7", "wednesday": "24/7", "thursday": "24/7", "friday": "24/7", "saturday": "24/7", "sunday": "24/7"}'},
+        {"id": 64, "name": "Spanish Steps", "bucket": "want", "latitude": 41.906051, "longitude": 12.482872, "recommended_duration_mins": 90, "opening_hours": '{"monday": "00:00-24:00", "tuesday": "00:00-24:00", "wednesday": "00:00-24:00", "thursday": "00:00-24:00", "friday": "00:00-24:00", "saturday": "00:00-24:00", "sunday": "00:00-24:00"}'},
+        {"id": 67, "name": "Sistine Chapel", "bucket": "must", "latitude": 41.902935, "longitude": 12.454403, "recommended_duration_mins": 120, "opening_hours": '{"monday": null, "tuesday": null, "wednesday": null, "thursday": null, "friday": null, "saturday": null, "sunday": "Closed"}'},
+        {"id": 69, "name": "Capitoline Museums", "bucket": "want", "latitude": 41.892669, "longitude": 12.482208, "recommended_duration_mins": 180, "opening_hours": '{"monday": "09:30-19:30", "tuesday": "09:30-19:30", "wednesday": "09:30-19:30", "thursday": "09:30-19:30", "friday": "09:30-19:30", "saturday": "09:30-19:30", "sunday": "09:30-19:30"}'},
         {"id": 62, "name": "Palatine Hill", "bucket": "optional", "latitude": 41.889305, "longitude": 12.487109, "recommended_duration_mins": 180, "opening_hours": '{"monday": "09:00-19:15", "tuesday": "09:00-19:15", "wednesday": "09:00-19:15", "thursday": "09:00-19:15", "friday": "09:00-19:15", "saturday": "09:00-19:15", "sunday": "09:00-19:15"}'},
         {"id": 65, "name": "Basilica of St.Clement", "bucket": "optional", "latitude": 41.889312, "longitude": 12.497466, "recommended_duration_mins": 90, "opening_hours": '{"monday": null, "tuesday": null, "wednesday": null, "thursday": null, "friday": null, "saturday": null, "sunday": null}'},
         {"id": 68, "name": "Obelisk of Piazza Navona", "bucket": "optional", "latitude": 41.898956, "longitude": 12.473084, "recommended_duration_mins": 120, "opening_hours": '{"monday": "24 hours", "tuesday": "24 hours", "wednesday": "24 hours", "thursday": "24 hours", "friday": "24 hours", "saturday": "24 hours", "sunday": "24 hours"}'},
         {"id": 70, "name": "Basilica di Santa Cecilia in Trastevere", "bucket": "optional", "latitude": 41.887561, "longitude": 12.475856, "recommended_duration_mins": 45, "opening_hours": '{"monday": "09:15-18:00", "tuesday": "09:15-18:00", "wednesday": "09:15-18:00", "thursday": "09:15-18:00", "friday": "09:15-18:00", "saturday": "09:15-18:00", "sunday": "09:15-18:00"}'},
         # FLORENCE ATTRACTIONS
-        {"id": 48, "name": "Uffizi Gallery", "bucket": "must-see", "latitude": 43.768089, "longitude": 11.255364, "recommended_duration_mins": 180, "opening_hours": '{"monday": "Closed", "tuesday": "08:15-18:30", "wednesday": "08:15-18:30", "thursday": "08:15-18:30", "friday": "08:15-18:30", "saturday": "08:15-18:30", "sunday": "08:15-18:30"}'},
-        {"id": 49, "name": "Ponte Vecchio", "bucket": "want-to-see", "latitude": 43.768421, "longitude": 11.253443, "recommended_duration_mins": 90, "opening_hours": '{"monday": "00:00-24:00", "tuesday": "00:00-24:00", "wednesday": "00:00-24:00", "thursday": "00:00-24:00", "friday": "00:00-24:00", "saturday": "00:00-24:00", "sunday": "00:00-24:00"}'},
-        {"id": 50, "name": "Conservatorio Cherubini", "bucket": "optional", "latitude": 43.776523, "longitude": 11.258512, "recommended_duration_mins": 120, "opening_hours": '{"monday": "Closed", "tuesday": "08:15-18:50", "wednesday": "08:15-18:50", "thursday": "08:15-18:50", "friday": "08:15-18:50", "saturday": "08:15-18:50", "sunday": "08:15-18:50"}'},
+        {"id": 48, "name": "Uffizi Gallery", "bucket": "must", "latitude": 43.768089, "longitude": 11.255364, "recommended_duration_mins": 180, "opening_hours": '{"monday": "Closed", "tuesday": "08:15-18:30", "wednesday": "08:15-18:30", "thursday": "08:15-18:30", "friday": "08:15-18:30", "saturday": "08:15-18:30", "sunday": "08:15-18:30"}'},
+        {"id": 49, "name": "Ponte Vecchio", "bucket": "want", "latitude": 43.768421, "longitude": 11.253443, "recommended_duration_mins": 90, "opening_hours": '{"monday": "00:00-24:00", "tuesday": "00:00-24:00", "wednesday": "00:00-24:00", "thursday": "00:00-24:00", "friday": "00:00-24:00", "saturday": "00:00-24:00", "sunday": "00:00-24:00"}'},
+        {"id": 50,"name": "Conservatorio Cherubini","bucket": "optional", "latitude": 43.776523, "longitude": 11.258512, "recommended_duration_mins": 120, "opening_hours": '{"monday": "Closed", "tuesday": "08:15-18:50", "wednesday": "08:15-18:50", "thursday": "08:15-18:50", "friday": "08:15-18:50", "saturday": "08:15-18:50", "sunday": "08:15-18:50"}'},
     ]
 
     print("\n--- RUNNING SCORING OPTIMIZER ---")
@@ -310,7 +310,7 @@ if __name__ == "__main__":
     print("\n" + "="*50)
     print("DROPPED ATTRACTIONS:")
     excluded = result['excluded']
-    for bucket in ['must-see', 'want-to-see', 'optional']:
+    for bucket in ['must', 'want', 'optional']:
         if excluded[bucket]:
             print(f"  - {bucket.upper()}: {', '.join(excluded[bucket])}")
         else:

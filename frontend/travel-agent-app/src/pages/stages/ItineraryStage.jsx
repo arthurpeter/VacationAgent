@@ -4,6 +4,7 @@ import { fetchWithAuth } from '../../authService';
 import { API_BASE_URL } from '../../config';
 import AttractionsStage from './AttractionsStage';
 import LogisticsStage from './LogisticsStage';
+import ScheduleStage from './ScheduleStage';
 import { Loader2 } from 'lucide-react';
 
 export default function ItineraryMaster() {
@@ -32,7 +33,6 @@ export default function ItineraryMaster() {
         if (sessionId) fetchState();
     }, [sessionId, fetchState]);
 
-    // --- CENTRALIZED STAGE MANAGER ---
     const handleUpdateStage = async (targetStage) => {
         try {
             const res = await fetchWithAuth(`${API_BASE_URL}/itinerary/update-stage`, {
@@ -41,7 +41,6 @@ export default function ItineraryMaster() {
             }, "POST");
             
             if (res.ok) {
-                // Fetch the new state so the UI flips to the correct component
                 await fetchState();
             }
         } catch (err) {
@@ -56,8 +55,6 @@ export default function ItineraryMaster() {
             </div>
         );
     }
-
-    // --- ROUTING LOGIC ---
     
     // STAGE 1: Logistics & Mobility
     if (gameState.stage === 1) {
@@ -66,25 +63,22 @@ export default function ItineraryMaster() {
                 gameState={gameState} 
                 session={session} 
                 refresh={fetchState}
-                onBack={() => handleUpdateStage(0)} // Move back to Attractions
-                onNext={() => handleUpdateStage(2)} // Move to Schedule
+                onBack={() => handleUpdateStage(0)} 
+                onNext={() => handleUpdateStage(2)} 
             />
         );
     }
 
-    // STAGE 2: Final Schedule (Placeholder for next step)
+    // STAGE 2: The Generated Schedule
     if (gameState.stage === 2) {
         return (
-            <div className="p-6">
-                <button
-                    onClick={() => handleUpdateStage(1)}
-                    className="mb-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
-                >
-                    Back
-                </button>
-
-                <div>Schedule Stage Implementation Coming Soon...</div>
-            </div>
+            <ScheduleStage 
+                gameState={gameState} 
+                session={session} 
+                refresh={fetchState}
+                onBack={() => handleUpdateStage(1)}
+                onNext={() => handleUpdateStage(3)} // Ready for whenever you build Stage 3 (Checkout/Export)
+            />
         );
     }
 
@@ -93,7 +87,7 @@ export default function ItineraryMaster() {
         <AttractionsStage 
             gameState={gameState} 
             session={session} 
-            onFinalize={() => handleUpdateStage(1)} // Move to Logistics
+            onFinalize={() => handleUpdateStage(1)} 
         />
     );
 }

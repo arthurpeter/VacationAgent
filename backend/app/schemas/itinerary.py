@@ -35,3 +35,7 @@ class TransportRequest(BaseModel):
 class PaceRequest(BaseModel):
     session_id: int
     pace: str
+
+class ScheduleActionRequest(BaseModel):
+    session_id: int
+    action: str

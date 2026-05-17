@@ -41,3 +41,7 @@ class ItineraryState(TypedDict):
     pace_recommendation: Optional[PaceRecommendationSchema] = None
     pace: Literal["Relaxed", "Moderate", "Fast-Paced"] = "Moderate"
 
+    trip_details: Optional[dict[str, Any]] = None
+    schedule: Optional[List[dict[str, Any]]] = None
+    excluded_pois: Optional[dict[str, List[str]]] = None
+

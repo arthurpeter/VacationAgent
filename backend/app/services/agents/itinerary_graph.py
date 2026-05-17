@@ -27,9 +27,7 @@ def route_stage(state: ItineraryState):
     elif stage == 1:
         return "picking_transit"
     elif stage == 2:
-        return "organizing_days"
-    elif stage == 3:
-        return "organizing_attractions"
+        return "organize_itinerary"
     else:
         return "picking_attractions"
     
@@ -48,17 +46,14 @@ def generate_graph(checkpointer=None):
 
     builder.add_node("picking_attractions", picking_attractions)
     builder.add_node("picking_transit", picking_transit)
-    builder.add_node("organizing_days", organizing_days)
-    builder.add_node("organizing_attractions", organizing_attractions)
-
+    builder.add_node("organize_itinerary", organize_itinerary)
     builder.add_node("enrich_single_attraction_node", enrich_single_attraction_node)
     builder.add_node("save_attractions_to_db", save_attractions_to_db)
 
     builder.add_conditional_edges(START, route_stage, {
         "picking_attractions": "picking_attractions",
         "picking_transit": "picking_transit",
-        "organizing_days": "organizing_days",
-        "organizing_attractions": "organizing_attractions"
+        "organize_itinerary": "organize_itinerary"
     })
 
     builder.add_conditional_edges(
@@ -73,8 +68,7 @@ def generate_graph(checkpointer=None):
     builder.add_edge("enrich_single_attraction_node", "save_attractions_to_db")
     builder.add_edge("save_attractions_to_db", END)
     builder.add_edge("picking_transit", END)
-    builder.add_edge("organizing_days", END)
-    builder.add_edge("organizing_attractions", END)
+    builder.add_edge("organize_itinerary", END)
 
     return builder.compile(checkpointer=checkpointer)
 

@@ -220,6 +220,18 @@ async def get_initial_itinerary_state(db: AsyncSession, session_id: int) -> Itin
         "accomodation_price": session.accomodation_price
     }
 
+    hotel_coords = (float(session.accommodation_latitude), float(session.accommodation_longitude)) if session.accommodation_latitude else (0.0, 0.0)
+    airport_coords = (float(session.airport_latitude), float(session.airport_longitude)) if session.airport_latitude else (0.0, 0.0)
+
+    trip_details = {
+        "arrival_dt": session.destination_arrival.isoformat() if session.destination_arrival else None,
+        "departure_dt": session.destination_departure.isoformat() if session.destination_departure else None,
+        "hotel_coords": hotel_coords,
+        "airport_coords": airport_coords,
+        "wakeup_time": "08:00",
+        "lunch_duration_mins": 90
+    }
+
     return {
         "messages": [], 
         "user_id": str(session.user_id),
@@ -230,5 +242,11 @@ async def get_initial_itinerary_state(db: AsyncSession, session_id: int) -> Itin
         "persona_context": persona,
         "data": itinerary_db_context,
         "pois": [],
-        "mobility_config": MobilityConfig.create_default().model_dump(mode='json')
+        "mobility_config": MobilityConfig.create_default().model_dump(mode='json'),
+        "mobility_recommendation": None,
+        "pace_recommendation": None,
+        "pace": "Moderate",
+        "trip_details": trip_details,
+        "schedule": None,
+        "excluded_pois": None
     }

@@ -100,12 +100,14 @@ async def get_itinerary_state(
             "mobility_config": None,
             "pace": "moderate",
             "mobility_recommendation": None,
-            "pace_recommendation": None
+            "pace_recommendation": None,
+            "schedule": None,
+            "excluded_pois": None,
         }
     
     ui_keys = {
         "stage", "pois", "resolved_attractions", "search_location", "mobility_config", "pace",
-        "mobility_recommendation", "pace_recommendation"
+        "mobility_recommendation", "pace_recommendation", "schedule", "excluded_pois"
     }
     
     return {k: v for k, v in state.values.items() if k in ui_keys}
@@ -271,3 +273,41 @@ async def trigger_pace_change(
     except Exception as e:
         log.error(f"Pace update failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error updating pace")
+    
+
+@router.post("/schedule/action")
+async def trigger_schedule_action(
+    data: ScheduleActionRequest,
+    db: AsyncSession = Depends(get_db),
+    checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
+    token: TokenPayload = Depends(access_token_header)
+):
+    stmt = select(models.VacationSession).where(
+        models.VacationSession.id == data.session_id,
+        models.VacationSession.user_id == token.sub
+    )
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
+
+    if not session:
+        log.warning(f"Unauthorized schedule access: {data.session_id} by user {token.sub}")
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    try:
+        final_state = await run_itinerary_graph(
+            session_id=data.session_id,
+            action=data.action,
+            stage=2,
+            query="",
+            db=db,
+            checkpointer=checkpointer
+        )
+
+        return {
+            "status": "success", 
+            "schedule": final_state.get("schedule"),
+            "excluded_pois": final_state.get("excluded_pois")
+        }
+    except Exception as e:
+        log.error(f"Schedule action failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal AI processing error")
