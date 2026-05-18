@@ -103,11 +103,12 @@ async def get_itinerary_state(
             "pace_recommendation": None,
             "schedule": None,
             "excluded_pois": None,
+            "trip_details": None
         }
     
     ui_keys = {
         "stage", "pois", "resolved_attractions", "search_location", "mobility_config", "pace",
-        "mobility_recommendation", "pace_recommendation", "schedule", "excluded_pois"
+        "mobility_recommendation", "pace_recommendation", "schedule", "excluded_pois", "trip_details"
     }
     
     return {k: v for k, v in state.values.items() if k in ui_keys}
@@ -311,3 +312,35 @@ async def trigger_schedule_action(
     except Exception as e:
         log.error(f"Schedule action failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal AI processing error")
+
+@router.post("/schedule/details")
+async def update_trip_details(
+    data: TripDetailsRequest,
+    db: AsyncSession = Depends(get_db),
+    checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
+    token: TokenPayload = Depends(access_token_header)
+):
+    stmt = select(models.VacationSession).where(
+        models.VacationSession.id == data.session_id,
+        models.VacationSession.user_id == token.sub
+    )
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
+
+    if not session:
+        log.warning(f"Unauthorized trip details access: {data.session_id} by user {token.sub}")
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    graph = generate_itinerary_graph(checkpointer)
+    config = {"configurable": {"thread_id": f"itinerary_{data.session_id}"}}
+
+    try:
+        await graph.aupdate_state(
+            config, 
+            {"trip_details": data.trip_details}
+        )
+
+        return {"status": "success", "updated_trip_details": data.trip_details}
+    except Exception as e:
+        log.error(f"Trip details update failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating trip details")

@@ -39,3 +39,7 @@ class PaceRequest(BaseModel):
 class ScheduleActionRequest(BaseModel):
     session_id: int
     action: str
+
+class TripDetailsRequest(BaseModel):
+    session_id: int
+    trip_details: Optional[dict] = None

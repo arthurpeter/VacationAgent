@@ -9,7 +9,9 @@ import {
     AlertTriangle,
     CalendarDays,
     Sparkles,
-    TrainFront
+    TrainFront,
+    Sun,
+    RefreshCw
 } from 'lucide-react';
 import PageTransition from '../../components/PageTransition';
 import { fetchWithAuth } from '../../authService';
@@ -99,13 +101,18 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
     const [localSchedule, setLocalSchedule] = useState(null);
     const [localExcluded, setLocalExcluded] = useState(null);
     
-    // NEW: State to track which day's map is currently visible
     const [activeMapDay, setActiveMapDay] = useState(0); 
-    
     const hasTriggered = useRef(false);
 
     const schedule = gameState?.schedule || localSchedule;
     const excluded = gameState?.excluded_pois || localExcluded;
+    
+    // Extract base trip details from global state
+    const baseTripDetails = gameState?.trip_details || {};
+
+    // NEW: Local state for UI controls, initializing from existing state
+    const [wakeupTime, setWakeupTime] = useState(baseTripDetails.wakeup_time || "08:00");
+    const [lunchDuration, setLunchDuration] = useState(baseTripDetails.lunch_duration_mins || 90);
 
     useEffect(() => {
         if (!schedule && !hasTriggered.current) {
@@ -131,6 +138,43 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
             await refresh();
         } catch (e) {
             console.error("Failed to generate schedule", e);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    // NEW: Handle user clicking "Recalculate"
+    const handleRecalculate = async () => {
+        setIsGenerating(true);
+        try {
+            // 1. Merge the new parameters with the existing trip coordinates/dates
+            const updatedDetails = {
+                ...baseTripDetails,
+                wakeup_time: wakeupTime,
+                lunch_duration_mins: parseInt(lunchDuration, 10)
+            };
+
+            // 2. Save the new settings to the graph state
+            await fetchWithAuth(`${API_BASE_URL}/itinerary/schedule/details`, {
+                session_id: session.id,
+                trip_details: updatedDetails
+            }, "POST");
+
+            // 3. Re-trigger the generation sequence using the new settings
+            const res = await fetchWithAuth(`${API_BASE_URL}/itinerary/schedule/action`, {
+                session_id: session.id,
+                action: "generate_schedule"
+            }, "POST");
+            
+            if (res.ok) {
+                const data = await res.json();
+                if (data.schedule) setLocalSchedule(data.schedule);
+                if (data.excluded_pois) setLocalExcluded(data.excluded_pois);
+            }
+            
+            await refresh();
+        } catch (e) {
+            console.error("Recalculation failed", e);
         } finally {
             setIsGenerating(false);
         }
@@ -178,13 +222,59 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
             <div className="flex flex-row flex-grow overflow-hidden">
                 
                 {/* LEFT PANEL: Scrollable Timeline */}
-                <div className="w-full lg:w-[45%] flex-grow overflow-y-auto p-8 z-10 bg-gray-50">
+                <div className="w-full lg:w-[45%] flex-grow overflow-y-auto p-8 z-10 bg-gray-50 relative">
                     <div className="max-w-xl mx-auto">
                         
-                        <div className="mb-10">
+                        <div className="mb-6">
                             <h1 className="text-4xl font-black text-gray-900 tracking-tight">Your Itinerary Draft</h1>
-                            <p className="text-gray-500 mt-2 font-medium">Review your daily timeline. (Drag and Drop editing coming soon!)</p>
+                            <p className="text-gray-500 mt-2 font-medium">Review your daily timeline. Adjust parameters to regenerate.</p>
                         </div>
+
+                        {/* --- NEW: GLOBAL SETTINGS BAR --- */}
+                        <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm mb-10 flex flex-col sm:flex-row items-center justify-between gap-4 sticky top-0 z-50">
+                            <div className="flex items-center gap-6 w-full sm:w-auto">
+                                
+                                {/* Wakeup Time Control */}
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center gap-1">
+                                        <Sun size={12} /> Start Time
+                                    </label>
+                                    <input 
+                                        type="time" 
+                                        value={wakeupTime}
+                                        onChange={(e) => setWakeupTime(e.target.value)}
+                                        className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-bold text-gray-900 outline-none focus:border-blue-500"
+                                    />
+                                </div>
+
+                                {/* Lunch Duration Control */}
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center gap-1">
+                                        <Utensils size={12} /> Lunch
+                                    </label>
+                                    <select 
+                                        value={lunchDuration}
+                                        onChange={(e) => setLunchDuration(e.target.value)}
+                                        className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-bold text-gray-900 outline-none focus:border-blue-500 cursor-pointer"
+                                    >
+                                        <option value="45">45 Mins</option>
+                                        <option value="60">1 Hour</option>
+                                        <option value="90">1.5 Hours</option>
+                                        <option value="120">2 Hours</option>
+                                    </select>
+                                </div>
+                                
+                            </div>
+
+                            <button 
+                                onClick={handleRecalculate}
+                                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
+                            >
+                                <RefreshCw size={16} />
+                                Recalculate
+                            </button>
+                        </div>
+                        {/* --- END SETTINGS BAR --- */}
 
                         {/* The Timeline */}
                         <div className="space-y-12">
@@ -195,7 +285,7 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
 
                                 return (
                                     <div key={idx} id={`timeline-day-${idx}`} className="relative">
-                                        <div className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur-md py-4 mb-4 border-b border-gray-200 flex items-center gap-3">
+                                        <div className="sticky top-[88px] z-10 bg-gray-50/90 backdrop-blur-md py-4 mb-4 border-b border-gray-200 flex items-center gap-3">
                                             <div className="bg-gray-900 text-white w-10 h-10 rounded-xl flex items-center justify-center font-black shadow-sm">
                                                 {day.day_index + 1}
                                             </div>
@@ -255,14 +345,12 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                 {/* RIGHT PANEL: Tabbed Map Container */}
                 <div className="hidden lg:flex flex-col lg:w-[55%] relative bg-gray-200 border-l border-gray-200 shadow-inner z-0">
                     
-                    {/* Floating Map Tabs */}
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-gray-200 flex gap-1 overflow-x-auto max-w-[90%]">
                         {schedule.map((day, idx) => (
                             <button
                                 key={idx}
                                 onClick={() => {
                                     setActiveMapDay(idx);
-                                    // Optional: Scroll the left timeline to match the clicked map tab
                                     document.getElementById(`timeline-day-${idx}`)?.scrollIntoView({ behavior: 'smooth' });
                                 }}
                                 className={`px-5 py-2 rounded-full text-sm font-black whitespace-nowrap transition-all ${
@@ -276,7 +364,6 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                         ))}
                     </div>
 
-                    {/* The Map Component */}
                     <div className="flex-grow w-full h-full">
                         {schedule[activeMapDay] && (
                             <ItineraryMap 
