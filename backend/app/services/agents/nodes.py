@@ -727,7 +727,8 @@ async def _generate_schedule(state: ItineraryState) -> dict:
                 "latitude": db_poi.latitude,
                 "longitude": db_poi.longitude,
                 "recommended_duration_mins": duration,
-                "opening_hours": opening_hours_str
+                "opening_hours": opening_hours_str,
+                "image_url": db_poi.image_url
             })
             
         log.info(engine_pois)

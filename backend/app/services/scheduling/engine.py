@@ -1,11 +1,10 @@
 import math
 from datetime import datetime, timedelta, time
 from typing import List, Dict, Any
-import logging
+from app.core.logger import get_logger
 import json
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 class ScheduleEngine:
     def __init__(self, pace: str, arrival_dt: datetime, departure_dt: datetime, 
@@ -16,6 +15,7 @@ class ScheduleEngine:
         self.arrival_dt = arrival_dt
         self.departure_dt = departure_dt
         self.hotel_coords = hotel_coords
+        self.airport_coords = airport_coords
         self.lunch_duration_mins = lunch_duration_mins
         self.arrival_buffer_hours = 3.5 
         
@@ -65,7 +65,13 @@ class ScheduleEngine:
         day_of_week = arrival_dt.strftime('%A').lower()
             
         try:
-            hours_dict = json.loads(opening_hours_str)
+            if isinstance(opening_hours_str, str):
+                hours_dict = json.loads(opening_hours_str)
+            elif isinstance(opening_hours_str, dict):
+                hours_dict = opening_hours_str
+            else:
+                return True, True
+
             day_hours = hours_dict.get(day_of_week)
             if day_hours is None or str(day_hours).lower() == "null": return True, True
             if "closed" in str(day_hours).lower(): return False, False
@@ -78,7 +84,8 @@ class ScheduleEngine:
                 dep_t = departure_dt.time()
                 if open_t <= close_t: return (open_t <= arr_t and dep_t <= close_t), False
                 else: return (arr_t >= open_t or dep_t <= close_t), False
-        except Exception:
+        except Exception as e:
+            log.warning(f"Failed to parse opening hours: {e} | Data: {opening_hours_str}")
             return True, True 
         return True, False
 
@@ -87,20 +94,16 @@ class ScheduleEngine:
         The Unified Scoring Model.
         Balances Priority, Geographic proximity, and Budget Constraints.
         """
-        # 1. Base Priority Score
         score = poi['priority_score'] * 1000 
         
-        # 2. Distance Penalty (Prevents zig-zagging)
         dist = self._calculate_distance_degrees(current_loc[0], current_loc[1], poi['latitude'], poi['longitude'])
         score -= (dist * 500)
         
-        # 3. Constraint Pressure
-        # If adding this item pushes us over the Soft Budget, heavily penalize it unless it is a MUST-SEE.
         if active_time + eff_cost > soft_budget:
             if poi['bucket'] != 'must':
-                score -= 5000 # Effectively bans it, stopping early to create slack
+                score -= 5000 
             else:
-                score -= 500  # Allowed, but lightly penalized to indicate stress
+                score -= 500  
                 
         return score
 
@@ -113,7 +116,6 @@ class ScheduleEngine:
             p['priority_score'] = self.priority_weights.get(p['bucket'], 2)
 
         # --- MACRO REGION CLASSIFICATION ---
-        # Instead of K-Means, simply identify POIs that are far from the hotel (> 0.5 degrees, ~55km)
         home_pois = []
         excursion_pois = []
         for p in pois:
@@ -122,25 +124,17 @@ class ScheduleEngine:
             else:
                 home_pois.append(p)
 
-        # --- DAY ALLOCATION ---
-        active_days = []
-        for i in range(total_days):
-            h_arr = self.arrival_dt + timedelta(hours=self.arrival_buffer_hours)
-            if i == 0 and h_arr >= self.arrival_dt.replace(hour=self.hard_day_cutoff.hour, minute=self.hard_day_cutoff.minute): continue
-            if i == total_days - 1 and (self.departure_dt - timedelta(hours=3)) <= self.departure_dt.replace(hour=9, minute=0): continue
-            active_days.append(i)
-
+        # We no longer skip days. Every day gets an index so departure/arrival anchors always render.
+        active_days = list(range(total_days))
         if not active_days: return {"status": "error"}
 
-        available_days = list(active_days)
+        full_days = [i for i in active_days if i != 0 and i != total_days - 1]
         excursion_day_map = {}
         
-        # Assign excursion days (e.g., Florence gets the middle day of the trip)
-        if excursion_pois and len(available_days) > 1:
-            excursion_day_idx = available_days.pop(len(available_days) // 2)
+        if excursion_pois and len(full_days) >= 1:
+            excursion_day_idx = full_days[len(full_days) // 2]
             excursion_day_map[excursion_day_idx] = excursion_pois
             
-        home_days = available_days
         schedule = []
         unassigned_pois = list(pois)
 
@@ -155,12 +149,15 @@ class ScheduleEngine:
             
             current_date = self.arrival_dt.date() + timedelta(days=day_idx)
             
-            # Start Clock
+            # Smart Clock Initialization
+            standard_wakeup = datetime.combine(current_date, time()) + self.morning_start_delta
             if day_idx == 0:
-                current_clock = max(self.arrival_dt + timedelta(hours=self.arrival_buffer_hours), 
-                                  datetime.combine(current_date, time()) + self.morning_start_delta)
+                current_clock = max(self.arrival_dt + timedelta(hours=self.arrival_buffer_hours), standard_wakeup)
+            elif day_idx == total_days - 1:
+                leave_for_airport = self.departure_dt - timedelta(hours=3)
+                current_clock = min(standard_wakeup, leave_for_airport)
             else:
-                current_clock = datetime.combine(current_date, time()) + self.morning_start_delta
+                current_clock = standard_wakeup
             
             end_clk = (self.departure_dt - timedelta(hours=3)) if day_idx == total_days - 1 else datetime.combine(current_date, self.hard_day_cutoff)
 
@@ -168,10 +165,43 @@ class ScheduleEngine:
             active_time_spent = 0
             lunch_taken = False
             day_plan = []
+
+            # --- 1. INJECT START ANCHORS ---
+            if day_idx == 0:
+                # Arrive at Airport
+                airport_dep = self.arrival_dt + timedelta(minutes=45)
+                day_plan.append({
+                    "type": "attraction", "id": "arr_airport", "name": "Arrive at Airport", "bucket": "logistics",
+                    "start_time": self.arrival_dt.strftime("%H:%M"),
+                    "end_time": airport_dep.strftime("%H:%M"),
+                    "transit_mins": 0, "unknown_hours_warning": False,
+                    "latitude": self.airport_coords[0], "longitude": self.airport_coords[1]
+                })
+                # Transit & Check in to Hotel
+                hotel_arr = airport_dep + timedelta(minutes=45)
+                day_plan.append({
+                    "type": "attraction", "id": "arr_hotel", "name": "Transit & Check-in at Hotel", "bucket": "logistics",
+                    "start_time": airport_dep.strftime("%H:%M"),
+                    "end_time": hotel_arr.strftime("%H:%M"),
+                    "transit_mins": 45, "unknown_hours_warning": False,
+                    "latitude": self.hotel_coords[0], "longitude": self.hotel_coords[1]
+                })
+                # Ensure clock starts after hotel check-in
+                current_clock = max(current_clock, hotel_arr)
+            else:
+                # Normal Morning Hotel Departure
+                day_plan.append({
+                    "type": "attraction", "id": f"start_hotel_{day_idx}", "name": "Start Day at Hotel", "bucket": "logistics",
+                    "start_time": current_clock.strftime("%H:%M"),
+                    "end_time": (current_clock + timedelta(minutes=5)).strftime("%H:%M"),
+                    "transit_mins": 0, "unknown_hours_warning": False,
+                    "latitude": self.hotel_coords[0], "longitude": self.hotel_coords[1]
+                })
+                current_clock += timedelta(minutes=5)
             
-            # Isolate the POI pool for the day's mode
             daily_pool = excursion_day_map[day_idx] if is_excursion else [p for p in unassigned_pois if p in home_pois]
             
+            # --- ATTRACTION SELECTION ---
             while daily_pool and current_clock < end_clk:
                 
                 if current_clock.hour >= 13 and not lunch_taken:
@@ -192,10 +222,8 @@ class ScheduleEngine:
                     raw_transit = self._get_base_transit_mins(current_loc[0], current_loc[1], p['latitude'], p['longitude'])
                     
                     eff_total, eff_transit, switch_pen = self._get_effective_costs(raw_dur, raw_transit, rigidity)
-                    
                     arr_dt = current_clock + timedelta(minutes=eff_transit)
                     
-                    # Wait Mechanic
                     wait_mins = 0
                     valid_arr, valid_dep, is_unk = None, None, False
                     
@@ -236,10 +264,17 @@ class ScheduleEngine:
                     })
 
                 day_plan.append({
-                    "type": "attraction", "id": b_poi['id'], "name": b_poi['name'], "bucket": b_poi['bucket'],
+                    "type": "attraction", 
+                    "id": b_poi['id'], 
+                    "name": b_poi['name'], 
+                    "bucket": b_poi['bucket'],
                     "start_time": best_candidate['arr'].strftime("%H:%M"), 
                     "end_time": (best_candidate['arr'] + timedelta(minutes=b_poi.get('recommended_duration_mins', 120))).strftime("%H:%M"),
-                    "transit_mins": best_candidate['raw_transit'], "unknown_hours_warning": best_candidate['unk']
+                    "transit_mins": best_candidate['raw_transit'], 
+                    "unknown_hours_warning": best_candidate['unk'],
+                    "latitude": b_poi['latitude'],
+                    "longitude": b_poi['longitude'],
+                    "image_url": b_poi.get('image_url')
                 })
                 
                 current_clock = best_candidate['dep']
@@ -248,6 +283,42 @@ class ScheduleEngine:
                 
                 daily_pool = [p for p in daily_pool if p['id'] != b_poi['id']]
                 unassigned_pois = [p for p in unassigned_pois if p['id'] != b_poi['id']]
+
+            # --- 2. INJECT RETURN TO HOTEL ANCHOR ---
+            if active_time_spent > 0:
+                return_transit_mins = self._get_base_transit_mins(current_loc[0], current_loc[1], self.hotel_coords[0], self.hotel_coords[1])
+                return_dt = current_clock + timedelta(minutes=return_transit_mins)
+                
+                day_plan.append({
+                    "type": "attraction", "id": f"return_hotel_{day_idx}", "name": "Return to Hotel", "bucket": "logistics",
+                    "start_time": current_clock.strftime("%H:%M"),
+                    "end_time": return_dt.strftime("%H:%M"),
+                    "transit_mins": return_transit_mins,
+                    "latitude": self.hotel_coords[0], "longitude": self.hotel_coords[1],
+                    "unknown_hours_warning": False
+                })
+                current_clock = return_dt
+
+            # --- 3. INJECT AIRPORT DEPARTURE ANCHOR (LAST DAY) ---
+            if day_idx == total_days - 1:
+                leave_for_airport_time = self.departure_dt - timedelta(hours=3)
+                
+                if current_clock < leave_for_airport_time:
+                    day_plan.append({
+                        "type": "free_time", "id": "free_time_hotel",
+                        "name": "Relax at Hotel / Grab Bags",
+                        "start_time": current_clock.strftime("%H:%M"),
+                        "end_time": leave_for_airport_time.strftime("%H:%M")
+                    })
+                
+                day_plan.append({
+                    "type": "attraction", "id": "dep_airport", "name": "Transit to Airport & Depart", "bucket": "logistics",
+                    "start_time": leave_for_airport_time.strftime("%H:%M"),
+                    "end_time": self.departure_dt.strftime("%H:%M"),
+                    "transit_mins": 60,
+                    "latitude": self.airport_coords[0], "longitude": self.airport_coords[1],
+                    "unknown_hours_warning": False
+                })
 
             if day_plan:
                 schedule.append({"day_index": day_idx, "date": current_date.strftime("%Y-%m-%d"), "events": day_plan})
