@@ -683,6 +683,8 @@ async def organize_itinerary(state: ItineraryState) -> dict:
 
     if action == "generate_schedule":
         return await _generate_schedule(state)
+    elif action == "recalculate_timeline":
+        return await _recalculate_timeline(state)
     
     return {}
 
@@ -759,8 +761,85 @@ async def _generate_schedule(state: ItineraryState) -> dict:
         
     except Exception as e:
         log.error(f"Schedule Engine Failed: {e}", exc_info=True)
-        return {"schedule": [], "excluded_pois": {}}
+        return {}
 
+async def _recalculate_timeline(state: ItineraryState) -> dict:
+    """
+    LangGraph Node Action: Bypasses the geographical optimizer.
+    Strictly runs the clock simulation on the exact order provided by the user.
+    """
+    pois_state = state.get("pois", [])
+    trip_details = state.get("trip_details")
+    pace = state.get("pace", "moderate")
+    user_timeline = state.get("user_timeline")
+
+    if not pois_state or not trip_details or not user_timeline:
+        log.warning("Missing data to recalculate timeline.")
+        return {}
+
+    try:
+        poi_ids = [p["id"] for p in pois_state]
+
+        async with SessionLocal() as db:
+            stmt = select(GlobalAttraction).where(GlobalAttraction.id.in_(poi_ids))
+            result = await db.execute(stmt)
+            db_attractions = {attr.id: attr for attr in result.scalars().all()}
+
+        engine_pois = []
+        for state_poi in pois_state:
+            db_poi = db_attractions.get(state_poi["id"])
+            if not db_poi:
+                continue
+
+            duration = state_poi.get("time_to_spend") or db_poi.recommended_duration_mins
+            
+            opening_hours_raw = db_poi.opening_hours
+            if isinstance(opening_hours_raw, dict):
+                opening_hours_str = orjson.dumps(opening_hours_raw)
+            else:
+                opening_hours_str = opening_hours_raw
+
+            engine_pois.append({
+                "id": db_poi.id,
+                "name": db_poi.official_name,
+                "bucket": state_poi.get("bucket", "want"),
+                "latitude": db_poi.latitude,
+                "longitude": db_poi.longitude,
+                "recommended_duration_mins": duration,
+                "opening_hours": opening_hours_str,
+                "image_url": db_poi.image_url
+            })
+
+        arrival_dt = datetime.fromisoformat(trip_details["arrival_dt"])
+        departure_dt = datetime.fromisoformat(trip_details["departure_dt"])
+        hotel_coords = trip_details.get("hotel_coords")
+        airport_coords = trip_details.get("airport_coords")
+        wakeup_time = trip_details.get("wakeup_time", "08:00")
+        lunch_duration_mins = trip_details.get("lunch_duration_mins", 90)
+
+        engine = ScheduleEngine(
+            pace=pace,
+            arrival_dt=arrival_dt,
+            departure_dt=departure_dt,
+            hotel_coords=hotel_coords,
+            airport_coords=airport_coords,
+            wakeup_time=wakeup_time,
+            lunch_duration_mins=lunch_duration_mins
+        )
+
+        # Run the Strict Simulator!
+        result = engine.recalculate_user_timeline(user_timeline, engine_pois)
+
+        return {
+            "schedule": result.get("schedule", []),
+            "excluded_pois": result.get("excluded", {"must": [], "want": [], "optional": []}),
+            "action": "idle", # Clear the action so the graph stops
+            "user_timeline": None # Clear the buffer
+        }
+
+    except Exception as e:
+        log.error(f"Failed to recalculate user timeline: {e}", exc_info=True)
+        return {}
 
 if __name__ == "__main__":
     print("This module is not meant to be run directly. It provides the agent nodes and decisional edges.")

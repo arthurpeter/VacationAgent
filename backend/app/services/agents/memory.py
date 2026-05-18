@@ -45,3 +45,5 @@ class ItineraryState(TypedDict):
     schedule: Optional[List[dict[str, Any]]] = None
     excluded_pois: Optional[dict[str, List[str]]] = None
 
+    user_timeline: Optional[List[List[int]]] = None
+

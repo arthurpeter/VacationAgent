@@ -344,3 +344,49 @@ async def update_trip_details(
     except Exception as e:
         log.error(f"Trip details update failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error updating trip details")
+    
+@router.post("/schedule/custom")
+async def update_custom_timeline(
+    data: CustomTimelineRequest,
+    db: AsyncSession = Depends(get_db),
+    checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
+    token: TokenPayload = Depends(access_token_header)
+):
+    stmt = select(models.VacationSession).where(
+        models.VacationSession.id == data.session_id,
+        models.VacationSession.user_id == token.sub
+    )
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
+
+    if not session:
+        log.warning(f"Unauthorized custom timeline access: {data.session_id} by user {token.sub}")
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    graph = generate_itinerary_graph(checkpointer)
+    config = {"configurable": {"thread_id": f"itinerary_{data.session_id}"}}
+
+    try:
+        await graph.aupdate_state(
+            config, 
+            {"user_timeline": data.user_timeline}
+        )
+
+        final_state = await run_itinerary_graph(
+            session_id=data.session_id,
+            action="recalculate_timeline",
+            stage=2,
+            query="",
+            db=db,
+            checkpointer=checkpointer
+        )
+
+        return {
+            "status": "success", 
+            "schedule": final_state.get("schedule"),
+            "excluded_pois": final_state.get("excluded_pois")
+        }
+    
+    except Exception as e:
+        log.error(f"Custom timeline update failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating custom timeline")

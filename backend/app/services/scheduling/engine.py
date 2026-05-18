@@ -325,7 +325,154 @@ class ScheduleEngine:
 
         # --- EXCLUDED ---
         excluded = {"must": [], "want": [], "optional": []}
-        for p in unassigned_pois: excluded[p['bucket']].append(p['name'])
+        for p in unassigned_pois: excluded[p['bucket']].append({
+                                                            "id": p["id"], 
+                                                            "name": p["name"], 
+                                                            "bucket": p['bucket'], 
+                                                            "type": "attraction"
+                                                        })
+
+        return {"status": "success", "schedule": schedule, "excluded": excluded}
+    
+    def recalculate_user_timeline(self, user_days_poi_ids: List[List[int]], pois: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Bypasses the optimizer. Takes a strict 2D array of POI IDs (one list per day)
+        and runs the clock to calculate transit, lunch, and opening hours warnings.
+        """
+        poi_map = {p['id']: p for p in pois}
+        schedule = []
+        total_days = (self.departure_dt.date() - self.arrival_dt.date()).days + 1
+        
+        for day_idx, day_poi_ids in enumerate(user_days_poi_ids):
+            current_date = self.arrival_dt.date() + timedelta(days=day_idx)
+            
+            # Start Clock (Identical to your main engine)
+            standard_wakeup = datetime.combine(current_date, time()) + self.morning_start_delta
+            if day_idx == 0:
+                current_clock = max(self.arrival_dt + timedelta(hours=self.arrival_buffer_hours), standard_wakeup)
+            elif day_idx == total_days - 1:
+                leave_for_airport = self.departure_dt - timedelta(hours=3)
+                current_clock = min(standard_wakeup, leave_for_airport)
+            else:
+                current_clock = standard_wakeup
+                
+            current_loc = self.hotel_coords
+            lunch_taken = False
+            day_plan = []
+            
+            # --- 1. INJECT START ANCHORS ---
+            if day_idx == 0:
+                airport_dep = self.arrival_dt + timedelta(minutes=45)
+                day_plan.append({
+                    "type": "attraction", "id": "arr_airport", "name": "Arrive at Airport", "bucket": "logistics",
+                    "start_time": self.arrival_dt.strftime("%H:%M"), "end_time": airport_dep.strftime("%H:%M"),
+                    "transit_mins": 0, "unknown_hours_warning": False,
+                    "latitude": self.airport_coords[0], "longitude": self.airport_coords[1]
+                })
+                hotel_arr = airport_dep + timedelta(minutes=45)
+                day_plan.append({
+                    "type": "attraction", "id": "arr_hotel", "name": "Transit & Check-in at Hotel", "bucket": "logistics",
+                    "start_time": airport_dep.strftime("%H:%M"), "end_time": hotel_arr.strftime("%H:%M"),
+                    "transit_mins": 45, "unknown_hours_warning": False,
+                    "latitude": self.hotel_coords[0], "longitude": self.hotel_coords[1]
+                })
+                current_clock = max(current_clock, hotel_arr)
+            else:
+                day_plan.append({
+                    "type": "attraction", "id": f"start_hotel_{day_idx}", "name": "Start Day at Hotel", "bucket": "logistics",
+                    "start_time": current_clock.strftime("%H:%M"), "end_time": (current_clock + timedelta(minutes=5)).strftime("%H:%M"),
+                    "transit_mins": 0, "unknown_hours_warning": False,
+                    "latitude": self.hotel_coords[0], "longitude": self.hotel_coords[1]
+                })
+                current_clock += timedelta(minutes=5)
+
+            # --- 2. PROCESS USER'S EXPLICIT ORDER ---
+            active_time_spent = 0
+            
+            for poi_id in day_poi_ids:
+                # Skip any anchors the frontend accidentally sends back
+                if isinstance(poi_id, str) and (poi_id.startswith("start_") or poi_id.startswith("return_") or poi_id.startswith("arr_") or poi_id.startswith("dep_")):
+                    continue
+                    
+                p = poi_map.get(poi_id)
+                if not p: continue
+                
+                # Auto-inject Lunch
+                if current_clock.hour >= 13 and not lunch_taken:
+                    day_plan.append({
+                        "type": "meal", "name": "Lunch Break",
+                        "start_time": current_clock.strftime("%H:%M"),
+                        "end_time": (current_clock + timedelta(minutes=self.lunch_duration_mins)).strftime("%H:%M")
+                    })
+                    current_clock += timedelta(minutes=self.lunch_duration_mins)
+                    lunch_taken = True
+                
+                # Calculate Transit
+                raw_transit = self._get_base_transit_mins(current_loc[0], current_loc[1], p['latitude'], p['longitude'])
+                arr_dt = current_clock + timedelta(minutes=raw_transit)
+                raw_dur = p.get('recommended_duration_mins', 120)
+                dep_dt = arr_dt + timedelta(minutes=raw_dur)
+                
+                # Opening Hours Check (Just flags a warning, does NOT stop the user)
+                is_open, is_unk = self._is_open_interval(arr_dt, dep_dt, p.get("opening_hours"))
+                
+                day_plan.append({
+                    "type": "attraction", "id": p['id'], "name": p['name'], "bucket": p.get('bucket', 'want').lower(),
+                    "start_time": arr_dt.strftime("%H:%M"), "end_time": dep_dt.strftime("%H:%M"),
+                    "transit_mins": raw_transit, 
+                    "unknown_hours_warning": not is_open if not is_unk else True, # True if closed or unknown
+                    "latitude": p['latitude'], "longitude": p['longitude'],
+                    "image_url": p.get('image_url')
+                })
+                
+                current_clock = dep_dt
+                current_loc = (p['latitude'], p['longitude'])
+                active_time_spent += 1
+                
+            # --- 3. INJECT RETURN ANCHORS ---
+            if active_time_spent > 0 or day_idx == 0:
+                return_transit_mins = self._get_base_transit_mins(current_loc[0], current_loc[1], self.hotel_coords[0], self.hotel_coords[1])
+                return_dt = current_clock + timedelta(minutes=return_transit_mins)
+                day_plan.append({
+                    "type": "attraction", "id": f"return_hotel_{day_idx}", "name": "Return to Hotel", "bucket": "logistics",
+                    "start_time": current_clock.strftime("%H:%M"), "end_time": return_dt.strftime("%H:%M"),
+                    "transit_mins": return_transit_mins, "unknown_hours_warning": False,
+                    "latitude": self.hotel_coords[0], "longitude": self.hotel_coords[1]
+                })
+                current_clock = return_dt
+                
+            if day_idx == total_days - 1:
+                leave_for_airport_time = self.departure_dt - timedelta(hours=3)
+                if current_clock < leave_for_airport_time:
+                    day_plan.append({
+                        "type": "free_time", "id": "free_time_hotel", "name": "Relax at Hotel / Grab Bags",
+                        "start_time": current_clock.strftime("%H:%M"), "end_time": leave_for_airport_time.strftime("%H:%M")
+                    })
+                day_plan.append({
+                    "type": "attraction", "id": "dep_airport", "name": "Transit to Airport & Depart", "bucket": "logistics",
+                    "start_time": leave_for_airport_time.strftime("%H:%M"), "end_time": self.departure_dt.strftime("%H:%M"),
+                    "transit_mins": 60, "unknown_hours_warning": False,
+                    "latitude": self.airport_coords[0], "longitude": self.airport_coords[1]
+                })
+                
+            schedule.append({"day_index": day_idx, "date": current_date.strftime("%Y-%m-%d"), "events": day_plan})
+
+        assigned_ids = {pid for day_list in user_days_poi_ids for pid in day_list if isinstance(pid, int) or str(pid).isdigit()}
+        
+        excluded = {"must": [], "want": [], "optional": []}
+        
+        for p in pois:
+            if p['id'] not in assigned_ids:
+                bucket = p.get('bucket', 'optional').lower()
+                if bucket not in excluded:
+                    bucket = "optional"
+                
+                excluded[bucket].append({
+                    "id": p["id"], 
+                    "name": p["name"], 
+                    "bucket": bucket, 
+                    "type": "attraction",
+                })
 
         return {"status": "success", "schedule": schedule, "excluded": excluded}
 

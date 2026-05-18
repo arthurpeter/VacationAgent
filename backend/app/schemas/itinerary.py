@@ -43,3 +43,7 @@ class ScheduleActionRequest(BaseModel):
 class TripDetailsRequest(BaseModel):
     session_id: int
     trip_details: Optional[dict] = None
+
+class CustomTimelineRequest(BaseModel):
+    session_id: int
+    user_timeline: list[list[int]]
