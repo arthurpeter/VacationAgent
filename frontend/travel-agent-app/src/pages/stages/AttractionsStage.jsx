@@ -93,7 +93,7 @@ function LocationAutocomplete({ label, value, onChange, placeholder }) {
   };
 
   return (
-    <div className="flex flex-col gap-1 w-64 relative" ref={wrapperRef}>
+    <div className="flex flex-col gap-1 w-48 sm:w-56 relative" ref={wrapperRef}>
       <label className="text-[10px] uppercase text-gray-400 font-bold tracking-wider ml-1">{label}</label>
       <div className="relative">
         <div className="absolute left-3 top-2.5 text-blue-600">
@@ -103,14 +103,14 @@ function LocationAutocomplete({ label, value, onChange, placeholder }) {
           value={value}
           onChange={handleInput}
           placeholder={placeholder}
-          className="bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-10 py-2.5 text-sm font-black text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full transition-all"
+          className="bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-10 py-2 text-xs font-black text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full transition-all"
         />
-        <div className="absolute right-3 top-2.5">
-          {isLoading ? <Loader2 size={16} className="animate-spin text-blue-600" /> : <ChevronDown size={16} className="text-gray-300" />}
+        <div className="absolute right-3 top-2">
+          {isLoading ? <Loader2 size={14} className="animate-spin text-blue-600" /> : <ChevronDown size={14} className="text-gray-300" />}
         </div>
       </div>
       {showSuggestions && suggestions.length > 0 && (
-        <ul className="absolute top-full left-0 right-0 bg-white border border-gray-100 rounded-2xl shadow-2xl mt-2 z-[100] max-h-60 overflow-y-auto p-2 animate-fadeIn">
+        <ul className="absolute top-full left-0 right-0 append-to-body bg-white border border-gray-100 rounded-2xl shadow-2xl mt-2 z-[110] max-h-60 overflow-y-auto p-2 animate-fadeIn">
           {suggestions.map((item, idx) => (
             <li 
               key={idx} 
@@ -242,7 +242,6 @@ export default function AttractionsStage({ gameState, session, onFinalize }) {
     }
   }, [sessionId, searchQuery]);
 
-  // --- THE CRITICAL INITIAL FETCH LOGIC ---
   useEffect(() => {
     const checkInitialFetch = async () => {
         if (!discoveryResults.length && !itinerary.length && !initialFetchPerformed.current) {
@@ -354,37 +353,49 @@ export default function AttractionsStage({ gameState, session, onFinalize }) {
   };
 
   return (
-    <PageTransition className="w-full h-full overflow-y-auto bg-gray-50 p-4 md:p-8 relative">
+    <PageTransition className="w-full h-screen overflow-hidden bg-gray-50 p-6 md:p-8 relative flex flex-col">
       {renderDetailsModal()}
       
-      <div className="max-w-7xl mx-auto flex flex-col gap-6 h-[calc(100vh-120px)]">
-        <div className="bg-white px-5 py-3 rounded-[2rem] border border-gray-100 shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <LocationAutocomplete 
-              label="City to search in"
-              value={searchLocation}
-              onChange={handleLocationChange}
-              placeholder="Change location..."
-            />
-            <div className="h-10 w-px bg-gray-100" />
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Trip Base</span>
-              <div className="flex items-center gap-2 text-sm font-black text-gray-800 bg-gray-50 px-4 py-2 rounded-xl">
-                <MapIcon size={14} className="text-blue-600" /> {session?.destination}
-              </div>
+      {/* NEW FLOATING STEP NAVIGATION CONTAINER
+        This sits completely on top of everything without a white structural layout bar.
+        Backdrop-blur-md creates the luxury transparent grey element, turning solid charcoal on hover.
+      */}
+      <div className="absolute top-10 right-10 z-[100] pointer-events-auto">
+        <button 
+          onClick={onFinalize}
+          className="px-4 py-3 bg-transparent text-gray-400 hover:text-blue-500 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all duration-300 group"
+        >
+          <span>Finalize Selection</span>
+          <ArrowRight size={14} className="transform transition-transform group-hover:translate-x-1" />
+        </button>
+      </div>
+
+      {/* FULL-HEIGHT SCREEN WRAPPER */}
+      <div className="w-full flex-1 flex flex-col gap-6 min-h-0">
+        
+        {/* TOP COMPACT BRANDING & SEARCH BAR CONFIGURATION */}
+        <div className="flex items-center gap-8 px-2 shrink-0">
+          <LocationAutocomplete 
+            label="City to search in"
+            value={searchLocation}
+            onChange={handleLocationChange}
+            placeholder="Change location..."
+          />
+          <div className="h-8 w-px bg-gray-200 mt-4" />
+          <div className="flex flex-col mt-3">
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Trip Base</span>
+            <div className="flex items-center gap-2 text-xs font-black text-gray-700 bg-white border border-gray-100 px-3.5 py-1.5 rounded-xl shadow-sm">
+              <MapIcon size={12} className="text-blue-600" /> {session?.destination}
             </div>
           </div>
-          <button 
-            onClick={onFinalize}
-            className="bg-gray-900 text-white px-8 py-3 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-blue-600 transition-all shadow-lg shadow-gray-200"
-          >
-            Finalize Selection <ArrowRight size={18} />
-          </button>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8 flex-1 overflow-hidden">
+        {/* COLUMNS LAYOUT CONTAINER */}
+        <div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0 overflow-hidden">
+          
+          {/* FEED COLUMN */}
           <div className="flex-1 flex flex-col min-w-0 bg-white rounded-[2.5rem] border border-gray-200 shadow-sm overflow-hidden">
-            <div className="p-6 border-b bg-white">
+            <div className="p-6 border-b bg-white shrink-0">
               <form onSubmit={handleSearch} className="flex gap-3">
                 <div className="relative flex-1">
                   <Search className="absolute left-5 top-4 text-gray-400" size={20} />
@@ -422,7 +433,8 @@ export default function AttractionsStage({ gameState, session, onFinalize }) {
             </div>
           </div>
 
-          <div className="w-full lg:w-96 flex flex-col gap-4 bg-gray-900 rounded-[3rem] p-8 text-white shadow-2xl relative overflow-hidden">
+          {/* BUCKET COLUMN */}
+          <div className="w-full lg:w-96 flex flex-col gap-4 bg-gray-900 rounded-[3rem] p-8 text-white shadow-2xl relative overflow-hidden shrink-0">
             <div className="absolute top-0 right-0 w-48 h-48 bg-blue-600/20 rounded-full -mr-24 -mt-24 blur-3xl" />
             <div className="relative z-10 flex items-center justify-between mb-8">
               <div>
@@ -452,7 +464,7 @@ export default function AttractionsStage({ gameState, session, onFinalize }) {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-xs truncate leading-tight mb-1">{item.name}</p>
-                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-tighter">{item.time_to_spend} MINS</p>
+                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-tighter">{item.time_to_spend} MINS</p>
                           </div>
                           <button className="text-gray-600 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100 p-2">
                             <Trash2 size={18} />
@@ -465,6 +477,7 @@ export default function AttractionsStage({ gameState, session, onFinalize }) {
               })}
             </div>
           </div>
+
         </div>
       </div>
     </PageTransition>

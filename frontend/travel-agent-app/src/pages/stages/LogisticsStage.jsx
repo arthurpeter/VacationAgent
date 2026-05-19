@@ -54,6 +54,7 @@ function AIRecommendationCard({ title, recommendation, reasoning, icon: Icon, co
 function TransportCard({ active, onClick, title, description, icon: Icon, detailsLoaded }) {
     return (
         <button
+            type="button"
             onClick={onClick}
             className={`relative text-left p-5 rounded-xl border-2 transition group flex flex-col h-full ${
                 active
@@ -80,7 +81,7 @@ function TransportCard({ active, onClick, title, description, icon: Icon, detail
                 <Icon size={24} />
             </div>
 
-            <h3 className="text-lg font-black text-gray-900">{title}</h3>
+            <h3 className="text-lg font-black text-gray-900(BC1)">{title}</h3>
             <p className="mt-1 text-xs text-gray-500 leading-relaxed flex-grow">
                 {description}
             </p>
@@ -108,6 +109,7 @@ function PaceSlider({ value, onChange }) {
             />
             {options.map((opt) => (
                 <button
+                    type="button"
                     key={opt.id}
                     onClick={() => onChange(opt.id)}
                     className={`flex-1 py-4 text-center rounded-lg z-10 transition-colors duration-300 ${
@@ -246,7 +248,6 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
     }
   };
 
-  // NEW: Handle Pace Selection instantly 
   const handlePaceSelect = async (newPace) => {
     setSelectedPace(newPace);
     try {
@@ -277,7 +278,6 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
   };
 
   const handleContinue = async () => {
-    // Pace is already saved, but we do a final safety save before advancing
     try {
         await fetchWithAuth(`${API_BASE_URL}/itinerary/logistics/pace`, {
             session_id: session.id,
@@ -290,28 +290,36 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
   };
 
   return (
-    <PageTransition className="flex flex-col w-full h-full bg-gray-50 overflow-hidden">
-        
-      <div className="bg-white border-b border-gray-200 p-4 shadow-sm shrink-0 flex items-center justify-between z-20">
-          <button 
-              onClick={onBack} 
-              className="flex items-center gap-2 text-gray-500 hover:text-blue-600 font-bold px-4 py-2 rounded-lg hover:bg-blue-50 transition"
-          >
-              <ArrowLeft size={18} />
-              Back
-          </button>
-          
-          <button 
-              onClick={handleContinue} 
-              disabled={loadingRecommendations}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md flex items-center gap-2 transition-transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-              Generate Itinerary
-              <ArrowRight size={18} />
-          </button>
+    <PageTransition className="flex flex-col w-full h-full bg-gray-50 overflow-hidden relative">
+      
+      {/* FLOATING ACTION OVERLAY CONTROLS */}
+      {/* Floating Back Button (Glows Red on Hover) */}
+      <div className="absolute top-8 left-8 z-[100] pointer-events-auto">
+        <button 
+          type="button"
+          onClick={onBack} 
+          className="px-4 py-3 bg-transparent text-gray-400 hover:text-red-500 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all duration-300 group"
+        >
+          <ArrowLeft size={14} className="transform transition-transform group-hover:-translate-x-1" />
+          <span>Back</span>
+        </button>
       </div>
 
-      <div className="flex-grow overflow-y-auto p-8 z-10">
+      {/* Floating Forward Button (Glows Blue on Hover) */}
+      <div className="absolute top-8 right-8 z-[100] pointer-events-auto">
+        <button 
+          type="button"
+          onClick={handleContinue} 
+          disabled={loadingRecommendations}
+          className="px-4 py-3 bg-transparent text-gray-400 hover:text-blue-500 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all duration-300 group disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          <span>Generate Itinerary</span>
+          <ArrowRight size={14} className="transform transition-transform group-hover:translate-x-1" />
+        </button>
+      </div>
+
+      {/* IMMERSIVE MAIN LAYOUT SCROLL CONTAINER */}
+      <div className="flex-grow overflow-y-auto p-8 pt-24 z-10">
         <div className="max-w-4xl mx-auto space-y-8">
             
             <div>
@@ -402,7 +410,6 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
                         subtitle="How much time per day will you spend visiting attractions?" 
                     />
                     <div className="mt-4">
-                        {/* Changed from setSelectedPace to handlePaceSelect */}
                         <PaceSlider value={selectedPace} onChange={handlePaceSelect} />
                     </div>
                 </section>
@@ -440,6 +447,7 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
                             Would you like to fetch real-time estimates and official resources for {selectedTransport === 'rental_car' ? 'rental cars' : 'public transit'}?
                         </p>
                         <button 
+                            type="button"
                             onClick={handleFetchDetails}
                             disabled={loadingTransportInfo}
                             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all flex items-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"

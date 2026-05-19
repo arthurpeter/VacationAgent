@@ -16,7 +16,10 @@ import {
     BedDouble,
     GripVertical,
     Edit3,
-    Undo2
+    Undo2,
+    Settings,
+    ChevronDown,
+    Activity
 } from 'lucide-react';
 import { 
     DndContext, 
@@ -28,7 +31,7 @@ import {
     DragOverlay,
     defaultDropAnimationSideEffects,
     MeasuringStrategy,
-    useDroppable // <-- NEW: Imported useDroppable
+    useDroppable 
 } from '@dnd-kit/core';
 import { 
     SortableContext, 
@@ -176,9 +179,7 @@ function SortableEventCard({ event, isManualMode, hideBucketTag }) {
     );
 }
 
-// --- NEW: THE UNIFIED PARKING LOT COMPONENT ---
 function DroppableParkingLot({ excluded, isManualMode }) {
-    // This tells dnd-kit that this entire visual box is a single drop target
     const { setNodeRef, isOver } = useDroppable({ id: 'parking-lot' });
 
     const allItems = [];
@@ -186,10 +187,8 @@ function DroppableParkingLot({ excluded, isManualMode }) {
          if (excluded?.[b]) allItems.push(...excluded[b]);
     });
 
-    // Visually highlight the box when dragging over it
     const dropTargetStyle = isOver ? "ring-2 ring-blue-500 bg-blue-50/50" : "";
 
-    // 1. The Empty State
     if (allItems.length === 0) {
         return (
             <div 
@@ -201,7 +200,6 @@ function DroppableParkingLot({ excluded, isManualMode }) {
         );
     }
 
-    // 2. The Populated State (Visually sorted, but physically one target)
     return (
         <div ref={setNodeRef} className={`flex flex-col gap-4 min-h-[120px] rounded-xl transition-all p-2 -mx-2 ${dropTargetStyle}`}>
             {['must', 'want', 'optional'].map(bucketKey => {
@@ -226,7 +224,9 @@ function DroppableParkingLot({ excluded, isManualMode }) {
     );
 }
 
-// --- MAIN COMPONENT ---
+// ----------------------------------------------------------------------
+// MAIN STAGE COMPONENT
+// ----------------------------------------------------------------------
 
 export default function ScheduleStage({ gameState, session, refresh, onBack, onNext }) {
     const [isGenerating, setIsGenerating] = useState(false);
@@ -236,6 +236,10 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
     const [localExcluded, setLocalExcluded] = useState(null);
     const [activeMapDay, setActiveMapDay] = useState(0); 
     const [isManualMode, setIsManualMode] = useState(false);
+    
+    // NEW: Controls the overlay advanced parameters dropdown visibility
+    const [showAdvanced, setShowAdvanced] = useState(false);
+    const advancedRef = useRef(null);
     
     const baseTripDetails = gameState?.trip_details || {};
     const [wakeupTime, setWakeupTime] = useState(baseTripDetails.wakeup_time || "08:00");
@@ -252,6 +256,17 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
         return () => {
             if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current);
         };
+    }, []);
+
+    // Close advanced dropdown when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (advancedRef.current && !advancedRef.current.contains(event.target)) {
+                setShowAdvanced(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     const sensors = useSensors(
@@ -292,6 +307,7 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
     const handleRecalculate = async () => {
         setIsGenerating(true);
         setIsManualMode(false); 
+        setShowAdvanced(false);
         try {
             const updatedDetails = {
                 ...baseTripDetails,
@@ -309,6 +325,12 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
             console.error("Recalculation failed", e);
             setIsGenerating(false);
         }
+    };
+
+    // Placeholder routing function for Directions API stage
+    const handleSyncRealTimeTransit = async () => {
+        // Future endpoint trigger location
+        console.log("Triggering Real-Time Distance Matrix sync...");
     };
 
     const stopAutoScroll = () => {
@@ -376,7 +398,6 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
             const activeId = parseInt(active.id, 10) || active.id.toString();
             const overId = over.id.toString();
             
-            // FIX: Check if we dropped over our new unified parking lot
             const overContainerId = over.data.current?.sortable?.containerId || overId;
             const isDroppingToExcluded = overContainerId === 'parking-lot' || overId === 'parking-lot';
 
@@ -399,12 +420,10 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
             }
 
             const userTimeline = currentSchedule.map((day, dIdx) => {
-                // Filter out the active item regardless of where it came from
                 let dayIds = day.events
                     .filter(e => e.type === 'attraction' && e.bucket !== 'logistics' && e.id?.toString() !== activeId.toString())
                     .map(e => e.id);
                 
-                // Only push it to a day if we didn't drop it in the trash/parking lot
                 if (!isDroppingToExcluded && dIdx === destinationDayIndex) {
                     dayIds.push(activeId); 
                 }
@@ -445,7 +464,6 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
         sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } }),
     };
 
-    // Flatten all excluded IDs so the SortableContext knows what items exist in the parking lot
     const allExcludedItems = [];
     if (excluded) {
         ['must', 'want', 'optional', 'must-see', 'want-to-see'].forEach(b => {
@@ -476,37 +494,132 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                 },
             }}
         >
-            <PageTransition className="flex flex-col w-full h-screen bg-gray-50 overflow-hidden">
+            <PageTransition className="flex flex-col w-full h-screen bg-gray-50 overflow-hidden relative">
                 
-                <div className="bg-white border-b border-gray-200 p-4 shadow-sm shrink-0 flex items-center justify-between z-20">
-                    <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-blue-600 font-bold px-4 py-2">
-                        <ArrowLeft size={18} /> Back
+                {/* 1. FLOATING CONTROL OVERLAY LAYER */}
+                {/* Minimalist Floating Back Button */}
+                <div className="absolute top-8 left-8 z-[100] pointer-events-auto">
+                    <button 
+                        type="button"
+                        onClick={onBack} 
+                        className="px-4 py-3 bg-transparent text-gray-400 hover:text-red-500 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all duration-300 group"
+                    >
+                        <ArrowLeft size={14} className="transform transition-transform group-hover:-translate-x-1" />
+                        <span>Back</span>
                     </button>
-                    
-                    <div className="flex gap-4">
-                        {isManualMode ? (
-                            <button 
-                                onClick={() => { setIsManualMode(false); generateSchedule(); }}
-                                className="px-4 py-2 bg-red-50 text-red-600 rounded-lg font-bold flex items-center gap-2 transition hover:bg-red-100"
-                            >
-                                <Undo2 size={16} /> Revert to AI Draft
-                            </button>
-                        ) : (
-                            <button 
-                                onClick={() => setIsManualMode(true)}
-                                className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg font-bold flex items-center gap-2 transition hover:bg-blue-100"
-                            >
-                                <Edit3 size={16} /> Customize Manually
-                            </button>
-                        )}
-
-                        <button onClick={onNext} className="px-6 py-2 bg-gray-900 hover:bg-black text-white rounded-lg font-bold shadow-md flex items-center gap-2">
-                            Finalize Trip <ArrowRight size={18} />
-                        </button>
-                    </div>
                 </div>
 
-                <div className="flex flex-row flex-1 overflow-hidden relative min-h-0">
+                {/* ADVANCED PARAMETERS DROP-DOWN CONFIGURATION */}
+                <div ref={advancedRef} className="absolute top-8 left-1/2 -translate-x-1/2 z-[100] pointer-events-auto flex flex-col items-center">
+                    <button
+                        type="button"
+                        onClick={() => setShowAdvanced(!showAdvanced)}
+                        className={`px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all duration-300 border ${
+                            showAdvanced 
+                                ? 'bg-gray-900 text-white border-transparent shadow-lg' 
+                                : 'bg-white/80 backdrop-blur-md text-gray-500 hover:text-gray-900 border-gray-200 shadow-sm'
+                        }`}
+                    >
+                        <Settings size={14} className={showAdvanced ? 'animate-spin' : ''} />
+                        <span>Advanced Options</span>
+                        <ChevronDown size={14} className={`transform transition-transform duration-300 ${showAdvanced ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Dropdown Menu Panel Card */}
+                    {showAdvanced && (
+                        <div className="mt-2 bg-white border border-gray-100 rounded-3xl shadow-2xl p-6 w-80 sm:w-96 flex flex-col gap-5 animate-fadeIn">
+                            <div className="flex items-center justify-between gap-4 border-b border-gray-100 pb-3">
+                                <h4 className="text-xs font-black uppercase tracking-wider text-gray-400">Timeline Engine Parameters</h4>
+                            </div>
+
+                            {/* Inputs Block */}
+                            <div className="flex gap-4 items-center justify-between">
+                                <div className="flex flex-col gap-1.5 flex-1">
+                                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center gap-1">
+                                        <Sun size={12} /> Start Time
+                                    </label>
+                                    <input 
+                                        type="time" 
+                                        value={wakeupTime} 
+                                        onChange={(e) => setWakeupTime(e.target.value)} 
+                                        className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-800 outline-none focus:ring-2 focus:ring-blue-500 w-full" 
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1.5 flex-1">
+                                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center gap-1">
+                                        <Utensils size={12} /> Lunch Break
+                                    </label>
+                                    <select 
+                                        value={lunchDuration} 
+                                        onChange={(e) => setLunchDuration(e.target.value)} 
+                                        className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-800 outline-none focus:ring-2 focus:ring-blue-500 w-full cursor-pointer"
+                                    >
+                                        <option value="45">45 Mins</option>
+                                        <option value="60">1 Hour</option>
+                                        <option value="90">1.5 Hours</option>
+                                        <option value="120">2 Hours</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Action Operations Stack */}
+                            <div className="flex flex-col gap-2 mt-2">
+                                <button 
+                                    type="button"
+                                    onClick={handleRecalculate} 
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider py-3 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all"
+                                >
+                                    <RefreshCw size={14} />
+                                    Recalculate Configuration
+                                </button>
+
+                                <div className="h-px bg-gray-100 my-1" />
+
+                                {isManualMode ? (
+                                    <button 
+                                        type="button"
+                                        onClick={() => { setIsManualMode(false); setShowAdvanced(false); generateSchedule(); }}
+                                        className="w-full bg-red-50 text-red-600 hover:bg-red-100 font-black text-xs uppercase tracking-wider py-3 rounded-xl flex items-center justify-center gap-2 transition"
+                                    >
+                                        <Undo2 size={14} /> Revert to AI Draft
+                                    </button>
+                                ) : (
+                                    <button 
+                                        type="button"
+                                        onClick={() => { setIsManualMode(true); setShowAdvanced(false); }}
+                                        className="w-full bg-blue-50 text-blue-600 hover:bg-blue-100 font-black text-xs uppercase tracking-wider py-3 rounded-xl flex items-center justify-center gap-2 transition"
+                                    >
+                                        <Edit3 size={14} /> Customize Manually
+                                    </button>
+                                )}
+
+                                <button 
+                                    type="button"
+                                    onClick={handleSyncRealTimeTransit} 
+                                    className="w-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-black text-xs uppercase tracking-wider py-3 rounded-xl flex items-center justify-center gap-2 transition"
+                                >
+                                    <Activity size={14} />
+                                    ⚡ Sync Real-Time Routing
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Minimalist Floating Forward/Overview Button */}
+                <div className="absolute top-8 right-8 z-[100] pointer-events-auto">
+                    <button 
+                        type="button"
+                        onClick={onNext} 
+                        className="px-4 py-3 bg-transparent text-gray-400 hover:text-blue-500 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all duration-300 group"
+                    >
+                        <span>Overview</span>
+                        <ArrowRight size={14} className="transform transition-transform group-hover:translate-x-1" />
+                    </button>
+                </div>
+
+                {/* 2. DUAL COLUMNS WORKSPACE CONTAINER */}
+                <div className="flex flex-row flex-1 overflow-hidden relative min-h-0 pt-24">
                     
                     {isSimulating && (
                         <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
@@ -515,37 +628,20 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                         </div>
                     )}
 
+                    {/* LEFT SIDEBAR: TIMELINE LIST */}
                     <div ref={scrollContainerRef} id="scrollable-timeline" className="w-full lg:w-[45%] flex-1 h-full overflow-y-auto z-10 bg-gray-50 relative">
                         <div className="p-8 max-w-xl mx-auto">
                             
-                            <div className="mb-6">
+                            <div className="mb-8">
                                 <h1 className="text-4xl font-black text-gray-900 tracking-tight">Your Itinerary Draft</h1>
-                                <p className="text-gray-500 mt-2 font-medium">
+                                <p className="text-gray-400 mt-2 font-medium text-xs">
                                     {isManualMode 
-                                        ? "Drag attractions to rearrange them. Transit times will auto-adjust." 
-                                        : "Review your daily timeline. Adjust parameters to regenerate."}
+                                        ? "DND Canvas Active: Rearrange attractions freely. Transit windows self-correct dynamically." 
+                                        : "Review calculated schedule constraints. Adjust engine dropdown variables to regenerate parameters."}
                                 </p>
                             </div>
 
-                            {!isManualMode && (
-                                <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm mb-10 flex flex-col sm:flex-row items-center justify-between gap-4 sticky top-0 z-40">
-                                    <div className="flex items-center gap-6">
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-1"><Sun size={12} /> Start Time</label>
-                                            <input type="time" value={wakeupTime} onChange={(e) => setWakeupTime(e.target.value)} className="bg-gray-50 border rounded-lg px-3 py-1.5 text-sm font-bold" />
-                                        </div>
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-1"><Utensils size={12} /> Lunch</label>
-                                            <select value={lunchDuration} onChange={(e) => setLunchDuration(e.target.value)} className="bg-gray-50 border rounded-lg px-3 py-1.5 text-sm font-bold cursor-pointer">
-                                                <option value="45">45 Mins</option><option value="60">1 Hour</option><option value="90">1.5 Hours</option><option value="120">2 Hours</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <button onClick={handleRecalculate} className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-2"><RefreshCw size={16} /> Recalculate</button>
-                                </div>
-                            )}
-
-                            {/* The Timeline */}
+                            {/* Timeline Stack */}
                             <div className="space-y-12">
                                 {schedule.map((day, idx) => {
                                     const dateObj = new Date(day.date);
@@ -576,7 +672,7 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                                 })}
                             </div>
 
-                            {/* NEW: THE UNIFIED PARKING LOT */}
+                            {/* PARKING LOT */}
                             {(allExcludedItems.length > 0 || isManualMode) && (
                                 <div className="mt-16 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
                                     <h3 className="text-lg font-black text-gray-900 flex items-center gap-2"><CalendarDays size={20}/> Dropped Attractions</h3>
@@ -584,7 +680,6 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                                         {isManualMode ? "Drop attractions here to remove them from your timeline." : "These didn't fit in your timeline."}
                                     </p>
 
-                                    {/* The single wrapper Context for the whole parking lot */}
                                     <SortableContext id="parking-lot" items={allExcludedIds} strategy={verticalListSortingStrategy}>
                                         <DroppableParkingLot excluded={excluded} isManualMode={isManualMode} />
                                     </SortableContext>
@@ -594,11 +689,12 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                         </div>
                     </div>
 
-                    {/* RIGHT PANEL: MAP */}
+                    {/* RIGHT SIDEBAR: FULL LAYER MAP CANVAS */}
                     <div className="hidden lg:flex flex-col lg:w-[55%] relative bg-gray-200 border-l border-gray-200 shadow-inner z-0">
                         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-gray-200 flex gap-1 overflow-x-auto max-w-[90%]">
                             {schedule.map((day, idx) => (
                                 <button
+                                    type="button"
                                     key={idx}
                                     onClick={() => {
                                         setActiveMapDay(idx);
@@ -624,7 +720,7 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
 
             </PageTransition>
 
-            {/* THE DRAG OVERLAY */}
+            {/* FLOATING ACTIVE DND ENGINE OVERLAY GLUE LAYER */}
             <DragOverlay dropAnimation={dropAnimation}>
                 {activeDragEvent ? (
                     <div className="w-[350px]"> 
