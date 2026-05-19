@@ -20,19 +20,22 @@ import {
 } from 'lucide-react';
 import { 
     DndContext, 
-    closestCenter, 
+    closestCorners, 
     KeyboardSensor, 
     PointerSensor, 
     useSensor, 
     useSensors,
     DragOverlay,
-    defaultDropAnimationSideEffects
+    defaultDropAnimationSideEffects,
+    MeasuringStrategy
 } from '@dnd-kit/core';
 import { 
     SortableContext, 
     verticalListSortingStrategy, 
-    useSortable 
+    useSortable,
+    arrayMove 
 } from '@dnd-kit/sortable';
+import { restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers'; // Added for bounding
 import { CSS } from '@dnd-kit/utilities';
 
 import PageTransition from '../../components/PageTransition';
@@ -42,7 +45,6 @@ import ItineraryMap from '../../components/ItineraryMap';
 
 // --- HELPER COMPONENTS ---
 
-// FIX 2: Added `hideBucketTag` prop
 function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDraggable, isOverlay, hideBucketTag }) {
     const isMeal = event.type === 'meal';
     const isFreeTime = event.type === 'free_time';
@@ -113,7 +115,6 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
                     <Icon size={18} />
                 </div>
                 
-                {/* FIX 2: Added min-w-0 so flexbox allows the text to break onto a new line */}
                 <div className="flex-grow pt-0.5 min-w-0">
                     <div className="flex justify-between items-start gap-2">
                         <div className="min-w-0">
@@ -127,7 +128,6 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
                             </h4>
                         </div>
                         
-                        {/* FIX 2: Added shrink-0 so the tag never gets squished, and respect hideBucketTag */}
                         {!hideBucketTag && isAttraction && event.bucket && (
                             <span className={`shrink-0 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md ${
                                 event.bucket.includes('must') ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'
@@ -155,7 +155,7 @@ function SortableEventCard({ event, isManualMode, hideBucketTag }) {
     });
 
     const style = {
-        transform: CSS.Transform.toString(transform),
+        transform: CSS.Translate.toString(transform),
         transition,
         opacity: isDragging ? 0.3 : 1, 
         zIndex: isDragging ? 50 : 'auto',
@@ -176,7 +176,6 @@ function SortableEventCard({ event, isManualMode, hideBucketTag }) {
     );
 }
 
-
 // --- MAIN COMPONENT ---
 
 export default function ScheduleStage({ gameState, session, refresh, onBack, onNext }) {
@@ -195,6 +194,16 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
     const hasTriggered = useRef(false);
     const schedule = localSchedule || gameState?.schedule;
     const excluded = localExcluded || gameState?.excluded_pois;
+
+    // Autoscroll Refs
+    const scrollContainerRef = useRef(null);
+    const scrollIntervalRef = useRef(null);
+
+    useEffect(() => {
+        return () => {
+            if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current);
+        };
+    }, []);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -253,17 +262,129 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
         }
     };
 
+    // --- AUTOSCROLL LOGIC ---
+    const stopAutoScroll = () => {
+        if (scrollIntervalRef.current) {
+            clearInterval(scrollIntervalRef.current);
+            scrollIntervalRef.current = null;
+        }
+    };
+
+    const startAutoScroll = (direction) => {
+        if (scrollIntervalRef.current) return; 
+        
+        scrollIntervalRef.current = setInterval(() => {
+            if (scrollContainerRef.current) {
+                const scrollSpeed = 15; 
+                scrollContainerRef.current.scrollTop += (direction === 'down' ? scrollSpeed : -scrollSpeed);
+            }
+        }, 16); 
+    };
+
+    const handleDragMove = (event) => {
+        if (!scrollContainerRef.current || !event.active.rect.current?.translated) {
+            stopAutoScroll();
+            return;
+        }
+
+        const containerRect = scrollContainerRef.current.getBoundingClientRect();
+        const activeRect = event.active.rect.current.translated;
+
+        const SCROLL_ZONE_PERCENTAGE = 0.15;
+        const scrollZoneHeight = containerRect.height * SCROLL_ZONE_PERCENTAGE;
+
+        const isNearBottom = activeRect.bottom > (containerRect.bottom - scrollZoneHeight);
+        const isNearTop = activeRect.top < (containerRect.top + scrollZoneHeight);
+
+        if (isNearBottom) {
+            startAutoScroll('down');
+        } else if (isNearTop) {
+            startAutoScroll('up');
+        } else {
+            stopAutoScroll();
+        }
+    };
+
+    // --- DRAG HANDLERS ---
     const handleDragStart = (event) => {
         const { active } = event;
         setActiveDragEvent(active.data.current?.event || null);
     };
 
+    const handleDragOver = (event) => {
+        const { active, over } = event;
+        if (!over) return;
+
+        const activeId = active.id.toString();
+        const overId = over.id.toString();
+
+        if (activeId === overId) return;
+
+        setLocalSchedule((prevSchedule) => {
+            const currentSchedule = prevSchedule || schedule;
+            if (!currentSchedule) return prevSchedule;
+
+            let activeDayIndex = -1;
+            let activeEventIndex = -1;
+            let overDayIndex = -1;
+            let overEventIndex = -1;
+
+            for (let i = 0; i < currentSchedule.length; i++) {
+                const eIdx = currentSchedule[i].events.findIndex(e => e.id?.toString() === activeId);
+                if (eIdx !== -1) {
+                    activeDayIndex = i;
+                    activeEventIndex = eIdx;
+                    break;
+                }
+            }
+
+            if (overId.startsWith('day-')) {
+                overDayIndex = parseInt(overId.replace('day-', ''), 10);
+                overEventIndex = currentSchedule[overDayIndex].events.length;
+            } else {
+                for (let i = 0; i < currentSchedule.length; i++) {
+                    const eIdx = currentSchedule[i].events.findIndex(e => e.id?.toString() === overId);
+                    if (eIdx !== -1) {
+                        overDayIndex = i;
+                        overEventIndex = eIdx;
+                        break;
+                    }
+                }
+            }
+
+            if (activeDayIndex === -1 || overDayIndex === -1) return prevSchedule;
+
+            // Prevent infinite loops: only trigger an update if the indices actually changed
+            if (activeDayIndex === overDayIndex && activeEventIndex === overEventIndex) {
+                return prevSchedule; 
+            }
+
+            const newSchedule = JSON.parse(JSON.stringify(currentSchedule));
+            const activeEvent = newSchedule[activeDayIndex].events[activeEventIndex];
+
+            if (activeDayIndex === overDayIndex) {
+                newSchedule[activeDayIndex].events = arrayMove(
+                    newSchedule[activeDayIndex].events,
+                    activeEventIndex,
+                    overEventIndex
+                );
+            } else {
+                newSchedule[activeDayIndex].events.splice(activeEventIndex, 1);
+                newSchedule[overDayIndex].events.splice(overEventIndex, 0, activeEvent);
+            }
+
+            return newSchedule;
+        });
+    };
+
     const handleDragCancel = () => {
+        stopAutoScroll();
         setActiveDragEvent(null);
     };
 
     const handleDragEnd = async (event) => {
         setActiveDragEvent(null); 
+        stopAutoScroll();
         
         const { active, over } = event;
         if (!over || active.id === over.id) return;
@@ -271,35 +392,47 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
         setIsSimulating(true);
 
         try {
-            const activeId = parseInt(active.id, 10) || active.id.toString();
-            const overId = over.id.toString();
+            // Get the raw data ID so we send integers to Python, not strings
+            const activeEventId = active.data.current?.event?.id;
             
-            let destinationDayIndex = null;
-            if (overId.startsWith('day-')) {
-                destinationDayIndex = parseInt(overId.replace('day-', ''), 10);
-            } else {
-                destinationDayIndex = schedule.findIndex(day => 
-                    day.events.some(e => e.id?.toString() === overId)
-                );
+            // Check if we dropped over a specific container or an item inside a container
+            const overContainerId = over.data.current?.sortable?.containerId || over.id.toString();
+            const isDroppingToExcluded = overContainerId.toString().startsWith('excluded-');
+            
+            let destinationDayIndex = -1;
+
+            if (!isDroppingToExcluded) {
+                if (overContainerId.toString().startsWith('day-')) {
+                    destinationDayIndex = parseInt(overContainerId.toString().replace('day-', ''), 10);
+                } else {
+                    destinationDayIndex = schedule.findIndex(day => 
+                        day.events.some(e => e.id?.toString() === over.id.toString())
+                    );
+                }
             }
 
-            if (destinationDayIndex === -1 || destinationDayIndex === null) {
+            // Abort if it was dropped somewhere completely invalid
+            if (!isDroppingToExcluded && (destinationDayIndex === -1 || destinationDayIndex === null)) {
                 setIsSimulating(false);
                 return;
             }
 
+            // Build the new timeline
             const userTimeline = schedule.map((day, dIdx) => {
+                // Keep everything EXCEPT the item we just dragged
                 let dayIds = day.events
-                    .filter(e => e.type === 'attraction' && e.bucket !== 'logistics' && e.id?.toString() !== activeId.toString())
+                    .filter(e => e.type === 'attraction' && e.bucket !== 'logistics' && e.id?.toString() !== activeEventId.toString())
                     .map(e => e.id);
                 
-                if (dIdx === destinationDayIndex) {
-                    dayIds.push(activeId); 
+                // If we are dropping into a day, append it to that day!
+                // If isDroppingToExcluded is true, it just vanishes from the array (which is exactly what we want)
+                if (dIdx === destinationDayIndex && !isDroppingToExcluded) {
+                    dayIds.push(activeEventId); 
                 }
                 return dayIds;
             });
 
-            const res = await fetchWithAuth(`${API_BASE_URL}/itinerary/schedule/custom`, {
+            const res = await fetchWithAuth(`${API_BASE_URL}/itinerary/schedule/custom-timeline`, {
                 session_id: session.id,
                 user_timeline: userTimeline
             }, "POST");
@@ -336,10 +469,18 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
     return (
         <DndContext 
             sensors={sensors} 
-            collisionDetection={closestCenter} 
+            modifiers={[restrictToFirstScrollableAncestor]} // Keeps the item bounded to the container
+            collisionDetection={closestCorners} 
             onDragStart={handleDragStart} 
+            onDragMove={handleDragMove}         
+            onDragOver={handleDragOver}         
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
+            measuring={{
+                droppable: {
+                    strategy: MeasuringStrategy.Always,
+                },
+            }}
         >
             <PageTransition className="flex flex-col w-full h-screen bg-gray-50 overflow-hidden">
                 
@@ -371,7 +512,7 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                     </div>
                 </div>
 
-                <div className="flex flex-row flex-grow overflow-hidden relative min-h-0">
+                <div className="flex flex-row flex-1 overflow-hidden relative min-h-0">
                     
                     {isSimulating && (
                         <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
@@ -380,8 +521,7 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                         </div>
                     )}
 
-                    {/* FIX 1: Added h-full to the left panel so dnd-kit knows the boundary for auto-scrolling */}
-                    <div className="w-full lg:w-[45%] h-full flex-grow overflow-y-auto z-10 bg-gray-50">
+                    <div ref={scrollContainerRef} id="scrollable-timeline" className="w-full lg:w-[45%] flex-1 h-full overflow-y-auto z-10 bg-gray-50 relative">
                         <div className="p-8 max-w-xl mx-auto">
                             
                             <div className="mb-6">
@@ -411,7 +551,6 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                                 </div>
                             )}
 
-                            {/* The Timeline */}
                             <div className="space-y-12">
                                 {schedule.map((day, idx) => {
                                     const dateObj = new Date(day.date);
@@ -442,7 +581,6 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                                 })}
                             </div>
 
-                            {/* PARKING LOT */}
                             {(excluded?.['must-see']?.length > 0 || excluded?.['want-to-see']?.length > 0 || excluded?.['optional']?.length > 0) && (
                                 <div className="mt-16 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
                                     <h3 className="text-lg font-black text-gray-900 flex items-center gap-2"><CalendarDays size={20}/> Dropped Attractions</h3>
@@ -473,7 +611,7 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                                                                         key={safeItem.id || i} 
                                                                         event={safeItem} 
                                                                         isManualMode={isManualMode} 
-                                                                        hideBucketTag={true} // FIX 2: Hide redundant tag in parking lot
+                                                                        hideBucketTag={true} 
                                                                     />
                                                                 );
                                                             })}
@@ -489,7 +627,6 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                         </div>
                     </div>
 
-                    {/* RIGHT PANEL: MAP */}
                     <div className="hidden lg:flex flex-col lg:w-[55%] relative bg-gray-200 border-l border-gray-200 shadow-inner z-0">
                         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-gray-200 flex gap-1 overflow-x-auto max-w-[90%]">
                             {schedule.map((day, idx) => (
@@ -519,7 +656,6 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
 
             </PageTransition>
 
-            {/* THE DRAG OVERLAY */}
             <DragOverlay dropAnimation={dropAnimation}>
                 {activeDragEvent ? (
                     <div className="w-[350px]"> 
