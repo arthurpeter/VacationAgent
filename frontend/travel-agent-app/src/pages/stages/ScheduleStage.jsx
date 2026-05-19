@@ -27,7 +27,8 @@ import {
     useSensors,
     DragOverlay,
     defaultDropAnimationSideEffects,
-    MeasuringStrategy
+    MeasuringStrategy,
+    useDroppable // <-- NEW: Imported useDroppable
 } from '@dnd-kit/core';
 import { 
     SortableContext, 
@@ -35,7 +36,7 @@ import {
     useSortable,
     arrayMove 
 } from '@dnd-kit/sortable';
-import { restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers'; // Added for bounding
+import { restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers'; 
 import { CSS } from '@dnd-kit/utilities';
 
 import PageTransition from '../../components/PageTransition';
@@ -142,7 +143,6 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
     );
 }
 
-// Wrapper for Dnd-Kit Sortable Items
 function SortableEventCard({ event, isManualMode, hideBucketTag }) {
     const isDraggable = isManualMode && event?.type === 'attraction' && event?.bucket !== 'logistics';
     const eventName = event?.name || 'Unknown';
@@ -176,6 +176,56 @@ function SortableEventCard({ event, isManualMode, hideBucketTag }) {
     );
 }
 
+// --- NEW: THE UNIFIED PARKING LOT COMPONENT ---
+function DroppableParkingLot({ excluded, isManualMode }) {
+    // This tells dnd-kit that this entire visual box is a single drop target
+    const { setNodeRef, isOver } = useDroppable({ id: 'parking-lot' });
+
+    const allItems = [];
+    ['must', 'must-see', 'want', 'want-to-see', 'optional'].forEach(b => {
+         if (excluded?.[b]) allItems.push(...excluded[b]);
+    });
+
+    // Visually highlight the box when dragging over it
+    const dropTargetStyle = isOver ? "ring-2 ring-blue-500 bg-blue-50/50" : "";
+
+    // 1. The Empty State
+    if (allItems.length === 0) {
+        return (
+            <div 
+                ref={setNodeRef} 
+                className={`border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center min-h-[120px] bg-gray-50 transition-all ${dropTargetStyle}`}
+            >
+                <span className="text-sm font-bold text-gray-400">Drop attractions here to remove them</span>
+            </div>
+        );
+    }
+
+    // 2. The Populated State (Visually sorted, but physically one target)
+    return (
+        <div ref={setNodeRef} className={`flex flex-col gap-4 min-h-[120px] rounded-xl transition-all p-2 -mx-2 ${dropTargetStyle}`}>
+            {['must', 'want', 'optional'].map(bucketKey => {
+                const items = excluded?.[bucketKey] || excluded?.[`${bucketKey}-see`] || [];
+                if (items.length === 0) return null;
+
+                return (
+                    <div key={bucketKey} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">{bucketKey}</h4>
+                        <ul className="space-y-2">
+                            {items.map((rawItem, i) => {
+                                const safeItem = typeof rawItem === 'string'
+                                    ? { id: `legacy-${bucketKey}-${i}`, name: rawItem, type: 'attraction', bucket: bucketKey }
+                                    : rawItem;
+                                return <SortableEventCard key={safeItem.id || i} event={safeItem} isManualMode={isManualMode} hideBucketTag={true} />;
+                            })}
+                        </ul>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 // --- MAIN COMPONENT ---
 
 export default function ScheduleStage({ gameState, session, refresh, onBack, onNext }) {
@@ -195,7 +245,6 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
     const schedule = localSchedule || gameState?.schedule;
     const excluded = localExcluded || gameState?.excluded_pois;
 
-    // Autoscroll Refs
     const scrollContainerRef = useRef(null);
     const scrollIntervalRef = useRef(null);
 
@@ -262,7 +311,6 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
         }
     };
 
-    // --- AUTOSCROLL LOGIC ---
     const stopAutoScroll = () => {
         if (scrollIntervalRef.current) {
             clearInterval(scrollIntervalRef.current);
@@ -305,76 +353,9 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
         }
     };
 
-    // --- DRAG HANDLERS ---
     const handleDragStart = (event) => {
         const { active } = event;
         setActiveDragEvent(active.data.current?.event || null);
-    };
-
-    const handleDragOver = (event) => {
-        const { active, over } = event;
-        if (!over) return;
-
-        const activeId = active.id.toString();
-        const overId = over.id.toString();
-
-        if (activeId === overId) return;
-
-        setLocalSchedule((prevSchedule) => {
-            const currentSchedule = prevSchedule || schedule;
-            if (!currentSchedule) return prevSchedule;
-
-            let activeDayIndex = -1;
-            let activeEventIndex = -1;
-            let overDayIndex = -1;
-            let overEventIndex = -1;
-
-            for (let i = 0; i < currentSchedule.length; i++) {
-                const eIdx = currentSchedule[i].events.findIndex(e => e.id?.toString() === activeId);
-                if (eIdx !== -1) {
-                    activeDayIndex = i;
-                    activeEventIndex = eIdx;
-                    break;
-                }
-            }
-
-            if (overId.startsWith('day-')) {
-                overDayIndex = parseInt(overId.replace('day-', ''), 10);
-                overEventIndex = currentSchedule[overDayIndex].events.length;
-            } else {
-                for (let i = 0; i < currentSchedule.length; i++) {
-                    const eIdx = currentSchedule[i].events.findIndex(e => e.id?.toString() === overId);
-                    if (eIdx !== -1) {
-                        overDayIndex = i;
-                        overEventIndex = eIdx;
-                        break;
-                    }
-                }
-            }
-
-            if (activeDayIndex === -1 || overDayIndex === -1) return prevSchedule;
-
-            // Prevent infinite loops: only trigger an update if the indices actually changed
-            if (activeDayIndex === overDayIndex && activeEventIndex === overEventIndex) {
-                return prevSchedule; 
-            }
-
-            const newSchedule = JSON.parse(JSON.stringify(currentSchedule));
-            const activeEvent = newSchedule[activeDayIndex].events[activeEventIndex];
-
-            if (activeDayIndex === overDayIndex) {
-                newSchedule[activeDayIndex].events = arrayMove(
-                    newSchedule[activeDayIndex].events,
-                    activeEventIndex,
-                    overEventIndex
-                );
-            } else {
-                newSchedule[activeDayIndex].events.splice(activeEventIndex, 1);
-                newSchedule[overDayIndex].events.splice(overEventIndex, 0, activeEvent);
-            }
-
-            return newSchedule;
-        });
     };
 
     const handleDragCancel = () => {
@@ -383,56 +364,54 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
     };
 
     const handleDragEnd = async (event) => {
-        setActiveDragEvent(null); 
         stopAutoScroll();
+        setActiveDragEvent(null); 
         
         const { active, over } = event;
-        if (!over || active.id === over.id) return;
+        if (!over) return;
 
         setIsSimulating(true);
 
         try {
-            // Get the raw data ID so we send integers to Python, not strings
-            const activeEventId = active.data.current?.event?.id;
+            const activeId = parseInt(active.id, 10) || active.id.toString();
+            const overId = over.id.toString();
             
-            // Check if we dropped over a specific container or an item inside a container
-            const overContainerId = over.data.current?.sortable?.containerId || over.id.toString();
-            const isDroppingToExcluded = overContainerId.toString().startsWith('excluded-');
-            
-            let destinationDayIndex = -1;
+            // FIX: Check if we dropped over our new unified parking lot
+            const overContainerId = over.data.current?.sortable?.containerId || overId;
+            const isDroppingToExcluded = overContainerId === 'parking-lot' || overId === 'parking-lot';
+
+            const currentSchedule = localSchedule || schedule;
+            let destinationDayIndex = null;
 
             if (!isDroppingToExcluded) {
-                if (overContainerId.toString().startsWith('day-')) {
-                    destinationDayIndex = parseInt(overContainerId.toString().replace('day-', ''), 10);
+                if (overId.startsWith('day-')) {
+                    destinationDayIndex = parseInt(overId.replace('day-', ''), 10);
                 } else {
-                    destinationDayIndex = schedule.findIndex(day => 
-                        day.events.some(e => e.id?.toString() === over.id.toString())
+                    destinationDayIndex = currentSchedule.findIndex(day => 
+                        day.events.some(e => e.id?.toString() === overId)
                     );
+                }
+
+                if (destinationDayIndex === -1 || destinationDayIndex === null) {
+                    setIsSimulating(false);
+                    return;
                 }
             }
 
-            // Abort if it was dropped somewhere completely invalid
-            if (!isDroppingToExcluded && (destinationDayIndex === -1 || destinationDayIndex === null)) {
-                setIsSimulating(false);
-                return;
-            }
-
-            // Build the new timeline
-            const userTimeline = schedule.map((day, dIdx) => {
-                // Keep everything EXCEPT the item we just dragged
+            const userTimeline = currentSchedule.map((day, dIdx) => {
+                // Filter out the active item regardless of where it came from
                 let dayIds = day.events
-                    .filter(e => e.type === 'attraction' && e.bucket !== 'logistics' && e.id?.toString() !== activeEventId.toString())
+                    .filter(e => e.type === 'attraction' && e.bucket !== 'logistics' && e.id?.toString() !== activeId.toString())
                     .map(e => e.id);
                 
-                // If we are dropping into a day, append it to that day!
-                // If isDroppingToExcluded is true, it just vanishes from the array (which is exactly what we want)
-                if (dIdx === destinationDayIndex && !isDroppingToExcluded) {
-                    dayIds.push(activeEventId); 
+                // Only push it to a day if we didn't drop it in the trash/parking lot
+                if (!isDroppingToExcluded && dIdx === destinationDayIndex) {
+                    dayIds.push(activeId); 
                 }
                 return dayIds;
             });
 
-            const res = await fetchWithAuth(`${API_BASE_URL}/itinerary/schedule/custom-timeline`, {
+            const res = await fetchWithAuth(`${API_BASE_URL}/itinerary/schedule/custom`, {
                 session_id: session.id,
                 user_timeline: userTimeline
             }, "POST");
@@ -466,14 +445,29 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
         sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } }),
     };
 
+    // Flatten all excluded IDs so the SortableContext knows what items exist in the parking lot
+    const allExcludedItems = [];
+    if (excluded) {
+        ['must', 'want', 'optional', 'must-see', 'want-to-see'].forEach(b => {
+             if(excluded[b]) {
+                 excluded[b].forEach((item, i) => {
+                     const safeItem = typeof item === 'string'
+                        ? { id: `legacy-${b}-${i}`, name: item, type: 'attraction', bucket: b }
+                        : item;
+                     allExcludedItems.push(safeItem);
+                 });
+             }
+        });
+    }
+    const allExcludedIds = allExcludedItems.map(item => item.id?.toString() || `fallback-${item.name}`);
+
     return (
         <DndContext 
             sensors={sensors} 
-            modifiers={[restrictToFirstScrollableAncestor]} // Keeps the item bounded to the container
+            modifiers={[restrictToFirstScrollableAncestor]} 
             collisionDetection={closestCorners} 
             onDragStart={handleDragStart} 
             onDragMove={handleDragMove}         
-            onDragOver={handleDragOver}         
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
             measuring={{
@@ -551,6 +545,7 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                                 </div>
                             )}
 
+                            {/* The Timeline */}
                             <div className="space-y-12">
                                 {schedule.map((day, idx) => {
                                     const dateObj = new Date(day.date);
@@ -581,52 +576,25 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                                 })}
                             </div>
 
-                            {(excluded?.['must-see']?.length > 0 || excluded?.['want-to-see']?.length > 0 || excluded?.['optional']?.length > 0) && (
+                            {/* NEW: THE UNIFIED PARKING LOT */}
+                            {(allExcludedItems.length > 0 || isManualMode) && (
                                 <div className="mt-16 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
                                     <h3 className="text-lg font-black text-gray-900 flex items-center gap-2"><CalendarDays size={20}/> Dropped Attractions</h3>
-                                    <p className="text-xs text-gray-500 mb-4">Drag these back into your timeline to include them.</p>
+                                    <p className="text-xs text-gray-500 mb-4">
+                                        {isManualMode ? "Drop attractions here to remove them from your timeline." : "These didn't fit in your timeline."}
+                                    </p>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {['must-see', 'want-to-see', 'optional'].map(bucket => {
-                                            const items = excluded[bucket];
-                                            if (!items || items.length === 0) return null;
-                                            
-                                            const safeItemsForContext = items.map((item, i) => {
-                                                if (typeof item === 'string') return `legacy-${i}`;
-                                                return item.id?.toString() || `fallback-${Math.random()}`;
-                                            });
-                                            
-                                            return (
-                                                <div key={bucket} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                                                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">{bucket.replace('-', ' ')}</h4>
-                                                    <SortableContext id={`excluded-${bucket}`} items={safeItemsForContext} strategy={verticalListSortingStrategy}>
-                                                        <ul className="space-y-2 min-h-[50px]">
-                                                            {items.map((item, i) => {
-                                                                const safeItem = typeof item === 'string' 
-                                                                    ? { id: `legacy-${i}`, name: item, type: 'attraction', bucket: bucket } 
-                                                                    : item;
-
-                                                                return (
-                                                                    <SortableEventCard 
-                                                                        key={safeItem.id || i} 
-                                                                        event={safeItem} 
-                                                                        isManualMode={isManualMode} 
-                                                                        hideBucketTag={true} 
-                                                                    />
-                                                                );
-                                                            })}
-                                                        </ul>
-                                                    </SortableContext>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                    {/* The single wrapper Context for the whole parking lot */}
+                                    <SortableContext id="parking-lot" items={allExcludedIds} strategy={verticalListSortingStrategy}>
+                                        <DroppableParkingLot excluded={excluded} isManualMode={isManualMode} />
+                                    </SortableContext>
                                 </div>
                             )}
 
                         </div>
                     </div>
 
+                    {/* RIGHT PANEL: MAP */}
                     <div className="hidden lg:flex flex-col lg:w-[55%] relative bg-gray-200 border-l border-gray-200 shadow-inner z-0">
                         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-gray-200 flex gap-1 overflow-x-auto max-w-[90%]">
                             {schedule.map((day, idx) => (
@@ -656,6 +624,7 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
 
             </PageTransition>
 
+            {/* THE DRAG OVERLAY */}
             <DragOverlay dropAnimation={dropAnimation}>
                 {activeDragEvent ? (
                     <div className="w-[350px]"> 
