@@ -494,11 +494,11 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                 },
             }}
         >
-            <PageTransition className="flex flex-col w-full h-screen bg-gray-50 overflow-hidden relative">
+            <PageTransition className="flex flex-col w-full h-full bg-gray-50 overflow-hidden relative">
                 
                 {/* 1. FLOATING CONTROL OVERLAY LAYER */}
                 {/* Minimalist Floating Back Button */}
-                <div className="absolute top-8 left-8 z-[100] pointer-events-auto">
+                <div className="absolute top-3 left-8 z-[100] pointer-events-auto">
                     <button 
                         type="button"
                         onClick={onBack} 
@@ -510,7 +510,7 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                 </div>
 
                 {/* ADVANCED PARAMETERS DROP-DOWN CONFIGURATION */}
-                <div ref={advancedRef} className="absolute top-8 left-1/2 -translate-x-1/2 z-[100] pointer-events-auto flex flex-col items-center">
+                <div ref={advancedRef} className="absolute top-3 left-1/2 -translate-x-1/2 z-[100] pointer-events-auto flex flex-col items-center">
                     <button
                         type="button"
                         onClick={() => setShowAdvanced(!showAdvanced)}
@@ -607,7 +607,7 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                 </div>
 
                 {/* Minimalist Floating Forward/Overview Button */}
-                <div className="absolute top-8 right-8 z-[100] pointer-events-auto">
+                <div className="absolute top-3 right-8 z-[100] pointer-events-auto">
                     <button 
                         type="button"
                         onClick={onNext} 
@@ -619,7 +619,7 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                 </div>
 
                 {/* 2. DUAL COLUMNS WORKSPACE CONTAINER */}
-                <div className="flex flex-row flex-1 overflow-hidden relative min-h-0 pt-24">
+                <div className="flex flex-row flex-1 overflow-hidden relative min-h-0 pt-16">
                     
                     {isSimulating && (
                         <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center">

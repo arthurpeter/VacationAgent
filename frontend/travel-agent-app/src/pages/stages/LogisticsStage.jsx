@@ -294,7 +294,7 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
       
       {/* FLOATING ACTION OVERLAY CONTROLS */}
       {/* Floating Back Button (Glows Red on Hover) */}
-      <div className="absolute top-8 left-8 z-[100] pointer-events-auto">
+      <div className="absolute top-3 left-8 z-[100] pointer-events-auto">
         <button 
           type="button"
           onClick={onBack} 
@@ -306,7 +306,7 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
       </div>
 
       {/* Floating Forward Button (Glows Blue on Hover) */}
-      <div className="absolute top-8 right-8 z-[100] pointer-events-auto">
+      <div className="absolute top-3 right-8 z-[100] pointer-events-auto">
         <button 
           type="button"
           onClick={handleContinue} 
@@ -319,7 +319,7 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
       </div>
 
       {/* IMMERSIVE MAIN LAYOUT SCROLL CONTAINER */}
-      <div className="flex-grow overflow-y-auto p-8 pt-24 z-10">
+      <div className="flex-grow overflow-y-auto p-8 pt-16 z-10">
         <div className="max-w-4xl mx-auto space-y-8">
             
             <div>

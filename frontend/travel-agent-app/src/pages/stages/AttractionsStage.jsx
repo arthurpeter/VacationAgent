@@ -353,42 +353,44 @@ export default function AttractionsStage({ gameState, session, onFinalize }) {
   };
 
   return (
-    <PageTransition className="w-full h-screen overflow-hidden bg-gray-50 p-6 md:p-8 relative flex flex-col">
+    <PageTransition className="w-full h-full overflow-hidden bg-gray-50 p-6 md:p-8 relative flex flex-col">
       {renderDetailsModal()}
       
       {/* NEW FLOATING STEP NAVIGATION CONTAINER
         This sits completely on top of everything without a white structural layout bar.
         Backdrop-blur-md creates the luxury transparent grey element, turning solid charcoal on hover.
       */}
-      <div className="absolute top-10 right-10 z-[100] pointer-events-auto">
-        <button 
-          onClick={onFinalize}
-          className="px-4 py-3 bg-transparent text-gray-400 hover:text-blue-500 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all duration-300 group"
-        >
-          <span>Finalize Selection</span>
-          <ArrowRight size={14} className="transform transition-transform group-hover:translate-x-1" />
-        </button>
+      <div className="absolute top-3 left-8 right-8 z-[100] pointer-events-auto flex items-center justify-between">
+    
+          {/* Left: location controls */}
+          <div className="flex items-center gap-4">
+              <LocationAutocomplete 
+                  label="City to search in"
+                  value={searchLocation}
+                  onChange={handleLocationChange}
+                  placeholder="Change location..."
+              />
+              <div className="h-7 w-px bg-gray-200 mt-4" />
+              <div className="flex flex-col mt-3">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Trip Base</span>
+                  <div className="flex items-center gap-2 text-xs font-black text-gray-700 bg-white border border-gray-100 px-3.5 py-1.5 rounded-xl shadow-sm">
+                      <MapIcon size={12} className="text-blue-600" /> {session?.destination}
+                  </div>
+              </div>
+          </div>
+
+          {/* Right: finalize button */}
+          <button 
+              onClick={onFinalize}
+              className="px-4 py-1.5 bg-transparent text-gray-400 hover:text-blue-500 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all duration-300 group"
+          >
+              <span>Finalize Selection</span>
+              <ArrowRight size={14} className="transform transition-transform group-hover:translate-x-1" />
+          </button>
       </div>
 
       {/* FULL-HEIGHT SCREEN WRAPPER */}
-      <div className="w-full flex-1 flex flex-col gap-6 min-h-0">
-        
-        {/* TOP COMPACT BRANDING & SEARCH BAR CONFIGURATION */}
-        <div className="flex items-center gap-8 px-2 shrink-0">
-          <LocationAutocomplete 
-            label="City to search in"
-            value={searchLocation}
-            onChange={handleLocationChange}
-            placeholder="Change location..."
-          />
-          <div className="h-8 w-px bg-gray-200 mt-4" />
-          <div className="flex flex-col mt-3">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Trip Base</span>
-            <div className="flex items-center gap-2 text-xs font-black text-gray-700 bg-white border border-gray-100 px-3.5 py-1.5 rounded-xl shadow-sm">
-              <MapIcon size={12} className="text-blue-600" /> {session?.destination}
-            </div>
-          </div>
-        </div>
+      <div className="w-full flex-1 flex flex-col gap-6 min-h-0 pt-16">
 
         {/* COLUMNS LAYOUT CONTAINER */}
         <div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0 overflow-hidden">
