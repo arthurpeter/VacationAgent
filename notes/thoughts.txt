@@ -230,3 +230,65 @@ One idea I already like:
 * dynamic maps updating live as the user edits days
 
 Please critique the overall concept honestly and help shape the best version of this final stage.
+
+
+Part 1: The Data Sync Strategy
+We will split data fetching into two modes to keep the UI immediate and protect your Google API budget.
+
+The Global Sync (When the user clicks ⚡ Sync Routing):
+
+The backend reads the user's default global travel choice (e.g., Public Transit) from mobility_config.
+
+The backend loops through the current timeline sequence and fetches only that one chosen mode for every leg of the trip.
+
+This provides real times and road-mapped polylines for the user's primary plan in a single click.
+
+The On-Demand Expansion (When the user clicks a specific transit line):
+
+The timeline remains clean and minimalist by default.
+
+When a user clicks an individual transit bar, it expands and fires a specific call to the backend for that single leg.
+
+The backend fetches the alternative modes (Walking, Driving/Uber) for just those two points so the user can compare alternatives.
+
+Part 2: The Data Blueprint (The Redis Payload)
+Instead of caching a simple number, we will pass the raw data through your existing @redis_cache decorator and save a rich data object from the Google Directions API.
+
+For every cached leg, the payload must look like this:
+
+Duration & Distance: duration_mins (integer) and distance_text (string).
+
+Map Geometry: The overview_polyline string, which Leaflet uses to draw the real road lines instead of geometric straight lines.
+
+Granular Steps: An array of step objects detailing explicit directions (e.g., "Walk 200m to Station X", "Take Subway Line M2"), complete with line names and vehicle icons for display.
+
+Status Flag: An explicit string marker setting status: "verified".
+
+Part 3: The Hybrid Recalculating Engine
+When a user drags an attraction to a new position after running a routing sync, we cannot afford to break the timeline or lock the user out. The engine will evaluate the time between any two points (POI_A to POI_B) using a strict fallback waterfall:
+
+Check for Custom Overrides: Has the user explicitly clicked and assigned a custom mode (like "Uber") to this specific link? If yes, fetch that specific mode data from the Redis cache.
+
+Check for Global Sync Data: If there is no custom override, does a verified route matching the user's global mobility choice exist in the cache for these coordinates? If yes, use it.
+
+Fallback to Geometric Estimation: If the user dragged a card to a completely new day or created an entirely new sequence that has never been synced, fallback instantly to your existing fast-math haversine distance calculation.
+
+Part 4: Buffers, Queues, and the Ride-Sharing Heuristic
+To make the travel plans realistic, the engine will automatically inject safety buffers when computing time-blocks:
+
+The Public Transit Buffer: The engine adds a flat +5 to +10 minutes to raw Google transit values to cover platform navigation, ticket queues, and walking deep into terminal networks.
+
+The Ride-Sharing Heuristic (Uber/Taxi Proxy): To avoid paying for a separate, restricted ride-sharing API, the backend intercepts driving requests from Google and synthesizes an "Uber" mode on the fly. It takes the driving geometry polyline, but calculates uber_duration = driving_duration + 5 minutes to accurately simulate car dispatch wait times.
+
+Part 5: The Mode Override Cascade
+When a user opens an expandable transit bar and selects an alternative mode (e.g., switching a leg from train to Uber):
+
+The frontend alerts the backend of the single-leg modification.
+
+The backend saves this specific leg exception to the session database configuration.
+
+The backend runs the Hybrid Recalculating Engine for that entire day.
+
+Because the engine hits the new saved exception, it grabs the Uber data string from the Redis cache instead of the default transit data.
+
+The engine updates the transit blocks, applies the driving road polyline, shifts the start/end timestamps of all subsequent attractions down the timeline cascade, and delivers the newly balanced state back to React.
