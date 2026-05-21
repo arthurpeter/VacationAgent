@@ -19,7 +19,8 @@ import {
     Undo2,
     Settings,
     ChevronDown,
-    Activity
+    Activity,
+    Car
 } from 'lucide-react';
 import { 
     DndContext, 
@@ -54,6 +55,9 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
     const isFreeTime = event.type === 'free_time';
     const isLogistics = event.bucket === 'logistics';
     const isAttraction = event.type === 'attraction' && !isLogistics;
+
+    // Local state to manage the inline step expansion panel independently for each transit leg
+    const [isTransitExpanded, setIsTransitExpanded] = useState(false);
 
     if (isLogistics) {
         const isAirport = event.name.toLowerCase().includes('airport');
@@ -96,10 +100,56 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
 
     return (
         <div className="relative flex flex-col gap-1.5 group ml-2">
+            {/* INTERACTIVE COMPACT TRANSIT PILL ELEMENT */}
             {!isOverlay && event.transit_mins > 0 && (
-                <div className="flex items-center gap-2 ml-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest my-0.5">
-                    <TrainFront size={12} />
-                    <span>~{event.transit_mins} min</span>
+                <div className="flex flex-col ml-3 my-0.5">
+                    <button
+                        type="button"
+                        onClick={() => event.transit_leg?.is_verified && setIsTransitExpanded(!isTransitExpanded)}
+                        className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest w-fit rounded-lg px-2 py-1 transition-all ${
+                            event.transit_leg?.is_verified 
+                                ? 'text-blue-600 bg-blue-50/40 hover:bg-blue-50 cursor-pointer' 
+                                : 'text-gray-400 bg-transparent'
+                        }`}
+                    >
+                        {event.transit_leg?.mode === 'uber' || event.transit_leg?.mode === 'driving' ? (
+                            <Car size={11} className="text-blue-500" />
+                        ) : (
+                            <TrainFront size={11} className={event.transit_leg?.is_verified ? "text-blue-500" : "text-gray-400"} />
+                        )}
+                        <span>
+                            {event.transit_leg?.is_verified ? '' : '~'}
+                            {event.transit_mins} min
+                            {event.transit_leg?.is_verified ? ` (${event.transit_leg.mode})` : ' (Est)'}
+                        </span>
+                        {event.transit_leg?.is_verified && (
+                            <ChevronDown size={10} className={`transform transition-transform duration-200 ${isTransitExpanded ? 'rotate-180' : ''}`} />
+                        )}
+                    </button>
+
+                    {/* Step-by-Step Dropdown Panel */}
+                    {isTransitExpanded && event.transit_leg?.steps && (
+                        <div className="mt-1.5 bg-white border border-gray-100 rounded-2xl p-3.5 max-w-sm flex flex-col gap-2.5 shadow-sm text-xs text-gray-600 animate-fadeIn z-10">
+                            {event.transit_leg.distance_text && (
+                                <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest pb-1.5 border-b border-gray-100 flex justify-between">
+                                    <span>Route Breakdown</span>
+                                    <span>{event.transit_leg.distance_text}</span>
+                                </div>
+                            )}
+                            <div className="space-y-3 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                                {event.transit_leg.steps.map((step, sIdx) => (
+                                    <div key={sIdx} className="flex gap-2.5 items-start">
+                                        <div className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                                        <div className="flex flex-col min-w-0">
+                                            {/* Safely inject html instructions to capture Google's bold styling rules */}
+                                            <p className="leading-tight text-gray-700 font-medium" dangerouslySetInnerHTML={{ __html: step.instruction }} />
+                                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tight mt-0.5">{step.duration_mins} mins</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -237,7 +287,7 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
     const [activeMapDay, setActiveMapDay] = useState(0); 
     const [isManualMode, setIsManualMode] = useState(false);
     
-    // NEW: Controls the overlay advanced parameters dropdown visibility
+    // Controls the overlay advanced parameters dropdown visibility
     const [showAdvanced, setShowAdvanced] = useState(false);
     const advancedRef = useRef(null);
     
@@ -327,10 +377,27 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
         }
     };
 
-    // Placeholder routing function for Directions API stage
+    // ACTIVE ASYNC CONCURRENT FETCH ROUTING PIPELINE
     const handleSyncRealTimeTransit = async () => {
-        // Future endpoint trigger location
-        console.log("Triggering Real-Time Distance Matrix sync...");
+        setIsGenerating(true);
+        setShowAdvanced(false);
+        try {
+            const res = await fetchWithAuth(`${API_BASE_URL}/itinerary/schedule/action`, {
+                session_id: session.id,
+                action: "sync_transit"
+            }, "POST");
+            
+            if (res.ok) {
+                const data = await res.json();
+                if (data.schedule) setLocalSchedule(data.schedule);
+                if (data.excluded_pois) setLocalExcluded(data.excluded_pois);
+            }
+            await refresh();
+        } catch (e) {
+            console.error("Sync transit matrix initialization failure:", e);
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     const stopAutoScroll = () => {

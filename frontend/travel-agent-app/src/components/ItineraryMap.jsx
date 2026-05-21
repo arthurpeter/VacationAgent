@@ -1,7 +1,40 @@
 import React from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet'; // <-- Import Popup
+import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css'; 
+import 'leaflet/dist/leaflet.css';
+
+// --- HELPER: Pure JavaScript Google Encoded Polyline Decoder ---
+// Decodes Google's compressed overview_polyline strings into arrays of [lat, lng] pairs
+function decodePolyline(encoded) {
+    if (!encoded) return [];
+    let points = [];
+    let index = 0, len = encoded.length;
+    let lat = 0, lng = 0;
+
+    while (index < len) {
+        let b, shift = 0, result = 0;
+        do {
+            b = encoded.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+        } while (b >= 0x20);
+        let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        lat += dlat;
+
+        shift = 0;
+        result = 0;
+        do {
+            b = encoded.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+        } while (b >= 0x20);
+        let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        lng += dlng;
+
+        points.push([lat / 1e5, lng / 1e5]);
+    }
+    return points;
+}
 
 // --- HELPER: Create a premium looking numbered pin ---
 const createNumberedPin = (number, color) => {
@@ -24,10 +57,10 @@ const createNumberedPin = (number, color) => {
             ">
                 ${number}
             </div>
-        `,
+        "`,
         iconSize: [28, 28],
         iconAnchor: [14, 14], 
-        popupAnchor: [0, -14], // <-- Ensures the popup opens ABOVE the pin, not covering it
+        popupAnchor: [0, -14], 
     });
 };
 
@@ -61,26 +94,27 @@ export default function ItineraryMap({ schedule }) {
                 {schedule.map((day, dIdx) => {
                     const color = dayColors[dIdx % dayColors.length];
                     
-                    const rawLocations = day.events
+                    // 1. Capture and structure all events that possess geographical anchors
+                    const locations = day.events
                         .filter(evt => evt.latitude && evt.longitude)
                         .map(evt => ({
                             latLng: [evt.latitude, evt.longitude],
                             name: evt.name,
                             id: evt.id,
-                            // --- Capture extra data for the popup ---
                             imageUrl: evt.image_url, 
                             startTime: evt.start_time,
                             endTime: evt.end_time,
-                            bucket: evt.bucket
+                            bucket: evt.bucket,
+                            transitLeg: evt.transit_leg // Capture the routing data object
                         }));
 
-                    if (rawLocations.length === 0) return null;
+                    if (locations.length === 0) return null;
 
-                    // Micro-Jitter logic
+                    // Micro-Jitter alignment logic to handle perfectly overlapping pins
                     const seenCoords = {};
                     const OFFSET = 0.00015; 
 
-                    const locations = rawLocations.map(loc => {
+                    const jitteredLocations = locations.map(loc => {
                         const coordKey = `${loc.latLng[0].toFixed(4)},${loc.latLng[1].toFixed(4)}`;
                         
                         if (seenCoords[coordKey]) {
@@ -96,25 +130,47 @@ export default function ItineraryMap({ schedule }) {
                         }
                     });
 
-                    const polylinePositions = locations.map(loc => loc.latLng);
-
                     return (
                         <React.Fragment key={`day-${dIdx}`}>
-                            <Polyline 
-                                positions={polylinePositions} 
-                                pathOptions={{ color: color, weight: 4, opacity: 0.8, dashArray: '8, 8' }} 
-                            />
+                            
+                            {/* --- HYBRID PATH RENDERING PIPELINE --- */}
+                            {jitteredLocations.map((loc, idx) => {
+                                // The transit leg represents the path *to* this marker from the previous stop
+                                if (idx === 0) return null; 
+                                const prevLoc = jitteredLocations[idx - 1];
+                                const leg = loc.transitLeg;
 
-                            {locations.map((loc, i) => (
+                                // Look for true Google verified overview polyline geometry parameters
+                                if (leg && leg.is_verified && leg.polyline) {
+                                    const roadPositions = decodePolyline(leg.polyline);
+                                    return (
+                                        <Polyline 
+                                            key={`road-leg-${idx}`}
+                                            positions={roadPositions}
+                                            pathOptions={{ color: color, weight: 5, opacity: 0.85 }} 
+                                        />
+                                    );
+                                }
+
+                                // Fallback Strategy: Draw your quick dashed sandbox line for unmatched nodes
+                                return (
+                                    <Polyline 
+                                        key={`est-leg-${idx}`}
+                                        positions={[prevLoc.latLng, loc.latLng]}
+                                        pathOptions={{ color: color, weight: 4, opacity: 0.6, dashArray: '6, 8' }} 
+                                    />
+                                );
+                            })}
+
+                            {/* --- MARKER OVERLAYS CANVAS --- */}
+                            {jitteredLocations.map((loc, i) => (
                                 <Marker 
                                     key={`${loc.id}-${i}`} 
                                     position={loc.latLng}
                                     icon={createNumberedPin(i + 1, color)}
                                 >
-                                    {/* --- THE POPUP UI --- */}
                                     <Popup className="custom-popup" closeButton={false}>
                                         <div className="flex flex-col w-[180px]">
-                                            {/* Show image if we have it */}
                                             {loc.imageUrl && (
                                                 <img 
                                                     src={loc.imageUrl} 

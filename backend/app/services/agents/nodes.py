@@ -27,6 +27,7 @@ from langchain_tavily import TavilySearch
 
 from app.services.agents.mobility_strategies import MobilityConfig
 from app.services.scheduling.engine import ScheduleEngine
+from app.services.scheduling.maps import get_transit_bundle_for_leg
 
 log = get_logger(__name__)
 
@@ -680,11 +681,14 @@ async def _execute_pace_research(from_date: str, to_date: str, location: str, po
 async def organize_itinerary(state: ItineraryState) -> dict:
     print("Executing organize_itinerary node...")
     action = state.get("action")
+    print(f"Action: {action}")
 
     if action == "generate_schedule":
         return await _generate_schedule(state)
     elif action == "recalculate_timeline":
         return await _recalculate_timeline(state)
+    elif action == "sync_transit":
+        return await _sync_transit(state)
     
     return {}
 
@@ -766,16 +770,50 @@ async def _generate_schedule(state: ItineraryState) -> dict:
 async def _recalculate_timeline(state: ItineraryState) -> dict:
     """
     LangGraph Node Action: Bypasses the geographical optimizer.
-    Strictly runs the clock simulation on the exact order provided by the user.
+    Strictly runs the clock simulation on the exact order provided by the user,
+    preserving pre-existing synced real transit legs to enable fluid hybrid rendering.
     """
     pois_state = state.get("pois", [])
     trip_details = state.get("trip_details")
     pace = state.get("pace", "moderate")
     user_timeline = state.get("user_timeline")
+    old_schedule = state.get("schedule") or []
 
     if not pois_state or not trip_details or not user_timeline:
         log.warning("Missing data to recalculate timeline.")
         return {}
+
+    existing_transit_legs = {}
+    for day in old_schedule:
+        events = day.get("events") or []
+        for i in range(1, len(events)):
+            prev_evt = events[i - 1]
+            curr_evt = events[i]
+            leg_state = curr_evt.get("transit_leg")
+            
+            if leg_state and leg_state.get("is_verified"):
+                lat1, lng1 = prev_evt.get("latitude"), prev_evt.get("longitude")
+                lat2, lng2 = curr_evt.get("latitude"), curr_evt.get("longitude")
+                
+                if None not in (lat1, lng1, lat2, lng2):
+                    leg_key = f"{lat1:.5f},{lng1:.5f}->{lat2:.5f},{lng2:.5f}"
+                    active_mode = leg_state.get("mode", "transit")
+                    
+                    final_mins = curr_evt.get("transit_mins", 0)
+                    buffer = 5 if active_mode in ["transit", "uber", "driving"] else 0
+                    raw_duration_mins = max(0, final_mins - buffer)
+                    
+                    existing_transit_legs[leg_key] = {
+                        "active_mode": active_mode,
+                        "alternatives": {
+                            active_mode: {
+                                "duration_mins": raw_duration_mins,
+                                "polyline": leg_state.get("polyline"),
+                                "steps": leg_state.get("steps", []),
+                                "distance_text": leg_state.get("distance_text", "")
+                            }
+                        }
+                    }
 
     try:
         poi_ids = [p["id"] for p in pois_state]
@@ -827,19 +865,196 @@ async def _recalculate_timeline(state: ItineraryState) -> dict:
             lunch_duration_mins=lunch_duration_mins
         )
 
-        # Run the Strict Simulator!
-        result = engine.recalculate_user_timeline(user_timeline, engine_pois)
+        result = engine.recalculate_user_timeline(
+            user_days_poi_ids=user_timeline, 
+            pois=engine_pois,
+            existing_transit_legs=existing_transit_legs
+        )
 
         return {
             "schedule": result.get("schedule", []),
             "excluded_pois": result.get("excluded", {"must": [], "want": [], "optional": []}),
-            "action": "idle", # Clear the action so the graph stops
-            "user_timeline": None # Clear the buffer
+            "action": "idle",
+            "user_timeline": None
         }
 
     except Exception as e:
         log.error(f"Failed to recalculate user timeline: {e}", exc_info=True)
         return {}
+    
+async def _sync_transit(state: ItineraryState) -> dict:
+    print("Executing _sync_transit node processing layer...")
+    
+    # 1. Parse driving preference status out of mobility config structure
+    mobility_config = state.get("mobility_config") or {}
+    strategies = mobility_config.get("strategies", {})
+    rental_car = strategies.get("rental_car", {})
+    
+    if isinstance(rental_car, dict):
+        driving_enabled = rental_car.get("enabled", False)
+    else:
+        driving_enabled = getattr(rental_car, "enabled", False)
+
+    current_schedule = state.get("schedule") or []
+    pois_state = state.get("pois") or []
+    
+    if not pois_state:
+        return {"action": "idle"}
+        
+    # --- FIX: Enrich the raw state POIs from the Database to fetch latitude/longitude ---
+    try:
+        poi_ids = [p["id"] for p in pois_state]
+
+        async with SessionLocal() as db:
+            stmt = select(GlobalAttraction).where(GlobalAttraction.id.in_(poi_ids))
+            result = await db.execute(stmt)
+            db_attractions = {attr.id: attr for attr in result.scalars().all()}
+
+        engine_pois = []
+        for state_poi in pois_state:
+            db_poi = db_attractions.get(state_poi["id"])
+            if not db_poi:
+                continue
+
+            duration = state_poi.get("time_to_spend") or db_poi.recommended_duration_mins
+            
+            opening_hours_raw = db_poi.opening_hours
+            if isinstance(opening_hours_raw, dict):
+                opening_hours_str = orjson.dumps(opening_hours_raw)
+            else:
+                opening_hours_str = opening_hours_raw
+
+            engine_pois.append({
+                "id": db_poi.id,
+                "name": db_poi.official_name,
+                "bucket": state_poi.get("bucket", "want"),
+                "latitude": db_poi.latitude,
+                "longitude": db_poi.longitude,
+                "recommended_duration_mins": duration,
+                "opening_hours": opening_hours_str,
+                "image_url": db_poi.image_url
+            })
+    except Exception as e:
+        log.error(f"Failed to enrich POIs inside sync transit worker node: {e}", exc_info=True)
+        return {}
+    # ---------------------------------------------------------------------------------
+
+    tasks = []
+    task_keys = []  
+    
+    def safe_float(val):
+        try: return float(val)
+        except (ValueError, TypeError): return None
+
+    # 2. Loop through current schedule sequence to map active consecutive legs
+    for day in current_schedule:
+        day_date_str = day.get("date")
+        is_weekend = False
+        if day_date_str:
+            try:
+                is_weekend = datetime.strptime(day_date_str, "%Y-%m-%d").isoweekday() in [6, 7]
+            except Exception:
+                pass
+                
+        events = day.get("events") or []
+        for i in range(1, len(events)):
+            prev_evt = events[i - 1]
+            curr_evt = events[i]
+            
+            lat1, lng1 = safe_float(prev_evt.get("latitude")), safe_float(prev_evt.get("longitude"))
+            lat2, lng2 = safe_float(curr_evt.get("latitude")), safe_float(curr_evt.get("longitude"))
+            
+            if None not in (lat1, lng1, lat2, lng2):
+                time_str = prev_evt.get("end_time", "08:00")
+                leg_key = f"{lat1:.5f},{lng1:.5f}->{lat2:.5f},{lng2:.5f}"
+                
+                if leg_key not in task_keys:
+                    task_keys.append(leg_key)
+                    tasks.append(
+                        get_transit_bundle_for_leg(
+                            origin_coords=(lat1, lng1),
+                            destination_coords=(lat2, lng2),
+                            time_str=time_str,
+                            is_weekend=is_weekend,
+                            driving_enabled=driving_enabled
+                        )
+                    )
+
+    # 3. Fire parallel asynchronous pipeline gather across all routing legs
+    routing_results = await asyncio.gather(*tasks) if tasks else []
+    
+    existing_transit_legs = {}
+    for leg_key, bundle_data in zip(task_keys, routing_results):
+        if bundle_data:
+            default_mode = "driving" if driving_enabled else "transit"
+            if default_mode not in bundle_data and bundle_data:
+                default_mode = list(bundle_data.keys())[0]
+                
+            existing_transit_legs[leg_key] = {
+                "active_mode": default_mode,
+                "alternatives": bundle_data
+            }
+
+    user_days_poi_ids = []
+    for day in current_schedule:
+        day_ids = []
+        for event in day.get("events", []):
+            evt_id = event.get("id")
+            if isinstance(evt_id, int):
+                day_ids.append(evt_id)
+            elif isinstance(evt_id, str) and evt_id.isdigit():
+                day_ids.append(int(evt_id))
+        user_days_poi_ids.append(day_ids)
+
+    trip_details = state.get("trip_details") or {}
+    
+    def parse_coords(val) -> tuple:
+        if isinstance(val, (list, tuple)) and len(val) >= 2:
+            return (float(val[0]), float(val[1]))
+        if isinstance(val, str):
+            try:
+                parts = val.split(",")
+                return (float(parts[0]), float(parts[1]))
+            except Exception: pass
+        return (0.0, 0.0)
+
+    def parse_dt(val) -> datetime:
+        if isinstance(val, datetime): return val
+        if isinstance(val, str):
+            try: return datetime.fromisoformat(val.replace("Z", ""))
+            except Exception: pass
+        return datetime.now()
+
+    hotel_coords = parse_coords(trip_details.get("hotel_coords"))
+    airport_coords = parse_coords(trip_details.get("airport_coords"))
+    arrival_dt = parse_dt(trip_details.get("arrival_dt") or trip_details.get("arrival_time"))
+    departure_dt = parse_dt(trip_details.get("departure_dt") or trip_details.get("departure_time"))
+    
+    pace = state.get("pace") or "Moderate"
+    wakeup_time = trip_details.get("wakeup_time", "08:00")
+    lunch_duration_mins = trip_details.get("lunch_duration_mins", 90)
+
+    engine = ScheduleEngine(
+        pace=pace,
+        arrival_dt=arrival_dt,
+        departure_dt=departure_dt,
+        hotel_coords=hotel_coords,
+        airport_coords=airport_coords,
+        wakeup_time=wakeup_time,
+        lunch_duration_mins=int(lunch_duration_mins)
+    )
+
+    recalc_result = engine.recalculate_user_timeline(
+        user_days_poi_ids=user_days_poi_ids,
+        pois=engine_pois,
+        existing_transit_legs=existing_transit_legs
+    )
+
+    return {
+        "schedule": recalc_result.get("schedule"),
+        "excluded_pois": recalc_result.get("excluded"),
+        "action": "idle" 
+    }
 
 if __name__ == "__main__":
     print("This module is not meant to be run directly. It provides the agent nodes and decisional edges.")

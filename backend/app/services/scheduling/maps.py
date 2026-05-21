@@ -11,13 +11,15 @@ log = get_logger(__name__)
 def get_normalized_departure_datetime(time_str: str, is_weekend: bool = False) -> datetime:
     """
     Normalizes time strings into 4 stable structural timestamp anchors.
-    This MUST be called before passing data to the cached function.
+    Forces the target to be 1 week after the next upcoming Tuesday/Saturday
+    to ensure compatibility with a 7-day Redis cache expiration window.
     """
     try:
         parsed_time = datetime.strptime(time_str, "%H:%M").time()
     except ValueError:
         parsed_time = time(12, 0)
 
+    # Standardize time slots
     if time(7, 0) <= parsed_time < time(9, 30):
         target_time = time(8, 0)
     elif time(9, 30) <= parsed_time < time(15, 30):
@@ -30,27 +32,28 @@ def get_normalized_departure_datetime(time_str: str, is_weekend: bool = False) -
     now = datetime.now()
 
     if is_weekend:
-        days_ahead = (5 - now.weekday()) % 7   # next Saturday
+        days_ahead = (5 - now.weekday()) % 7   # Next Saturday
     else:
-        days_ahead = (1 - now.weekday()) % 7   # next Tuesday
+        days_ahead = (1 - now.weekday()) % 7   # Next Tuesday
 
     if days_ahead == 0 and now.time() > target_time:
-        days_ahead = 7
+        days_ahead += 7
+
+    days_ahead += 7
 
     target_date = now + timedelta(days=days_ahead)
     return datetime.combine(target_date.date(), target_time)
 
-
-@redis_cache(expire_time=86400)
+@redis_cache(expire_time=60 * 60 * 24 * 7)
 async def fetch_google_directions(
     origin_coords: Tuple[float, float], 
     destination_coords: Tuple[float, float], 
     mode: str, 
-    normalized_dt: datetime # <-- FIX: Cache key now generates from this stable datetime object!
+    normalized_dt: datetime
 ) -> Optional[Dict[str, Any]]:
     """
     Fetches real-world navigation metadata between precise coordinates.
-    The decorator generates keys based on normalized_dt, ensuring maximum cache HIT ratios.
+    Returns a minimized, high-fidelity payload optimized for React rendering and Redis space.
     """
     origin = f"{origin_coords[0]},{origin_coords[1]}"
     destination = f"{destination_coords[0]},{destination_coords[1]}"
@@ -80,38 +83,52 @@ async def fetch_google_directions(
             if data.get("status") != "OK":
                 log.error(f"Google Maps API error status: {data.get('status')}")
                 return None
-            
-            print(f"Google Maps API response for {mode} from {origin} to {destination} at {normalized_dt}: {data}")
                 
             route = data["routes"][0]
             leg = route["legs"][0]
             
+            # Base high-fidelity contract block
             parsed_bundle = {
                 "status": "verified",
                 "mode": mode,
                 "distance_text": leg["distance"]["text"],
                 "duration_mins": int(leg.get("duration_in_traffic", leg["duration"])["value"] // 60),
                 "polyline": route["overview_polyline"]["points"],
-                "warnings": route.get("warnings", []),
+                "transfers": 0,
                 "steps": []
             }
             
             for step in leg.get("steps", []):
+                # Clean up dirty typography characters from Google's text strings
+                clean_instruction = step["html_instructions"].replace("\u202f", " ").replace("&nbsp;", " ")
+                
                 step_data = {
-                    "travel_mode": step["travel_mode"],
+                    "travel_mode": step["travel_mode"].lower(),
                     "duration_mins": int(step["duration"]["value"] // 60),
-                    "instruction": step["html_instructions"]
+                    "instruction": clean_instruction
                 }
                 
+                # Extract specific UI decoration details if it's a subway, bus, or train leg
                 if "transit_details" in step:
+                    parsed_bundle["transfers"] += 1
                     details = step["transit_details"]
+                    line = details["line"]
+                    
                     step_data["transit_detail"] = {
-                        "line_name": details["line"].get("short_name", details["line"].get("name", "Transit")),
-                        "vehicle_type": details["line"]["vehicle"]["type"],
-                        "num_stops": details["num_stops"]
+                        "line_name": line.get("short_name", line.get("name", "Transit")),
+                        "vehicle_type": line["vehicle"]["type"].lower(),
+                        "num_stops": details["num_stops"],
+                        "departure_stop": details["departure_stop"]["name"],
+                        "arrival_stop": details["arrival_stop"]["name"],
+                        "bg_color": line.get("color", "#2563eb"),        # Default to blue if line color missing
+                        "text_color": line.get("text_color", "#ffffff")   # Default to white text
                     }
                     
                 parsed_bundle["steps"].append(step_data)
+            
+            # The number of transfers is total transit steps minus 1 (e.g., 1 bus ride = 0 transfers)
+            if parsed_bundle["transfers"] > 0:
+                parsed_bundle["transfers"] -= 1
                 
             return parsed_bundle
 
@@ -119,6 +136,52 @@ async def fetch_google_directions(
             log.error(f"Critical execution block trap in direction resolver: {e}")
             return None
 
+
+async def get_transit_bundle_for_leg(
+    origin_coords: Tuple[float, float],
+    destination_coords: Tuple[float, float],
+    time_str: str,
+    is_weekend: bool,
+    driving_enabled: bool = False
+) -> Dict[str, Any]:
+    """
+    Orchestrates parallel routing queries based on user mobility configuration rules.
+    Restricts active processing modes to minimize Google API resource usage.
+    """
+    # 1. Get the rock-solid future normalized datetime object
+    normalized_dt = get_normalized_departure_datetime(time_str, is_weekend)
+    
+    bundle = {}
+
+    # CASE A: User has a rental car -> Only care about driving metrics
+    if driving_enabled:
+        driving_data = await fetch_google_directions(
+            origin_coords, destination_coords, "driving", normalized_dt
+        )
+        if driving_data:
+            bundle["driving"] = driving_data
+        return bundle
+
+    # CASE B: Standard Traveler -> Fetch Transit and Driving (to map out Uber alternatives) in parallel
+    # This runs both requests concurrently over your Redis decorator
+    transit_task = fetch_google_directions(origin_coords, destination_coords, "transit", normalized_dt)
+    driving_task = fetch_google_directions(origin_coords, destination_coords, "driving", normalized_dt)
+    
+    transit_data, driving_data = await asyncio.gather(transit_task, driving_task)
+    
+    if transit_data:
+        bundle["transit"] = transit_data
+        
+    if driving_data:
+        # Clone the driving metadata structure to build the custom Uber proxy leg
+        uber_data = dict(driving_data)
+        uber_data["mode"] = "uber"
+        # Apply your wait-time padding heuristic (+5 minutes buffer)
+        uber_data["duration_mins"] = driving_data["duration_mins"] + 5
+        
+        bundle["uber"] = uber_data
+
+    return bundle
 
 # ----------------------------------------------------------------------
 # CORRECT WORKFLOW TEST RUN
@@ -143,9 +206,11 @@ if __name__ == "__main__":
         print(f"Are the target datetimes identical? {dt_1 == dt_2} <-- SUCCESS!")
         
         print("\nFiring Request 1 (Cache MISS)...")
-        await fetch_google_directions(colosseum, vatican, "transit", dt_1)
+        response = await fetch_google_directions(colosseum, vatican, "transit", dt_1)
+        print(f"Response for Request 1: {response}")
         
-        print("\nFiring Request 2 (Should be a Cache HIT from Redis because dt_1 == dt_2)...")
-        await fetch_google_directions(colosseum, vatican, "transit", dt_2)
+        # print("\nFiring Request 2 (Should be a Cache HIT from Redis because dt_1 == dt_2)...")
+        # response = await fetch_google_directions(colosseum, vatican, "transit", dt_2)
+        # print(f"Response for Request 2: {response}")
 
     asyncio.run(test_cache_hits())
