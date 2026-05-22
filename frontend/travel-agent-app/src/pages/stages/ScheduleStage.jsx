@@ -60,12 +60,28 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
     const [isTransitExpanded, setIsTransitExpanded] = useState(false);
     const [activeMode, setActiveMode] = useState(event.transit_leg?.mode || 'transit');
 
+    // Tooltip state and outside‑click ref
+    const [showWarningTooltip, setShowWarningTooltip] = useState(false);
+    const warningRef = useRef(null);
+
     // Ensure activeMode stays in sync if graph state fields update dynamically
     useEffect(() => {
         if (event.transit_leg?.mode) {
             setActiveMode(event.transit_leg.mode);
         }
     }, [event.transit_leg?.mode]);
+
+    // Close tooltip when clicking outside
+    useEffect(() => {
+        if (!showWarningTooltip) return;
+        const handleClickOutside = (e) => {
+            if (warningRef.current && !warningRef.current.contains(e.target)) {
+                setShowWarningTooltip(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showWarningTooltip]);
 
     const leg = event.transit_leg;
     const hasAlternatives = !!leg?.alternatives;
@@ -174,13 +190,12 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
 
     if (isLogistics) {
         const isAirport = event.name.toLowerCase().includes('airport');
-        const content = (
+        return (
             <div className="flex items-center gap-4 py-1 ml-1 opacity-70">
                 <div className="w-8 h-8 rounded-full border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center text-gray-400 z-10">
                     {isAirport ? <PlaneLanding size={14} /> : <BedDouble size={14} />}
                 </div>
                 <div className="flex items-center gap-2">
-                    {/* --- FIX: Display both start and end times so the transit gap makes sense --- */}
                     <span className="text-xs font-black text-gray-400 tracking-wider">
                         {event.start_time} {event.end_time && `- ${event.end_time}`}
                     </span>
@@ -234,7 +249,7 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
                     <Icon size={18} />
                 </div>
                 
-                <div className="flex-grow pt-0.5 min-w-0">
+                <div className="flex-grow pt-0.5 min-w-0 relative">
                     <div className="flex justify-between items-start gap-2">
                         <div className="min-w-0">
                             {event.start_time && !isOverlay && (
@@ -247,13 +262,36 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
                             </h4>
                         </div>
                         
-                        {!hideBucketTag && isAttraction && event.bucket && (
-                            <span className={`shrink-0 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md ${
-                                event.bucket.includes('must') ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'
-                            }`}>
-                                {event.bucket.replace('-', ' ')}
-                            </span>
-                        )}
+                        <div className="flex items-center gap-1 shrink-0">
+                            {!hideBucketTag && isAttraction && event.bucket && (
+                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md ${
+                                    event.bucket.includes('must') ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                    {event.bucket.replace('-', ' ')}
+                                </span>
+                            )}
+                            {/* Warning icon with click‑to‑show tooltip */}
+                            {event.unknown_hours_warning && (
+                                <div ref={warningRef} className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowWarningTooltip(!showWarningTooltip)}
+                                        className="focus:outline-none"
+                                        aria-label="Opening hours warning"
+                                    >
+                                        <AlertTriangle size={14} className="text-amber-500 hover:text-amber-600 transition shrink-0" />
+                                    </button>
+                                    {showWarningTooltip && (
+                                        <div className="absolute top-6 right-0 mt-1 w-56 bg-white border border-gray-100 rounded-xl shadow-lg p-3 text-xs text-gray-700 z-50 animate-fadeIn">
+                                            <div className="flex items-start gap-2">
+                                                <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
+                                                <span>Opening hours unverified – this attraction may be closed at the scheduled time.</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
