@@ -60,7 +60,6 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
     const [isTransitExpanded, setIsTransitExpanded] = useState(false);
     const [activeMode, setActiveMode] = useState(event.transit_leg?.mode || 'transit');
 
-    // Tooltip state and outside‑click ref
     const [showWarningTooltip, setShowWarningTooltip] = useState(false);
     const warningRef = useRef(null);
 
@@ -71,7 +70,6 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
         }
     }, [event.transit_leg?.mode]);
 
-    // Close tooltip when clicking outside
     useEffect(() => {
         if (!showWarningTooltip) return;
         const handleClickOutside = (e) => {
@@ -190,12 +188,13 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
 
     if (isLogistics) {
         const isAirport = event.name.toLowerCase().includes('airport');
-        return (
+        const content = (
             <div className="flex items-center gap-4 py-1 ml-1 opacity-70">
                 <div className="w-8 h-8 rounded-full border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center text-gray-400 z-10">
                     {isAirport ? <PlaneLanding size={14} /> : <BedDouble size={14} />}
                 </div>
                 <div className="flex items-center gap-2">
+                    {/* --- FIX: Display both start and end times so the transit gap makes sense --- */}
                     <span className="text-xs font-black text-gray-400 tracking-wider">
                         {event.start_time} {event.end_time && `- ${event.end_time}`}
                     </span>
@@ -270,7 +269,7 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
                                     {event.bucket.replace('-', ' ')}
                                 </span>
                             )}
-                            {/* Warning icon with click‑to‑show tooltip */}
+                            {/* Warning icon with click-to-show tooltip */}
                             {event.unknown_hours_warning && (
                                 <div ref={warningRef} className="relative">
                                     <button
@@ -279,7 +278,7 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
                                         className="focus:outline-none"
                                         aria-label="Opening hours warning"
                                     >
-                                        <AlertTriangle size={14} className="text-amber-500 hover:text-amber-600 transition shrink-0" />
+                                        <AlertTriangle size={14} className="text-amber-500 hover:text-amber-600 transition" />
                                     </button>
                                     {showWarningTooltip && (
                                         <div className="absolute top-6 right-0 mt-1 w-56 bg-white border border-gray-100 rounded-xl shadow-lg p-3 text-xs text-gray-700 z-50 animate-fadeIn">
