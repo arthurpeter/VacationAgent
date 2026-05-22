@@ -56,18 +56,134 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
     const isLogistics = event.bucket === 'logistics';
     const isAttraction = event.type === 'attraction' && !isLogistics;
 
-    // Local state to manage the inline step expansion panel independently for each transit leg
+    // Local state to manage dropdown panel visibility and alternative mode tab viewing
     const [isTransitExpanded, setIsTransitExpanded] = useState(false);
+    const [activeMode, setActiveMode] = useState(event.transit_leg?.mode || 'transit');
+
+    // Ensure activeMode stays in sync if graph state fields update dynamically
+    useEffect(() => {
+        if (event.transit_leg?.mode) {
+            setActiveMode(event.transit_leg.mode);
+        }
+    }, [event.transit_leg?.mode]);
+
+    const leg = event.transit_leg;
+    const hasAlternatives = !!leg?.alternatives;
+    const currentModeData = hasAlternatives ? leg.alternatives[activeMode] : leg;
+    
+    const displayMins = hasAlternatives && currentModeData ? currentModeData.duration_mins : event.transit_mins;
+    const displayMode = hasAlternatives ? activeMode : (leg?.mode || 'estimated');
+
+    // Shared Transit Pill Renderer Component to avoid breaking logistics alignments
+    const renderTransitPill = () => {
+        if (!(!isOverlay && event.transit_mins > 0)) return null;
+
+        // Visual Hierarchy: Assign specialized style colors to match your high-contrast map setup
+        let pillColorClass = "text-gray-400 bg-transparent";
+        if (leg?.is_verified) {
+            if (displayMode === 'uber') {
+                pillColorClass = "text-blue-600 bg-blue-50/50 hover:bg-blue-100/70 border border-blue-100/50";
+            } else if (displayMode === 'driving') {
+                pillColorClass = "text-orange-600 bg-orange-50/50 hover:bg-orange-100/70 border border-orange-100/50";
+            } else {
+                pillColorClass = "text-emerald-600 bg-emerald-50/50 hover:bg-emerald-100/70 border border-emerald-100/50";
+            }
+        }
+
+        return (
+            <div className="flex flex-col ml-3 my-0.5">
+                <button
+                    type="button"
+                    onClick={() => leg?.is_verified && setIsTransitExpanded(!isTransitExpanded)}
+                    className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest w-fit rounded-lg px-2 py-1 transition-all ${
+                        leg?.is_verified ? 'cursor-pointer' : ''
+                    } ${pillColorClass}`}
+                >
+                    {displayMode === 'uber' || displayMode === 'driving' ? (
+                        <Car size={11} />
+                    ) : (
+                        <TrainFront size={11} />
+                    )}
+                    <span>
+                        {!leg?.is_verified ? '~' : ''}
+                        {displayMins} min
+                        {leg?.is_verified ? ` (${displayMode})` : ' (Est)'}
+                    </span>
+                    {leg?.is_verified && (
+                        <ChevronDown size={10} className={`transform transition-transform duration-200 ${isTransitExpanded ? 'rotate-180' : ''}`} />
+                    )}
+                </button>
+
+                {/* Step-by-Step Directions Dropdown Menu */}
+                {isTransitExpanded && currentModeData && (
+                    <div className="mt-1.5 bg-white border border-gray-100 rounded-2xl p-3.5 w-72 sm:w-80 flex flex-col gap-2.5 shadow-sm text-xs text-gray-600 animate-fadeIn z-50 relative">
+                        
+                        {/* Alternative Options Tab Bar Component */}
+                        {hasAlternatives && (
+                            <div className="flex gap-1 mb-1 pb-1 border-b border-gray-100 overflow-x-auto scrollbar-none">
+                                {Object.keys(leg.alternatives).map((modeKey) => {
+                                    const altData = leg.alternatives[modeKey];
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={modeKey}
+                                            onClick={() => setActiveMode(modeKey)}
+                                            className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all ${
+                                                activeMode === modeKey
+                                                    ? 'bg-gray-900 text-white shadow-sm'
+                                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            {modeKey} ({altData?.duration_mins || 0}m)
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {currentModeData.distance_text && (
+                            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest pb-1.5 border-b border-gray-100 flex justify-between">
+                                <span>Route Breakdown</span>
+                                <span>{currentModeData.distance_text}</span>
+                            </div>
+                        )}
+                        
+                        <div className="space-y-3 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                            {currentModeData.steps && currentModeData.steps.length > 0 ? (
+                                currentModeData.steps.map((step, sIdx) => (
+                                    <div key={sIdx} className="flex gap-2.5 items-start">
+                                        <div className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                                        <div className="flex flex-col min-w-0">
+                                            <p className="leading-tight text-gray-700 font-medium" dangerouslySetInnerHTML={{ __html: step.instruction }} />
+                                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tight mt-0.5">{step.duration_mins} mins</span>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="flex items-center gap-2 text-gray-400 py-1">
+                                    <Car size={14} />
+                                    <span>Follow standard road directions.</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     if (isLogistics) {
         const isAirport = event.name.toLowerCase().includes('airport');
-        return (
+        const content = (
             <div className="flex items-center gap-4 py-1 ml-1 opacity-70">
                 <div className="w-8 h-8 rounded-full border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center text-gray-400 z-10">
                     {isAirport ? <PlaneLanding size={14} /> : <BedDouble size={14} />}
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-gray-400 tracking-wider">{event.start_time}</span>
+                    {/* --- FIX: Display both start and end times so the transit gap makes sense --- */}
+                    <span className="text-xs font-black text-gray-400 tracking-wider">
+                        {event.start_time} {event.end_time && `- ${event.end_time}`}
+                    </span>
                     <span className="text-xs font-bold text-gray-500">{event.name}</span>
                 </div>
             </div>
@@ -100,58 +216,7 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
 
     return (
         <div className="relative flex flex-col gap-1.5 group ml-2">
-            {/* INTERACTIVE COMPACT TRANSIT PILL ELEMENT */}
-            {!isOverlay && event.transit_mins > 0 && (
-                <div className="flex flex-col ml-3 my-0.5">
-                    <button
-                        type="button"
-                        onClick={() => event.transit_leg?.is_verified && setIsTransitExpanded(!isTransitExpanded)}
-                        className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest w-fit rounded-lg px-2 py-1 transition-all ${
-                            event.transit_leg?.is_verified 
-                                ? 'text-blue-600 bg-blue-50/40 hover:bg-blue-50 cursor-pointer' 
-                                : 'text-gray-400 bg-transparent'
-                        }`}
-                    >
-                        {event.transit_leg?.mode === 'uber' || event.transit_leg?.mode === 'driving' ? (
-                            <Car size={11} className="text-blue-500" />
-                        ) : (
-                            <TrainFront size={11} className={event.transit_leg?.is_verified ? "text-blue-500" : "text-gray-400"} />
-                        )}
-                        <span>
-                            {event.transit_leg?.is_verified ? '' : '~'}
-                            {event.transit_mins} min
-                            {event.transit_leg?.is_verified ? ` (${event.transit_leg.mode})` : ' (Est)'}
-                        </span>
-                        {event.transit_leg?.is_verified && (
-                            <ChevronDown size={10} className={`transform transition-transform duration-200 ${isTransitExpanded ? 'rotate-180' : ''}`} />
-                        )}
-                    </button>
-
-                    {/* Step-by-Step Dropdown Panel */}
-                    {isTransitExpanded && event.transit_leg?.steps && (
-                        <div className="mt-1.5 bg-white border border-gray-100 rounded-2xl p-3.5 max-w-sm flex flex-col gap-2.5 shadow-sm text-xs text-gray-600 animate-fadeIn z-10">
-                            {event.transit_leg.distance_text && (
-                                <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest pb-1.5 border-b border-gray-100 flex justify-between">
-                                    <span>Route Breakdown</span>
-                                    <span>{event.transit_leg.distance_text}</span>
-                                </div>
-                            )}
-                            <div className="space-y-3 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-                                {event.transit_leg.steps.map((step, sIdx) => (
-                                    <div key={sIdx} className="flex gap-2.5 items-start">
-                                        <div className="mt-1 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                                        <div className="flex flex-col min-w-0">
-                                            {/* Safely inject html instructions to capture Google's bold styling rules */}
-                                            <p className="leading-tight text-gray-700 font-medium" dangerouslySetInnerHTML={{ __html: step.instruction }} />
-                                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tight mt-0.5">{step.duration_mins} mins</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
+            {renderTransitPill()}
 
             <div className={`p-3.5 rounded-xl border flex items-start gap-3 transition-all ${isDraggable && !isOverlay ? 'hover:shadow-md cursor-grab active:cursor-grabbing' : ''} ${bgClass} ${overlayStyles}`}>
                 

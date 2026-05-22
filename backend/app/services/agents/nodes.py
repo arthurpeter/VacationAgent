@@ -901,7 +901,6 @@ async def _sync_transit(state: ItineraryState) -> dict:
     if not pois_state:
         return {"action": "idle"}
         
-    # --- FIX: Enrich the raw state POIs from the Database to fetch latitude/longitude ---
     try:
         poi_ids = [p["id"] for p in pois_state]
 
@@ -937,7 +936,6 @@ async def _sync_transit(state: ItineraryState) -> dict:
     except Exception as e:
         log.error(f"Failed to enrich POIs inside sync transit worker node: {e}", exc_info=True)
         return {}
-    # ---------------------------------------------------------------------------------
 
     tasks = []
     task_keys = []  
@@ -957,28 +955,41 @@ async def _sync_transit(state: ItineraryState) -> dict:
                 pass
                 
         events = day.get("events") or []
-        for i in range(1, len(events)):
-            prev_evt = events[i - 1]
-            curr_evt = events[i]
+        
+        # --- FIX: Extract a clean chronological sequence of locations that have coordinates ---
+        geo_events = []
+        for evt in events:
+            lat = safe_float(evt.get("latitude"))
+            lng = safe_float(evt.get("longitude"))
+            if lat is not None and lng is not None:
+                geo_events.append({
+                    "latitude": lat,
+                    "longitude": lng,
+                    "end_time": evt.get("end_time", "08:00")
+                })
+        
+        # Build consecutive routing keys using the filtered list of locations
+        for i in range(1, len(geo_events)):
+            prev_evt = geo_events[i - 1]
+            curr_evt = geo_events[i]
             
-            lat1, lng1 = safe_float(prev_evt.get("latitude")), safe_float(prev_evt.get("longitude"))
-            lat2, lng2 = safe_float(curr_evt.get("latitude")), safe_float(curr_evt.get("longitude"))
+            lat1, lng1 = prev_evt["latitude"], prev_evt["longitude"]
+            lat2, lng2 = curr_evt["latitude"], curr_evt["longitude"]
             
-            if None not in (lat1, lng1, lat2, lng2):
-                time_str = prev_evt.get("end_time", "08:00")
-                leg_key = f"{lat1:.5f},{lng1:.5f}->{lat2:.5f},{lng2:.5f}"
-                
-                if leg_key not in task_keys:
-                    task_keys.append(leg_key)
-                    tasks.append(
-                        get_transit_bundle_for_leg(
-                            origin_coords=(lat1, lng1),
-                            destination_coords=(lat2, lng2),
-                            time_str=time_str,
-                            is_weekend=is_weekend,
-                            driving_enabled=driving_enabled
-                        )
+            time_str = prev_evt["end_time"]
+            leg_key = f"{lat1:.5f},{lng1:.5f}->{lat2:.5f},{lng2:.5f}"
+            
+            if leg_key not in task_keys:
+                task_keys.append(leg_key)
+                tasks.append(
+                    get_transit_bundle_for_leg(
+                        origin_coords=(lat1, lng1),
+                        destination_coords=(lat2, lng2),
+                        time_str=time_str,
+                        is_weekend=is_weekend,
+                        driving_enabled=driving_enabled
                     )
+                )
 
     # 3. Fire parallel asynchronous pipeline gather across all routing legs
     routing_results = await asyncio.gather(*tasks) if tasks else []
@@ -995,6 +1006,7 @@ async def _sync_transit(state: ItineraryState) -> dict:
                 "alternatives": bundle_data
             }
 
+    # 4. Extract strict current layout user_timeline matrix
     user_days_poi_ids = []
     for day in current_schedule:
         day_ids = []
@@ -1006,6 +1018,7 @@ async def _sync_transit(state: ItineraryState) -> dict:
                 day_ids.append(int(evt_id))
         user_days_poi_ids.append(day_ids)
 
+    # 5. Extract environment parameters safely to build the ScheduleEngine
     trip_details = state.get("trip_details") or {}
     
     def parse_coords(val) -> tuple:
@@ -1044,9 +1057,10 @@ async def _sync_transit(state: ItineraryState) -> dict:
         lunch_duration_mins=int(lunch_duration_mins)
     )
 
+    # 6. Execute complete recalculation waterfall pass with geo-enriched engine_pois
     recalc_result = engine.recalculate_user_timeline(
         user_days_poi_ids=user_days_poi_ids,
-        pois=engine_pois,
+        pois=engine_pois,  
         existing_transit_legs=existing_transit_legs
     )
 

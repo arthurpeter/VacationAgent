@@ -18,6 +18,9 @@ class ScheduleEngine:
         self.airport_coords = airport_coords
         self.lunch_duration_mins = lunch_duration_mins
         self.arrival_buffer_hours = 3.5 
+        self.airport_egress_mins = 90
+        self.hotel_checkin_mins = 45
+        self.pre_flight_buffer_mins = 180
         
         wakeup_t = datetime.strptime(wakeup_time, "%H:%M").time()
         self.morning_start_delta = timedelta(hours=wakeup_t.hour, minutes=wakeup_t.minute) + timedelta(minutes=90)
@@ -124,7 +127,8 @@ class ScheduleEngine:
                 "mode": active_mode,
                 "polyline": mode_bundle.get("polyline"),
                 "steps": mode_bundle.get("steps", []),
-                "distance_text": mode_bundle.get("distance_text", "")
+                "distance_text": mode_bundle.get("distance_text", ""),
+                "alternatives": leg_meta.get("alternatives")
             }
         
         return default_mins, {
@@ -180,56 +184,53 @@ class ScheduleEngine:
             
             current_date = self.arrival_dt.date() + timedelta(days=day_idx)
             
-            # Smart Clock Initialization
-            standard_wakeup = datetime.combine(current_date, time()) + self.morning_start_delta
-            if day_idx == 0:
-                current_clock = max(self.arrival_dt + timedelta(hours=self.arrival_buffer_hours), standard_wakeup)
-            elif day_idx == total_days - 1:
-                leave_for_airport = self.departure_dt - timedelta(hours=3)
-                current_clock = min(standard_wakeup, leave_for_airport)
-            else:
-                current_clock = standard_wakeup
-            
-            end_clk = (self.departure_dt - timedelta(hours=3)) if day_idx == total_days - 1 else datetime.combine(current_date, self.hard_day_cutoff)
-
+            # FIX: Initialize the container components safely at the very top of each loop turn
+            day_plan = []
             current_loc = self.hotel_coords
             active_time_spent = 0
             lunch_taken = False
-            day_plan = []
-
-            # --- 1. INJECT START ANCHORS ---
+            
+            standard_wakeup = datetime.combine(current_date, time()) + self.morning_start_delta
+            
+            # --- START LOGISTICS MANAGEMENT GRID ---
             if day_idx == 0:
-                airport_dep = self.arrival_dt + timedelta(minutes=45)
+                # Day 1: Land, handle passport controls and deplaning buffers
+                bags_claim_end = self.arrival_dt + timedelta(minutes=self.airport_egress_mins)
                 day_plan.append({
-                    "type": "attraction", "id": "arr_airport", "name": "Arrive at Airport", "bucket": "logistics",
-                    "start_time": self.arrival_dt.strftime("%H:%M"), "end_time": airport_dep.strftime("%H:%M"),
+                    "type": "attraction", "id": "arr_airport", "name": "Customs & Baggage Claim", "bucket": "logistics",
+                    "start_time": self.arrival_dt.strftime("%H:%M"), "end_time": bags_claim_end.strftime("%H:%M"),
                     "transit_mins": 0, "unknown_hours_warning": False,
                     "latitude": self.airport_coords[0], "longitude": self.airport_coords[1]
                 })
 
-                # Check for verified arrival transit leg
+                # Route transit connection directly to hotel coords
                 h_transit, h_leg = self._resolve_transit_leg(
                     self.airport_coords[0], self.airport_coords[1], 
                     self.hotel_coords[0], self.hotel_coords[1], transit_lookup, 45
                 )
-                hotel_arr = airport_dep + timedelta(minutes=h_transit)
+                hotel_arrival_time = bags_claim_end + timedelta(minutes=h_transit)
+                checkin_end_time = hotel_arrival_time + timedelta(minutes=self.hotel_checkin_mins)
+                
                 day_plan.append({
                     "type": "attraction", "id": "arr_hotel", "name": "Transit & Check-in at Hotel", "bucket": "logistics",
-                    "start_time": airport_dep.strftime("%H:%M"), "end_time": hotel_arr.strftime("%H:%M"),
+                    "start_time": bags_claim_end.strftime("%H:%M"), "end_time": checkin_end_time.strftime("%H:%M"),
                     "transit_mins": h_transit, "unknown_hours_warning": False,
                     "latitude": self.hotel_coords[0], "longitude": self.hotel_coords[1],
                     "transit_leg": h_leg
                 })
-                current_clock = max(current_clock, hotel_arr)
+                current_clock = max(checkin_end_time, standard_wakeup)
             else:
+                # Standard days morning hotel initialization
                 day_plan.append({
                     "type": "attraction", "id": f"start_hotel_{day_idx}", "name": "Start Day at Hotel", "bucket": "logistics",
-                    "start_time": current_clock.strftime("%H:%M"), "end_time": (current_clock + timedelta(minutes=5)).strftime("%H:%M"),
+                    "start_time": standard_wakeup.strftime("%H:%M"), "end_time": (standard_wakeup + timedelta(minutes=5)).strftime("%H:%M"),
                     "transit_mins": 0, "unknown_hours_warning": False,
                     "latitude": self.hotel_coords[0], "longitude": self.hotel_coords[1]
                 })
-                current_clock += timedelta(minutes=5)
+                current_clock = standard_wakeup + timedelta(minutes=5)
             
+            # Establish day boundaries safely
+            end_clk = (self.departure_dt - timedelta(minutes=self.pre_flight_buffer_mins)) if day_idx == total_days - 1 else datetime.combine(current_date, self.hard_day_cutoff)
             daily_pool = excursion_day_map[day_idx] if is_excursion else [p for p in unassigned_pois if p in home_pois]
             
             # --- ATTRACTION SELECTION ---
@@ -250,7 +251,6 @@ class ScheduleEngine:
                 for p in daily_pool:
                     raw_dur = p.get('recommended_duration_mins', 120)
                     
-                    # Resolve real transit metrics
                     est_mins = self._get_base_transit_mins(current_loc[0], current_loc[1], p['latitude'], p['longitude'])
                     transit_mins, leg_state = self._resolve_transit_leg(
                         current_loc[0], current_loc[1], p['latitude'], p['longitude'], transit_lookup, est_mins
@@ -267,6 +267,15 @@ class ScheduleEngine:
                         test_dep = test_arr + timedelta(minutes=raw_dur + switch_pen)
                         
                         if test_dep > end_clk or (active_time_spent + eff_total > hard_budget): break
+
+                        # Safety gate validation boundary rules for final day departures
+                        if day_idx == total_days - 1:
+                            est_to_air = self._get_base_transit_mins(p['latitude'], p['longitude'], self.airport_coords[0], self.airport_coords[1])
+                            transit_to_air_mins, _ = self._resolve_transit_leg(
+                                p['latitude'], p['longitude'], self.airport_coords[0], self.airport_coords[1], transit_lookup, est_to_air
+                            )
+                            if test_dep + timedelta(minutes=transit_to_air_mins) > end_clk:
+                                break
                             
                         is_open, unk = self._is_open_interval(test_arr, test_dep, p.get("opening_hours"))
                         if is_open:
@@ -303,7 +312,7 @@ class ScheduleEngine:
                     "end_time": (best_candidate['arr'] + timedelta(minutes=b_poi.get('recommended_duration_mins', 120))).strftime("%H:%M"),
                     "transit_mins": best_candidate['transit_mins'], "unknown_hours_warning": best_candidate['unk'],
                     "latitude": b_poi['latitude'], "longitude": b_poi['longitude'], "image_url": b_poi.get('image_url'),
-                    "transit_leg": best_candidate['leg_state'] # Inject data object structure
+                    "transit_leg": best_candidate['leg_state']
                 })
                 
                 current_clock = best_candidate['dep']
@@ -313,8 +322,9 @@ class ScheduleEngine:
                 daily_pool = [p for p in daily_pool if p['id'] != b_poi['id']]
                 unassigned_pois = [p for p in unassigned_pois if p['id'] != b_poi['id']]
 
-            # --- 2. INJECT RETURN TO HOTEL ANCHOR ---
-            if active_time_spent > 0:
+            # --- EXIT LOGISTICS ANCHORS MANAGEMENT ---
+            # Inject Return to Hotel segment ONLY if it is not the final day departure wrap pass
+            if day_idx != total_days - 1 and active_time_spent > 0:
                 est_ret_mins = self._get_base_transit_mins(current_loc[0], current_loc[1], self.hotel_coords[0], self.hotel_coords[1])
                 ret_transit_mins, ret_leg = self._resolve_transit_leg(
                     current_loc[0], current_loc[1], self.hotel_coords[0], self.hotel_coords[1], transit_lookup, est_ret_mins
@@ -325,42 +335,52 @@ class ScheduleEngine:
                     "type": "attraction", "id": f"return_hotel_{day_idx}", "name": "Return to Hotel", "bucket": "logistics",
                     "start_time": current_clock.strftime("%H:%M"), "end_time": return_dt.strftime("%H:%M"),
                     "transit_mins": ret_transit_mins, "latitude": self.hotel_coords[0], "longitude": self.hotel_coords[1],
-                    "unknown_hours_warning": False,
-                    "transit_leg": ret_leg # Handles tracking return metrics smoothly!
+                    "unknown_hours_warning": False, "transit_leg": ret_leg
                 })
                 current_clock = return_dt
 
-            # --- 3. INJECT AIRPORT DEPARTURE ANCHOR (LAST DAY) ---
+            # Handle Departure day airport security logic rules at the very end of final day iteration index
             if day_idx == total_days - 1:
-                leave_for_airport_time = self.departure_dt - timedelta(hours=3)
+                airport_arrival_target = self.departure_dt - timedelta(minutes=self.pre_flight_buffer_mins)
                 
-                if current_clock < leave_for_airport_time:
+                est_dep_mins = self._get_base_transit_mins(current_loc[0], current_loc[1], self.airport_coords[0], self.airport_coords[1])
+                dep_transit_mins, dep_leg = self._resolve_transit_leg(
+                    current_loc[0], current_loc[1], self.airport_coords[0], self.airport_coords[1], transit_lookup, est_dep_mins
+                )
+                leave_hotel_time = airport_arrival_target - timedelta(minutes=dep_transit_mins)
+                
+                if current_clock < leave_hotel_time:
                     day_plan.append({
-                        "type": "free_time", "id": "free_time_hotel", "name": "Relax at Hotel / Grab Bags",
-                        "start_time": current_clock.strftime("%H:%M"), "end_time": leave_for_airport_time.strftime("%H:%M")
+                        "type": "free_time", "id": "free_time_hotel", "name": "Relax / Prep for Departure",
+                        "start_time": current_clock.strftime("%H:%M"), "end_time": leave_hotel_time.strftime("%H:%M")
                     })
                 
-                est_dep_mins = self._get_base_transit_mins(self.hotel_coords[0], self.hotel_coords[1], self.airport_coords[0], self.airport_coords[1])
-                dep_transit_mins, dep_leg = self._resolve_transit_leg(
-                    self.hotel_coords[0], self.hotel_coords[1], self.airport_coords[0], self.airport_coords[1], transit_lookup, est_dep_mins
-                )
-                
                 day_plan.append({
-                    "type": "attraction", "id": "dep_airport", "name": "Transit to Airport & Depart", "bucket": "logistics",
-                    "start_time": leave_for_airport_time.strftime("%H:%M"), "end_time": self.departure_dt.strftime("%H:%M"),
+                    "type": "attraction", "id": "transit_to_airport", "name": "Transit to Airport", "bucket": "logistics",
+                    "start_time": leave_hotel_time.strftime("%H:%M"), "end_time": airport_arrival_target.strftime("%H:%M"),
                     "transit_mins": dep_transit_mins, "latitude": self.airport_coords[0], "longitude": self.airport_coords[1],
-                    "unknown_hours_warning": False,
                     "transit_leg": dep_leg
+                })
+
+                day_plan.append({
+                    "type": "attraction", "id": "dep_airport", "name": "Airport Check-in & Security", "bucket": "logistics",
+                    "start_time": airport_arrival_target.strftime("%H:%M"), "end_time": self.departure_dt.strftime("%H:%M"),
+                    "transit_mins": 0, "latitude": self.airport_coords[0], "longitude": self.airport_coords[1],
+                    "unknown_hours_warning": False
                 })
 
             if day_plan:
                 schedule.append({"day_index": day_idx, "date": current_date.strftime("%Y-%m-%d"), "events": day_plan})
 
-        # --- EXCLUDED ---
+        # Calculate excluded pool
+        assigned_ids = {pid for day_list in user_days_poi_ids for pid in day_list if isinstance(pid, int) or str(pid).isdigit()}
         excluded = {"must": [], "want": [], "optional": []}
-        for p in unassigned_pois: 
-            excluded[p['bucket']].append({"id": p["id"], "name": p["name"], "bucket": p['bucket'], "type": "attraction"})
-            
+        for p in pois:
+            if p['id'] not in assigned_ids:
+                bucket = p.get('bucket', 'optional').lower()
+                if bucket not in excluded: bucket = "optional"
+                excluded[bucket].append({"id": p["id"], "name": p["name"], "bucket": bucket, "type": "attraction"})
+
         return {"status": "success", "schedule": schedule, "excluded": excluded}
     
     def recalculate_user_timeline(
@@ -385,69 +405,57 @@ class ScheduleEngine:
         for day_idx, day_poi_ids in enumerate(user_days_poi_ids):
             current_date = self.arrival_dt.date() + timedelta(days=day_idx)
             
-            # Clock Init
-            standard_wakeup = datetime.combine(current_date, time()) + self.morning_start_delta
-            if day_idx == 0:
-                current_clock = max(self.arrival_dt + timedelta(hours=self.arrival_buffer_hours), standard_wakeup)
-            elif day_idx == total_days - 1:
-                leave_for_airport = self.departure_dt - timedelta(hours=3)
-                current_clock = min(standard_wakeup, leave_for_airport)
-            else:
-                current_clock = standard_wakeup
-                
+            # Initialize day-scoped parameters cleanly at the top of the iteration pass
+            day_plan = []
             current_loc = self.hotel_coords
             lunch_taken = False
-            day_plan = []
+            standard_wakeup = datetime.combine(current_date, time()) + self.morning_start_delta
             
-            # 1. INJECT START ARRIVAL LOGISTICS
+            # --- 1. INJECT START ARRIVAL LOGISTICS & CLOCK INITIALIZATION ---
             if day_idx == 0:
-                airport_dep = self.arrival_dt + timedelta(minutes=45)
-                
-                # Check for verified arrival leg
-                arr_key = f"{self.airport_coords[0]:.5f},{self.airport_coords[1]:.5f}->{self.hotel_coords[0]:.5f},{self.hotel_coords[1]:.5f}"
-                arr_transit_mins = 45
-                arr_leg_payload = {"is_verified": False, "mode": "estimated", "polyline": None, "steps": []}
-                
-                if arr_key in transit_lookup:
-                    active_mode = transit_lookup[arr_key].get("active_mode", "driving")
-                    mode_data = transit_lookup[arr_key].get("alternatives", {}).get(active_mode, {})
-                    arr_transit_mins = mode_data.get("duration_mins", 45) + 5 # Add ride buffer
-                    arr_leg_payload = {"is_verified": True, "mode": active_mode, "polyline": mode_data.get("polyline"), "steps": mode_data.get("steps", [])}
-                
+                # Land, clear passport control boundaries, and await baggage handle loops
+                bags_claim_end = self.arrival_dt + timedelta(minutes=self.airport_egress_mins)
                 day_plan.append({
-                    "type": "attraction", "id": "arr_airport", "name": "Arrive at Airport", "bucket": "logistics",
-                    "start_time": self.arrival_dt.strftime("%H:%M"), "end_time": airport_dep.strftime("%H:%M"),
+                    "type": "attraction", "id": "arr_airport", "name": "Customs & Baggage Claim", "bucket": "logistics",
+                    "start_time": self.arrival_dt.strftime("%H:%M"), "end_time": bags_claim_end.strftime("%H:%M"),
                     "transit_mins": 0, "unknown_hours_warning": False, "latitude": self.airport_coords[0], "longitude": self.airport_coords[1]
                 })
                 
-                hotel_arr = airport_dep + timedelta(minutes=arr_transit_mins)
+                # Fetch route configurations out of cache layout
+                h_transit, h_leg = self._resolve_transit_leg(
+                    self.airport_coords[0], self.airport_coords[1], 
+                    self.hotel_coords[0], self.hotel_coords[1], transit_lookup, 45
+                )
+                hotel_arrival_time = bags_claim_end + timedelta(minutes=h_transit)
+                checkin_end_time = hotel_arrival_time + timedelta(minutes=self.hotel_checkin_mins)
+                
                 day_plan.append({
                     "type": "attraction", "id": "arr_hotel", "name": "Transit & Check-in at Hotel", "bucket": "logistics",
-                    "start_time": airport_dep.strftime("%H:%M"), "end_time": hotel_arr.strftime("%H:%M"),
-                    "transit_mins": arr_transit_mins, "unknown_hours_warning": False, 
+                    "start_time": bags_claim_end.strftime("%H:%M"), "end_time": checkin_end_time.strftime("%H:%M"),
+                    "transit_mins": h_transit, "unknown_hours_warning": False, 
                     "latitude": self.hotel_coords[0], "longitude": self.hotel_coords[1],
-                    "transit_leg": arr_leg_payload
+                    "transit_leg": h_leg
                 })
-                current_clock = max(current_clock, hotel_arr)
+                current_clock = max(checkin_end_time, standard_wakeup)
             else:
+                # Standard day room-departure entry trace
                 day_plan.append({
                     "type": "attraction", "id": f"start_hotel_{day_idx}", "name": "Start Day at Hotel", "bucket": "logistics",
-                    "start_time": current_clock.strftime("%H:%M"), "end_time": (current_clock + timedelta(minutes=5)).strftime("%H:%M"),
+                    "start_time": standard_wakeup.strftime("%H:%M"), "end_time": (standard_wakeup + timedelta(minutes=5)).strftime("%H:%M"),
                     "transit_mins": 0, "unknown_hours_warning": False, "latitude": self.hotel_coords[0], "longitude": self.hotel_coords[1]
                 })
-                current_clock += timedelta(minutes=5)
+                current_clock = standard_wakeup + timedelta(minutes=5)
 
-            # 2. EVALUATE SEQUENTIAL ATTRACTIONS CANVAS
-            active_time_spent = 0
-            
+            # --- 2. EVALUATE SEQUENTIAL ATTRACTIONS CANVAS ---
             for poi_id in day_poi_ids:
-                if isinstance(poi_id, str) and (poi_id.startswith("start_") or poi_id.startswith("return_") or poi_id.startswith("arr_") or poi_id.startswith("dep_")):
+                # Bypass structural anchor tags safely
+                if isinstance(poi_id, str) and (poi_id.startswith("start_") or poi_id.startswith("return_") or poi_id.startswith("arr_") or poi_id.startswith("dep_") or poi_id.startswith("transit_")):
                     continue
                     
                 p = poi_map.get(poi_id)
                 if not p: continue
                 
-                # Auto-inject Lunch Check
+                # Auto-inject Lunch Break if the clock cross-over window allows it
                 if current_clock.hour >= 13 and not lunch_taken:
                     day_plan.append({
                         "type": "meal", "name": "Lunch Break",
@@ -456,16 +464,13 @@ class ScheduleEngine:
                     current_clock += timedelta(minutes=self.lunch_duration_mins)
                     lunch_taken = True
                 
-                # ADAPTIVE COUPLING WATERFALL
+                # Resolve verified multi-option transit data blocks matching coordinate targets
                 leg_key = f"{current_loc[0]:.5f},{current_loc[1]:.5f}->{p['latitude']:.5f},{p['longitude']:.5f}"
-                
-                # Look for verified route data matching our layout string key contract
                 if leg_key in transit_lookup:
                     leg_meta = transit_lookup[leg_key]
                     active_mode = leg_meta.get("active_mode", "transit")
                     mode_bundle = leg_meta.get("alternatives", {}).get(active_mode, {})
                     
-                    # Pull real duration and assign standard target logistics padding buffers (+5 mins)
                     raw_transit = mode_bundle.get("duration_mins", 15)
                     logistics_buffer = 5 if active_mode in ["transit", "uber", "driving"] else 0
                     final_transit_mins = raw_transit + logistics_buffer
@@ -475,10 +480,10 @@ class ScheduleEngine:
                         "mode": active_mode,
                         "polyline": mode_bundle.get("polyline"),
                         "steps": mode_bundle.get("steps", []),
-                        "distance_text": mode_bundle.get("distance_text", "")
+                        "distance_text": mode_bundle.get("distance_text", ""),
+                        "alternatives": leg_meta.get("alternatives")
                     }
                 else:
-                    # Cache Miss (Fallback to local haversine geometric estimation)
                     final_transit_mins = self._get_base_transit_mins(current_loc[0], current_loc[1], p['latitude'], p['longitude'])
                     transit_leg_state = {
                         "is_verified": False,
@@ -500,24 +505,19 @@ class ScheduleEngine:
                     "transit_mins": final_transit_mins, 
                     "unknown_hours_warning": not is_open if not is_unk else True,
                     "latitude": p['latitude'], "longitude": p['longitude'], "image_url": p.get('image_url'),
-                    "transit_leg": transit_leg_state # Pass rich metadata block back to state
+                    "transit_leg": transit_leg_state 
                 })
                 
                 current_clock = dep_dt
                 current_loc = (p['latitude'], p['longitude'])
-                active_time_spent += 1
                 
-            # 3. INJECT RETURN ANCHORS WITH ROUTE SELECTION
-            if active_time_spent > 0 or day_idx == 0:
-                ret_key = f"{current_loc[0]:.5f},{current_loc[1]:.5f}->{self.hotel_coords[0]:.5f},{self.hotel_coords[1]:.5f}"
-                return_transit_mins = self._get_base_transit_mins(current_loc[0], current_loc[1], self.hotel_coords[0], self.hotel_coords[1])
-                ret_leg_payload = {"is_verified": False, "mode": "estimated", "polyline": None, "steps": []}
-                
-                if ret_key in transit_lookup:
-                    active_mode = transit_lookup[ret_key].get("active_mode", "transit")
-                    mode_data = transit_lookup[ret_key].get("alternatives", {}).get(active_mode, {})
-                    return_transit_mins = mode_data.get("duration_mins", return_transit_mins) + 5
-                    ret_leg_payload = {"is_verified": True, "mode": active_mode, "polyline": mode_data.get("polyline"), "steps": mode_data.get("steps", [])}
+            # --- 3. INJECT RETURN & EXIT LOGISTICS ANCHORS ---
+            # Append Return to Hotel route rows ONLY on non-departure dates
+            if day_idx != total_days - 1:
+                est_ret_mins = self._get_base_transit_mins(current_loc[0], current_loc[1], self.hotel_coords[0], self.hotel_coords[1])
+                return_transit_mins, ret_leg = self._resolve_transit_leg(
+                    current_loc[0], current_loc[1], self.hotel_coords[0], self.hotel_coords[1], transit_lookup, est_ret_mins
+                )
 
                 return_dt = current_clock + timedelta(minutes=return_transit_mins)
                 day_plan.append({
@@ -525,39 +525,44 @@ class ScheduleEngine:
                     "start_time": current_clock.strftime("%H:%M"), "end_time": return_dt.strftime("%H:%M"),
                     "transit_mins": return_transit_mins, "unknown_hours_warning": False,
                     "latitude": self.hotel_coords[0], "longitude": self.hotel_coords[1],
-                    "transit_leg": ret_leg_payload
+                    "transit_leg": ret_leg
                 })
                 current_clock = return_dt
                 
+            # Final Day Departure sequence layout tracking rules
             if day_idx == total_days - 1:
-                leave_for_airport_time = self.departure_dt - timedelta(hours=3)
-                if current_clock < leave_for_airport_time:
+                airport_arrival_target = self.departure_dt - timedelta(minutes=self.pre_flight_buffer_mins)
+                
+                est_dep_mins = self._get_base_transit_mins(current_loc[0], current_loc[1], self.airport_coords[0], self.airport_coords[1])
+                airport_transit_mins, dep_leg = self._resolve_transit_leg(
+                    current_loc[0], current_loc[1], self.airport_coords[0], self.airport_coords[1], transit_lookup, est_dep_mins
+                )
+
+                leave_hotel_time = airport_arrival_target - timedelta(minutes=airport_transit_mins)
+                
+                if current_clock < leave_hotel_time:
                     day_plan.append({
-                        "type": "free_time", "id": "free_time_hotel", "name": "Relax at Hotel / Grab Bags",
-                        "start_time": current_clock.strftime("%H:%M"), "end_time": leave_for_airport_time.strftime("%H:%M")
+                        "type": "free_time", "id": "free_time_hotel", "name": "Relax / Prep for Departure",
+                        "start_time": current_clock.strftime("%H:%M"), "end_time": leave_hotel_time.strftime("%H:%M")
                     })
                 
-                dep_key = f"{self.hotel_coords[0]:.5f},{self.hotel_coords[1]:.5f}->{self.airport_coords[0]:.5f},{self.airport_coords[1]:.5f}"
-                airport_transit_mins = 60
-                dep_leg_payload = {"is_verified": False, "mode": "estimated", "polyline": None, "steps": []}
-                
-                if dep_key in transit_lookup:
-                    active_mode = transit_lookup[dep_key].get("active_mode", "driving")
-                    mode_data = transit_lookup[dep_key].get("alternatives", {}).get(active_mode, {})
-                    airport_transit_mins = mode_data.get("duration_mins", 60) + 5
-                    dep_leg_payload = {"is_verified": True, "mode": active_mode, "polyline": mode_data.get("polyline"), "steps": mode_data.get("steps", [])}
+                day_plan.append({
+                    "type": "attraction", "id": "transit_to_airport", "name": "Transit to Airport", "bucket": "logistics",
+                    "start_time": leave_hotel_time.strftime("%H:%M"), "end_time": airport_arrival_target.strftime("%H:%M"),
+                    "transit_mins": airport_transit_mins, "latitude": self.airport_coords[0], "longitude": self.airport_coords[1],
+                    "transit_leg": dep_leg
+                })
 
                 day_plan.append({
-                    "type": "attraction", "id": "dep_airport", "name": "Transit to Airport & Depart", "bucket": "logistics",
-                    "start_time": leave_for_airport_time.strftime("%H:%M"), "end_time": self.departure_dt.strftime("%H:%M"),
-                    "transit_mins": airport_transit_mins, "unknown_hours_warning": False,
-                    "latitude": self.airport_coords[0], "longitude": self.airport_coords[1],
-                    "transit_leg": dep_leg_payload
+                    "type": "attraction", "id": "dep_airport", "name": "Airport Check-in & Security", "bucket": "logistics",
+                    "start_time": airport_arrival_target.strftime("%H:%M"), "end_time": self.departure_dt.strftime("%H:%M"),
+                    "transit_mins": 0, "latitude": self.airport_coords[0], "longitude": self.airport_coords[1],
+                    "unknown_hours_warning": False
                 })
                 
             schedule.append({"day_index": day_idx, "date": current_date.strftime("%Y-%m-%d"), "events": day_plan})
 
-        # Calculate excluded pool
+        # Calculate excluded pool tracking records
         assigned_ids = {pid for day_list in user_days_poi_ids for pid in day_list if isinstance(pid, int) or str(pid).isdigit()}
         excluded = {"must": [], "want": [], "optional": []}
         for p in pois:

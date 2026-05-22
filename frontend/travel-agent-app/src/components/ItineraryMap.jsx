@@ -4,7 +4,6 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // --- HELPER: Pure JavaScript Google Encoded Polyline Decoder ---
-// Decodes Google's compressed overview_polyline strings into arrays of [lat, lng] pairs
 function decodePolyline(encoded) {
     if (!encoded) return [];
     let points = [];
@@ -64,8 +63,25 @@ const createNumberedPin = (number, color) => {
     });
 };
 
+// --- HELPER: Dynamic Continuous Dash Pattern Generator ---
+// We use lineCap: 'round' to make all dashes soft and pill-shaped.
+// By avoiding purely isolated dots, every line stays continuous and easy to track.
+const getVerifiedLegDashPattern = (dayIdx, legIdx) => {
+    const patterns = [
+        '4, 6',             // Sleek, rapid short pill-dashes
+        '14, 6',            // Elegant long pill-segments
+        '12, 6, 0, 6',      // Premium long dash + circular dot sequence
+        '8, 5, 2, 5',       // Dynamic long-short alternating sequence
+        '16, 6, 4, 6',      // Broad block + distinct accent dash
+        '6, 5, 6, 5'        // Standard medium-spaced layout tracking
+    ];
+    const targetPatternIndex = (dayIdx + legIdx * 2) % patterns.length;
+    return patterns[targetPatternIndex];
+};
+
 export default function ItineraryMap({ schedule }) {
     const dayColors = ['#2563eb', '#9333ea', '#ea580c', '#16a34a', '#dc2626', '#0891b2'];
+    const ESTIMATED_LINE_COLOR = '#94a3b8';
 
     if (!schedule || schedule.length === 0) return null;
 
@@ -94,7 +110,6 @@ export default function ItineraryMap({ schedule }) {
                 {schedule.map((day, dIdx) => {
                     const color = dayColors[dIdx % dayColors.length];
                     
-                    // 1. Capture and structure all events that possess geographical anchors
                     const locations = day.events
                         .filter(evt => evt.latitude && evt.longitude)
                         .map(evt => ({
@@ -105,12 +120,11 @@ export default function ItineraryMap({ schedule }) {
                             startTime: evt.start_time,
                             endTime: evt.end_time,
                             bucket: evt.bucket,
-                            transitLeg: evt.transit_leg // Capture the routing data object
+                            transitLeg: evt.transit_leg 
                         }));
 
                     if (locations.length === 0) return null;
 
-                    // Micro-Jitter alignment logic to handle perfectly overlapping pins
                     const seenCoords = {};
                     const OFFSET = 0.00015; 
 
@@ -135,29 +149,42 @@ export default function ItineraryMap({ schedule }) {
                             
                             {/* --- HYBRID PATH RENDERING PIPELINE --- */}
                             {jitteredLocations.map((loc, idx) => {
-                                // The transit leg represents the path *to* this marker from the previous stop
                                 if (idx === 0) return null; 
                                 const prevLoc = jitteredLocations[idx - 1];
                                 const leg = loc.transitLeg;
 
-                                // Look for true Google verified overview polyline geometry parameters
+                                // CASE 1: Google Verified Street Path -> Fine, stylized continuous pill-dashes
                                 if (leg && leg.is_verified && leg.polyline) {
                                     const roadPositions = decodePolyline(leg.polyline);
+                                    const dynamicDashPattern = getVerifiedLegDashPattern(dIdx, idx);
+                                    
                                     return (
                                         <Polyline 
                                             key={`road-leg-${idx}`}
                                             positions={roadPositions}
-                                            pathOptions={{ color: color, weight: 5, opacity: 0.85 }} 
+                                            pathOptions={{ 
+                                                color: color, 
+                                                weight: 2,
+                                                opacity: 0.4,
+                                                lineCap: 'round',
+                                                lineJoin: 'round',
+                                                dashArray: dynamicDashPattern
+                                            }} 
                                         />
                                     );
                                 }
 
-                                // Fallback Strategy: Draw your quick dashed sandbox line for unmatched nodes
+                                // CASE 2: Sandbox Fallback/Estimate -> Ultra-fine neutral slate tracking dashes
                                 return (
                                     <Polyline 
                                         key={`est-leg-${idx}`}
                                         positions={[prevLoc.latLng, loc.latLng]}
-                                        pathOptions={{ color: color, weight: 4, opacity: 0.6, dashArray: '6, 8' }} 
+                                        pathOptions={{ 
+                                            color: ESTIMATED_LINE_COLOR, 
+                                            weight: 1.5,          // Subdued weight for non-synced movements
+                                            opacity: 0.5, 
+                                            dashArray: '2, 5' 
+                                        }} 
                                     />
                                 );
                             })}
