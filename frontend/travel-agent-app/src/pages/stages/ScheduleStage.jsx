@@ -50,7 +50,7 @@ import ItineraryMap from '../../components/ItineraryMap';
 
 // --- HELPER COMPONENTS ---
 
-function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDraggable, isOverlay, hideBucketTag }) {
+function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDraggable, isOverlay, hideBucketTag, dayIndex, onTransitModeChange }) {
     const isMeal = event.type === 'meal';
     const isFreeTime = event.type === 'free_time';
     const isLogistics = event.bucket === 'logistics';
@@ -141,7 +141,10 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
                                         <button
                                             type="button"
                                             key={modeKey}
-                                            onClick={() => setActiveMode(modeKey)}
+                                            onClick={() => {
+                                                setActiveMode(modeKey);                         // instant local UI
+                                                onTransitModeChange?.(dayIndex, event.id, modeKey); // trigger recalculation
+                                            }}
                                             className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-all ${
                                                 activeMode === modeKey
                                                     ? 'bg-gray-900 text-white shadow-sm'
@@ -298,7 +301,7 @@ function EventCard({ event, isManualMode, dragListeners, dragAttributes, isDragg
     );
 }
 
-function SortableEventCard({ event, isManualMode, hideBucketTag }) {
+function SortableEventCard({ event, isManualMode, hideBucketTag, dayIndex, onTransitModeChange }) {
     const isDraggable = isManualMode && event?.type === 'attraction' && event?.bucket !== 'logistics';
     const eventName = event?.name || 'Unknown';
     const safeId = event?.id?.toString() || `fallback-${eventName.replace(/\s+/g, '-')}`;
@@ -326,6 +329,8 @@ function SortableEventCard({ event, isManualMode, hideBucketTag }) {
                 dragAttributes={attributes} 
                 isDraggable={isDraggable}
                 hideBucketTag={hideBucketTag}
+                dayIndex={dayIndex}
+                onTransitModeChange={onTransitModeChange}
             />
         </div>
     );
@@ -648,6 +653,28 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
     }
     const allExcludedIds = allExcludedItems.map(item => item.id?.toString() || `fallback-${item.name}`);
 
+
+    const handleTransitModeChange = async (dayIndex, legKey, mode) => {
+        setIsGenerating(true);
+        try {
+            const res = await fetchWithAuth(`${API_BASE_URL}/itinerary/schedule/setTransitMode`, {
+                session_id: session.id,
+                day: dayIndex,
+                leg_key: legKey,
+                mode: mode
+            }, "POST");
+            if (res.ok) {
+                const data = await res.json();
+                if (data.schedule) setLocalSchedule(data.schedule);
+                if (data.excluded_pois) setLocalExcluded(data.excluded_pois);
+            }
+        } catch (error) {
+            console.error("Failed to set transit mode", error);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     return (
         <DndContext 
             sensors={sensors} 
@@ -832,7 +859,13 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                                             <SortableContext id={safeDayId} items={draggableIds} strategy={verticalListSortingStrategy}>
                                                 <div className="pl-4 border-l-2 border-gray-200 ml-4 space-y-4 py-2 min-h-[50px]">
                                                     {day.events.map((evt, eIdx) => (
-                                                        <SortableEventCard key={`${evt.id || eIdx}-${eIdx}`} event={evt} isManualMode={isManualMode} />
+                                                        <SortableEventCard 
+                                                            key={`${evt.id || eIdx}-${eIdx}`} 
+                                                            event={evt} 
+                                                            isManualMode={isManualMode}
+                                                            dayIndex={day.day_index}
+                                                            onTransitModeChange={handleTransitModeChange}
+                                                        />
                                                     ))}
                                                 </div>
                                             </SortableContext>

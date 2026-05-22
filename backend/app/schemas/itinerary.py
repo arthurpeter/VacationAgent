@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -47,3 +47,9 @@ class TripDetailsRequest(BaseModel):
 class CustomTimelineRequest(BaseModel):
     session_id: int
     user_timeline: list[list[int]]
+
+class TransitModeRequest(BaseModel):
+    session_id: int
+    day: int
+    leg_key: Any
+    mode: str

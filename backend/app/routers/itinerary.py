@@ -13,6 +13,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 from app.services.agents.itinerary_graph import generate_graph as generate_itinerary_graph, run_itinerary_graph
 from app.schemas.itinerary import *
 from app.services.agents.mobility_strategies import MobilityConfig
+from copy import deepcopy
 
 log = get_logger(__name__)
 
@@ -390,3 +391,88 @@ async def update_custom_timeline(
     except Exception as e:
         log.error(f"Custom timeline update failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error updating custom timeline")
+    
+@router.post("/schedule/setTransitMode")
+async def set_transit_mode(
+    data: TransitModeRequest,
+    db: AsyncSession = Depends(get_db),
+    checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
+    token: TokenPayload = Depends(access_token_header)
+):
+    stmt = select(models.VacationSession).where(
+        models.VacationSession.id == data.session_id,
+        models.VacationSession.user_id == token.sub
+    )
+    result = await db.execute(stmt)
+    session = result.scalar_one_or_none()
+
+    if not session:
+        log.warning(f"Unauthorized transit mode access: {data.session_id} by user {token.sub}")
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    graph = generate_itinerary_graph(checkpointer)
+    config = {"configurable": {"thread_id": f"itinerary_{data.session_id}"}}
+
+    try:
+        current_state = await graph.aget_state(config)
+        schedule = current_state.values.get("schedule", {})
+
+        # Update the transit mode in the schedule for specific leg
+        updated = False
+        for day in schedule:
+            if day.get("day_index") == data.day:
+                for event in day.get("events", []):
+                    if event.get("id") == data.leg_key:
+                        leg = event.get("transit_leg", {})
+                        alternatives = leg.get("alternatives", {})
+
+                        if data.mode in alternatives:
+                            # Switch the active mode
+                            leg["mode"] = data.mode
+                            # Update the top‑level transit duration to match the new mode
+                            event["transit_mins"] = alternatives[data.mode].get(
+                                "duration_mins", event.get("transit_mins", 0)
+                            )
+                            leg["steps"] = alternatives[data.mode].get("steps", [])
+                            leg["polyline"] = alternatives[data.mode].get("polyline", "")
+                            leg["distance_text"] = alternatives[data.mode].get("distance_text", {})
+                            updated = True
+                        break
+            if updated:
+                break
+
+        if not updated:
+            raise HTTPException(status_code=404, detail="Leg not found")
+        
+        user_timeline = []
+        for day in schedule:
+            day_ids = [
+                e["id"]
+                for e in day.get("events", [])
+                if e.get("type") == "attraction" and e.get("bucket") != "logistics"
+            ]
+            user_timeline.append(day_ids)
+
+        await graph.aupdate_state(
+            config, 
+            {"schedule": schedule, "user_timeline": user_timeline}
+        )
+
+        final_state = await run_itinerary_graph(
+            session_id=data.session_id,
+            action="recalculate_timeline",
+            stage=2,
+            query="",
+            db=db,
+            checkpointer=checkpointer
+        )
+
+        return {
+            "status": "success", 
+            "schedule": final_state.get("schedule"),
+            "excluded_pois": final_state.get("excluded_pois")
+        }
+    
+    except Exception as e:
+        log.error(f"Transit mode update failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error updating transit mode")

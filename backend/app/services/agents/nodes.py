@@ -798,21 +798,10 @@ async def _recalculate_timeline(state: ItineraryState) -> dict:
                 if None not in (lat1, lng1, lat2, lng2):
                     leg_key = f"{lat1:.5f},{lng1:.5f}->{lat2:.5f},{lng2:.5f}"
                     active_mode = leg_state.get("mode", "transit")
-                    
-                    final_mins = curr_evt.get("transit_mins", 0)
-                    buffer = 5 if active_mode in ["transit", "uber", "driving"] else 0
-                    raw_duration_mins = max(0, final_mins - buffer)
-                    
+                                        
                     existing_transit_legs[leg_key] = {
                         "active_mode": active_mode,
-                        "alternatives": {
-                            active_mode: {
-                                "duration_mins": raw_duration_mins,
-                                "polyline": leg_state.get("polyline"),
-                                "steps": leg_state.get("steps", []),
-                                "distance_text": leg_state.get("distance_text", "")
-                            }
-                        }
+                        "alternatives": leg_state.get("alternatives", {})
                     }
 
     try:
