@@ -217,7 +217,9 @@ async def get_initial_itinerary_state(db: AsyncSession, session_id: int) -> Itin
         "currency": session.currency,
         "budget": session.budget,
         "flight_price": session.flight_price,
-        "accomodation_price": session.accomodation_price
+        "accomodation_price": session.accomodation_price,
+        "airport_name": session.airport_name,
+        "hotel_address": session.accommodation_address,
     }
 
     hotel_coords = (float(session.accommodation_latitude), float(session.accommodation_longitude)) if session.accommodation_latitude else (0.0, 0.0)

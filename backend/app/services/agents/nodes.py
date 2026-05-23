@@ -874,7 +874,6 @@ async def _recalculate_timeline(state: ItineraryState) -> dict:
 async def _sync_transit(state: ItineraryState) -> dict:
     print("Executing _sync_transit node processing layer...")
     
-    # 1. Parse driving preference status out of mobility config structure
     mobility_config = state.get("mobility_config") or {}
     strategies = mobility_config.get("strategies", {})
     rental_car = strategies.get("rental_car", {})
@@ -933,7 +932,6 @@ async def _sync_transit(state: ItineraryState) -> dict:
         try: return float(val)
         except (ValueError, TypeError): return None
 
-    # 2. Loop through current schedule sequence to map active consecutive legs
     for day in current_schedule:
         day_date_str = day.get("date")
         is_weekend = False
@@ -945,7 +943,6 @@ async def _sync_transit(state: ItineraryState) -> dict:
                 
         events = day.get("events") or []
         
-        # --- FIX: Extract a clean chronological sequence of locations that have coordinates ---
         geo_events = []
         for evt in events:
             lat = safe_float(evt.get("latitude"))
@@ -954,10 +951,10 @@ async def _sync_transit(state: ItineraryState) -> dict:
                 geo_events.append({
                     "latitude": lat,
                     "longitude": lng,
-                    "end_time": evt.get("end_time", "08:00")
+                    "end_time": evt.get("end_time", "08:00"),
+                    "id": evt.get("id"),
                 })
         
-        # Build consecutive routing keys using the filtered list of locations
         for i in range(1, len(geo_events)):
             prev_evt = geo_events[i - 1]
             curr_evt = geo_events[i]
@@ -967,6 +964,15 @@ async def _sync_transit(state: ItineraryState) -> dict:
             
             time_str = prev_evt["end_time"]
             leg_key = f"{lat1:.5f},{lng1:.5f}->{lat2:.5f},{lng2:.5f}"
+
+            origin_name = None
+            destination_name = None
+
+            if prev_evt.get("id") == "arr_airport" or "airport" in prev_evt.get("name", "").lower():
+                origin_name = state.get('data', {}).get('airport_name')
+
+            if curr_evt.get("id") == "dep_airport" or "airport" in curr_evt.get("name", "").lower():
+                destination_name = state.get('data', {}).get('airport_name')
             
             if leg_key not in task_keys:
                 task_keys.append(leg_key)
@@ -976,11 +982,12 @@ async def _sync_transit(state: ItineraryState) -> dict:
                         destination_coords=(lat2, lng2),
                         time_str=time_str,
                         is_weekend=is_weekend,
-                        driving_enabled=driving_enabled
+                        driving_enabled=driving_enabled,
+                        origin_name=origin_name,
+                        destination_name=destination_name
                     )
                 )
 
-    # 3. Fire parallel asynchronous pipeline gather across all routing legs
     routing_results = await asyncio.gather(*tasks) if tasks else []
     
     existing_transit_legs = {}
@@ -995,7 +1002,6 @@ async def _sync_transit(state: ItineraryState) -> dict:
                 "alternatives": bundle_data
             }
 
-    # 4. Extract strict current layout user_timeline matrix
     user_days_poi_ids = []
     for day in current_schedule:
         day_ids = []
@@ -1007,7 +1013,6 @@ async def _sync_transit(state: ItineraryState) -> dict:
                 day_ids.append(int(evt_id))
         user_days_poi_ids.append(day_ids)
 
-    # 5. Extract environment parameters safely to build the ScheduleEngine
     trip_details = state.get("trip_details") or {}
     
     def parse_coords(val) -> tuple:
@@ -1046,7 +1051,6 @@ async def _sync_transit(state: ItineraryState) -> dict:
         lunch_duration_mins=int(lunch_duration_mins)
     )
 
-    # 6. Execute complete recalculation waterfall pass with geo-enriched engine_pois
     recalc_result = engine.recalculate_user_timeline(
         user_days_poi_ids=user_days_poi_ids,
         pois=engine_pois,  

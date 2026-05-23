@@ -49,14 +49,16 @@ async def fetch_google_directions(
     origin_coords: Tuple[float, float], 
     destination_coords: Tuple[float, float], 
     mode: str, 
-    normalized_dt: datetime
+    normalized_dt: datetime,
+    origin_name: Optional[str] = None,
+    destination_name: Optional[str] = None
 ) -> Optional[Dict[str, Any]]:
     """
     Fetches real-world navigation metadata between precise coordinates.
     Returns a minimized, high-fidelity payload optimized for React rendering and Redis space.
     """
-    origin = f"{origin_coords[0]},{origin_coords[1]}"
-    destination = f"{destination_coords[0]},{destination_coords[1]}"
+    origin = origin_name if origin_name else f"{origin_coords[0]},{origin_coords[1]}"
+    destination = destination_name if destination_name else f"{destination_coords[0]},{destination_coords[1]}"
     
     timestamp = int(normalized_dt.timestamp())
     
@@ -142,7 +144,9 @@ async def get_transit_bundle_for_leg(
     destination_coords: Tuple[float, float],
     time_str: str,
     is_weekend: bool,
-    driving_enabled: bool = False
+    driving_enabled: bool = False,
+    origin_name: Optional[str] = None,
+    destination_name: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Orchestrates parallel routing queries based on user mobility configuration rules.
@@ -153,30 +157,25 @@ async def get_transit_bundle_for_leg(
     
     bundle = {}
 
-    # CASE A: User has a rental car -> Only care about driving metrics
     if driving_enabled:
         driving_data = await fetch_google_directions(
-            origin_coords, destination_coords, "driving", normalized_dt
+            origin_coords, destination_coords, "driving", normalized_dt, origin_name, destination_name
         )
         if driving_data:
             bundle["driving"] = driving_data
         return bundle
 
-    # CASE B: Standard Traveler -> Fetch Transit and Driving (to map out Uber alternatives) in parallel
-    # This runs both requests concurrently over your Redis decorator
-    transit_task = fetch_google_directions(origin_coords, destination_coords, "transit", normalized_dt)
-    driving_task = fetch_google_directions(origin_coords, destination_coords, "driving", normalized_dt)
-    
+    transit_task = fetch_google_directions(origin_coords, destination_coords, "transit", normalized_dt, origin_name, destination_name)
+    driving_task = fetch_google_directions(origin_coords, destination_coords, "driving", normalized_dt, origin_name, destination_name)
+
     transit_data, driving_data = await asyncio.gather(transit_task, driving_task)
     
     if transit_data:
         bundle["transit"] = transit_data
         
     if driving_data:
-        # Clone the driving metadata structure to build the custom Uber proxy leg
         uber_data = dict(driving_data)
         uber_data["mode"] = "uber"
-        # Apply your wait-time padding heuristic (+5 minutes buffer)
         uber_data["duration_mins"] = driving_data["duration_mins"] + 5
         
         bundle["uber"] = uber_data

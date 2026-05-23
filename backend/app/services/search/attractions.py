@@ -173,18 +173,18 @@ if __name__ == "__main__":
             print("❌ ERROR: OPENTRIPMAP_API_KEY is missing from your config!")
             return
 
-        city = "Paris"
+        city = "Rome"
         print(f"\n[1] Fetching coordinates for '{city}'...")
-        coords = await get_city_coordinates(city, "FR")
+        coords = await get_city_coordinates(city, "IT")
         
         if not coords:
             print("Stopping tests: Could not get coordinates.")
             return
 
-        lat, lon = coords["lat"], coords["lon"]
+        lat, lon = 41.8045, 12.2508
         print(f"Result: {lat}, {lon}")
 
-        query = "Eiffel Tower"
+        query = "Leonardo Da Vinci (Fiumicino) International Airport"
         print(f"\n[2] Autosuggest searching for '{query}'...")
         suggestions = await autosuggest_places(query, lat, lon, limit=10, min_rate="2")
         
