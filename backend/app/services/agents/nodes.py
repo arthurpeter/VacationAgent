@@ -737,7 +737,7 @@ async def _generate_schedule(state: ItineraryState) -> dict:
                 "image_url": db_poi.image_url
             })
             
-        log.info(engine_pois)
+        #log.info(engine_pois)
 
         arrival_dt = datetime.fromisoformat(trip_details["arrival_dt"])
         departure_dt = datetime.fromisoformat(trip_details["departure_dt"])
