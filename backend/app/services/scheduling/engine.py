@@ -757,9 +757,8 @@ class ScheduleEngine:
             )
 
             if is_excursion_day and real_pois_today:
-                # Shift wakeup earlier by the same amount as generate_schedule:
-                # proportional to the max one-way transit, capped at 2 hours,
-                # but never before 05:00.
+                # Shift wakeup earlier proportional to max one-way transit,
+                # capped at 2 hours, never before 05:00.
                 max_transit_mins = max(
                     self._get_base_transit_mins(
                         self.hotel_coords[0], self.hotel_coords[1],
@@ -770,6 +769,31 @@ class ScheduleEngine:
                 shift_mins = min(max_transit_mins, 120)
                 earliest_allowed = datetime.combine(current_date, time(5, 0))
                 wakeup_dt = max(ideal_wakeup_dt - timedelta(minutes=shift_mins), earliest_allowed)
+
+            elif day_idx == total_days - 1:
+                # DEPARTURE DAY: mirror generate_schedule's logic — if the
+                # default ready time would leave us no time to reach the airport,
+                # pull wakeup back so we can still fit POIs before the flight.
+                est_dep_mins = self._get_base_transit_mins(
+                    self.hotel_coords[0], self.hotel_coords[1],
+                    self.airport_coords[0], self.airport_coords[1]
+                )
+                dep_transit_mins, _ = self._resolve_transit_leg(
+                    self.hotel_coords[0], self.hotel_coords[1],
+                    self.airport_coords[0], self.airport_coords[1],
+                    transit_lookup, est_dep_mins
+                )
+                # Latest we can leave the hotel and still make pre-flight buffer
+                day_end_limit = self.departure_dt - timedelta(minutes=self.pre_flight_buffer_mins)
+                latest_leave_time = day_end_limit - timedelta(minutes=dep_transit_mins)
+
+                tentative_ready = ideal_wakeup_dt + timedelta(minutes=90)
+                if tentative_ready > latest_leave_time:
+                    # Flight is early — pull the whole morning back
+                    wakeup_dt = latest_leave_time - timedelta(minutes=90)
+                else:
+                    wakeup_dt = ideal_wakeup_dt
+
             else:
                 wakeup_dt = ideal_wakeup_dt
 
@@ -810,26 +834,14 @@ class ScheduleEngine:
 
             # ----------------------------------------------------------------
             # "START DAY AT HOTEL" BLOCK (non-arrival days)
-            # The end time of this block is when we physically leave the hotel,
-            # i.e. ready_dt minus nothing — we leave as soon as we're ready.
-            # For excursion days the wakeup shift already pulled ready_dt back.
+            # End time = ready_dt, i.e. when we physically walk out the door.
+            # Wakeup is already adjusted above for excursion/departure days.
             # ----------------------------------------------------------------
             if day_idx != 0:
                 if first_real_poi is not None:
-                    est_first_transit = self._get_base_transit_mins(
-                        self.hotel_coords[0], self.hotel_coords[1],
-                        first_real_poi['latitude'], first_real_poi['longitude']
-                    )
-                    first_transit_mins, _ = self._resolve_transit_leg(
-                        self.hotel_coords[0], self.hotel_coords[1],
-                        first_real_poi['latitude'], first_real_poi['longitude'],
-                        transit_lookup, est_first_transit
-                    )
-                    # We leave the hotel at ready_dt; the transit clock starts ticking.
-                    leave_hotel_dt = ready_dt
                     day_plan.append({
                         "type": "attraction", "id": f"start_hotel_{day_idx}", "name": "Start Day at Hotel", "bucket": "logistics",
-                        "start_time": wakeup_dt.strftime("%H:%M"), "end_time": leave_hotel_dt.strftime("%H:%M"),
+                        "start_time": wakeup_dt.strftime("%H:%M"), "end_time": ready_dt.strftime("%H:%M"),
                         "transit_mins": 0, "unknown_hours_warning": False,
                         "latitude": self.hotel_coords[0], "longitude": self.hotel_coords[1]
                     })
