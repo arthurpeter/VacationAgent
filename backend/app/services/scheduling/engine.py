@@ -25,14 +25,12 @@ class ScheduleEngine:
         self.airport_egress_mins = 90
         self.hotel_checkin_mins = 45
         self.pre_flight_buffer_mins = 180
-        
-        # User's default wakeup
+
         wakeup_t = datetime.strptime(wakeup_time, "%H:%M").time()
         self.wakeup_delta = timedelta(hours=wakeup_t.hour, minutes=wakeup_t.minute)
-        
+
         self.priority_weights = {"must": 100000, "want": 25000, "optional": 10000}
-        
-        # PACING SYSTEM: Based on Wall-Clock Curfews
+
         self.pace_profiles = {
             "relaxed": {"end_time": time(18, 30)},
             "moderate": {"end_time": time(20, 30)},
@@ -124,12 +122,10 @@ class ScheduleEngine:
         return fallback
 
     def _cluster_pois(self, pois: List[Dict], k: int) -> Dict[int, List[Dict]]:
-        # Sklearn implementation for robust geographic grouping
         if not pois or k <= 1: return {0: pois}
         if k >= len(pois): return {i: [p] for i, p in enumerate(pois)}
         
         coords = np.array([[p['latitude'], p['longitude']] for p in pois])
-        # n_init='auto' suppresses sklearn warnings, random_state ensures consistent output
         kmeans = KMeans(n_clusters=k, random_state=42, n_init='auto').fit(coords)
         
         clusters = {i: [] for i in range(k)}
@@ -138,13 +134,6 @@ class ScheduleEngine:
             
         return clusters
 
-    # -------------------------------------------------------------------------
-    # FIX 2: BALANCED CLUSTERING
-    # Post-processes K-Means output to equalise total visit duration per cluster
-    # while preserving geographic coherence. A POI is only moved from the most
-    # loaded cluster to the least loaded one when it is geographically closer to
-    # (or within max_distance_km of) the destination cluster's centroid.
-    # -------------------------------------------------------------------------
     def _balance_clusters(
         self, 
         clusters: Dict[int, List[Dict]], 
@@ -170,7 +159,6 @@ class ScheduleEngine:
         if len(clusters) <= 1:
             return clusters
 
-        # Work on a mutable deep copy so the original is never modified.
         balanced = {k: list(v) for k, v in clusters.items()}
 
         def _cluster_load(pois: List[Dict]) -> int:
@@ -188,23 +176,18 @@ class ScheduleEngine:
             max_k = max(loads, key=loads.get)
             min_k = min(loads, key=loads.get)
 
-            # Stop when the imbalance is within the acceptable tolerance.
             if loads[max_k] - loads[min_k] <= tolerance_mins:
                 break
 
-            # Only clusters with at least 2 POIs can donate one.
             if len(balanced[max_k]) < 2:
                 break
 
             dest_centroid = _centroid(balanced[min_k])
 
-            # Among non-must candidates in the heavy cluster, pick the one
-            # whose distance to the destination centroid is smallest (and
-            # within the allowed radius). Prefer optional > want > must.
             priority_order = {"optional": 0, "want": 1, "must": 2}
             candidates = [
                 p for p in balanced[max_k]
-                if p.get('bucket', 'want').lower() != 'must'  # never force-move must-sees
+                if p.get('bucket', 'want').lower() != 'must'
                 and self._get_real_distance_km(
                     p['latitude'], p['longitude'],
                     dest_centroid[0], dest_centroid[1]
@@ -212,9 +195,8 @@ class ScheduleEngine:
             ]
 
             if not candidates:
-                break  # Nothing movable within the geographic constraint — stop.
+                break
 
-            # Sort by (priority ascending so optional moves first, then distance)
             candidates.sort(key=lambda p: (
                 priority_order.get(p.get('bucket', 'want').lower(), 1),
                 self._get_real_distance_km(
@@ -237,9 +219,6 @@ class ScheduleEngine:
 
         return balanced
 
-    # -------------------------------------------------------------------------
-    # OR-TOOLS COP SOLVER
-    # -------------------------------------------------------------------------
     def _solve_day_route(self, day_nodes: List[Dict], start_min: int, end_min: int, transit_lookup: dict):
         num_nodes = len(day_nodes)
         if num_nodes < 2: return []
@@ -336,9 +315,6 @@ class ScheduleEngine:
         
         return route
 
-    # -------------------------------------------------------------------------
-    # SCHEDULE GENERATOR 
-    # -------------------------------------------------------------------------
     def generate_schedule(self, pois: List[Dict[str, Any]], 
                           existing_transit_legs: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
         if not pois: return {"status": "success", "schedule": [], "excluded": {}}
@@ -373,34 +349,16 @@ class ScheduleEngine:
             else:
                 log.warning(f"More day trips ({len(excursion_groups)}) than available full days ({len(full_days)})!")
 
-        # --- CLUSTER AND BALANCE HOME POIS ---
-        # K-Means groups POIs geographically so that each day's cluster has
-        # spatially coherent POIs (keeping transit times low).
-        # _balance_clusters then equalises total visit duration across clusters
-        # so no single day is overloaded before the solver even runs.
         home_days = [d for d in full_days if d not in excursion_day_map]
         k_clusters = len(home_days) if home_days else 1
         raw_clusters = self._cluster_pois(home_pois, k_clusters)
         balanced_clusters = self._balance_clusters(raw_clusters)
 
-        # Build a set of cluster-preferred POI ids per home day.
-        # day_cluster_hint[day_idx] = set of poi ids that K-Means assigned here.
-        # Used only to sort the daily_pool so the solver sees the "local" POIs
-        # first — but it never prevents non-cluster POIs from being considered
-        # (that's the dynamic spillover guarantee).
         day_cluster_hint: Dict[int, set] = {}
         for i, day_idx in enumerate(home_days):
             cluster_pois = balanced_clusters.get(i, [])
             day_cluster_hint[day_idx] = {p['id'] for p in cluster_pois}
 
-        # FIX 1: DYNAMIC SPILLOVER
-        # A single flat list of all home POIs replaces the old
-        # clustered_home_pois + unassigned_home_pois + cluster_idx triple.
-        # Every home day always receives ALL not-yet-assigned home POIs as
-        # candidates. The solver decides what fits; nothing is ever silently
-        # skipped because it "belongs" to a future cluster.
-        # (The cluster hint above still biases ordering to favour geographic
-        # coherence without hard-binding any POI to a specific day.)
         remaining_home_pois: List[Dict] = list(home_pois)
 
         schedule = []
@@ -414,7 +372,6 @@ class ScheduleEngine:
             base_dt = datetime.combine(current_date, time.min)
             day_plan = []
             
-            # --- DAY BOUNDARIES AND LOGISTICS ---
             if day_idx == 0:
                 wakeup_dt = datetime.combine(current_date, time()) + self.wakeup_delta
                 ready_dt = wakeup_dt + timedelta(minutes=90)
@@ -503,17 +460,10 @@ class ScheduleEngine:
             end_limit_min = day_end_limit.hour * 60 + day_end_limit.minute
             end_min = end_limit_min
             
-            # --- BUILD SOLVER NODES ---
             if is_excursion:
                 daily_pool = [p for p in excursion_day_map[day_idx] if p['id'] not in assigned_ids]
 
             elif day_idx in home_days:
-                # FIX 1: Dynamic spillover in action.
-                # All not-yet-assigned home POIs are eligible today.
-                # We sort so that POIs in this day's geographic cluster come
-                # first — the solver then tends to build a coherent local route
-                # while still being free to pick up any stragglers from other
-                # clusters that happen to fit.
                 hint = day_cluster_hint.get(day_idx, set())
                 unassigned = [p for p in remaining_home_pois if p['id'] not in assigned_ids]
                 daily_pool = (
@@ -522,7 +472,6 @@ class ScheduleEngine:
                 )
 
             else:
-                # Arrival / departure day with no excursion: no home POI pool.
                 daily_pool = []
                 
             nodes = []
@@ -552,7 +501,6 @@ class ScheduleEngine:
 
             route = self._solve_day_route(nodes, start_min, end_min, transit_lookup)
 
-            # --- TRANSLATE ROUTE TO DAY PLAN ---
             if route and len(route) >= 2:
                 if day_idx != 0:
                     leave_hotel_dt = base_dt + timedelta(minutes=route[0]['dep_min'])
@@ -581,7 +529,6 @@ class ScheduleEngine:
                     
                     time_gap = curr_r['arr_min'] - (prev_r['dep_min'] + t_mins)
                     
-                    # Absorb tiny wait times into transit to keep the itinerary clean.
                     if 0 < time_gap < 15:
                         t_mins += time_gap
                         time_gap = 0
@@ -641,11 +588,6 @@ class ScheduleEngine:
             if day_plan:
                 schedule.append({"day_index": day_idx, "date": current_date.strftime("%Y-%m-%d"), "events": day_plan})
 
-            # FIX 1: No more manual spillover append.
-            # remaining_home_pois is the full list; assigned_ids is the filter.
-            # The next day's daily_pool construction (above) handles everything.
-
-        # --- EXCLUDED CALCULATION ---
         excluded = {"must": [], "want": [], "optional": []}
         for p in pois:
             if p['id'] not in assigned_ids:
@@ -655,9 +597,6 @@ class ScheduleEngine:
 
         return {"status": "success", "schedule": schedule, "excluded": excluded}
 
-    # -------------------------------------------------------------------------
-    # RECALCULATE TIMELINE HELPERS
-    # -------------------------------------------------------------------------
     def _is_open_interval(self, arrival_dt: datetime, departure_dt: datetime, opening_hours_str: Any) -> tuple[bool, bool]:
         """
         Returns (is_open, is_unknown).
@@ -682,7 +621,6 @@ class ScheduleEngine:
             if day_hours is None or str(day_hours).lower() == "null": return True, True
             if "closed" in str(day_hours).lower(): return False, False
 
-            # Normalise to lowercase for the always-open variants
             day_str = str(day_hours).lower().strip()
             if "24/7" in day_str or "24 hours" in day_str or "00:00-24:00" in day_str or day_str == "24":
                 return True, False
@@ -712,7 +650,6 @@ class ScheduleEngine:
         total_days = (self.departure_dt.date() - self.arrival_dt.date()).days + 1
         transit_lookup = existing_transit_legs or {}
 
-        # Anchor string prefixes that are logistics placeholders, not real POIs
         _LOGISTICS_PREFIXES = ("start_", "return_", "arr_", "dep_", "transit_")
 
         def _is_logistics_id(pid) -> bool:
@@ -735,14 +672,6 @@ class ScheduleEngine:
             current_loc = self.hotel_coords
             lunch_taken = False
 
-            # ----------------------------------------------------------------
-            # WAKEUP / READY TIME
-            # For excursion days (any POI > 55 km from hotel) we mirror the
-            # same dynamic early-wakeup logic used in generate_schedule so
-            # that the "Start Day at Hotel" block and departure time are
-            # consistent whether the schedule was auto-generated or manually
-            # rearranged by the user.
-            # ----------------------------------------------------------------
             real_pois_today = _real_pois_for_day(day_poi_ids)
             first_real_poi = real_pois_today[0] if real_pois_today else None
 
@@ -757,8 +686,6 @@ class ScheduleEngine:
             )
 
             if is_excursion_day and real_pois_today:
-                # Shift wakeup earlier proportional to max one-way transit,
-                # capped at 2 hours, never before 05:00.
                 max_transit_mins = max(
                     self._get_base_transit_mins(
                         self.hotel_coords[0], self.hotel_coords[1],
@@ -771,9 +698,6 @@ class ScheduleEngine:
                 wakeup_dt = max(ideal_wakeup_dt - timedelta(minutes=shift_mins), earliest_allowed)
 
             elif day_idx == total_days - 1:
-                # DEPARTURE DAY: mirror generate_schedule's logic — if the
-                # default ready time would leave us no time to reach the airport,
-                # pull wakeup back so we can still fit POIs before the flight.
                 est_dep_mins = self._get_base_transit_mins(
                     self.hotel_coords[0], self.hotel_coords[1],
                     self.airport_coords[0], self.airport_coords[1]
@@ -783,13 +707,11 @@ class ScheduleEngine:
                     self.airport_coords[0], self.airport_coords[1],
                     transit_lookup, est_dep_mins
                 )
-                # Latest we can leave the hotel and still make pre-flight buffer
                 day_end_limit = self.departure_dt - timedelta(minutes=self.pre_flight_buffer_mins)
                 latest_leave_time = day_end_limit - timedelta(minutes=dep_transit_mins)
 
                 tentative_ready = ideal_wakeup_dt + timedelta(minutes=90)
                 if tentative_ready > latest_leave_time:
-                    # Flight is early — pull the whole morning back
                     wakeup_dt = latest_leave_time - timedelta(minutes=90)
                 else:
                     wakeup_dt = ideal_wakeup_dt
@@ -799,9 +721,6 @@ class ScheduleEngine:
 
             ready_dt = wakeup_dt + timedelta(minutes=90)
 
-            # ----------------------------------------------------------------
-            # ARRIVAL DAY LOGISTICS
-            # ----------------------------------------------------------------
             if day_idx == 0:
                 bags_claim_end = self.arrival_dt + timedelta(minutes=self.airport_egress_mins)
                 day_plan.append({
@@ -832,11 +751,6 @@ class ScheduleEngine:
             else:
                 current_clock = ready_dt
 
-            # ----------------------------------------------------------------
-            # "START DAY AT HOTEL" BLOCK (non-arrival days)
-            # End time = ready_dt, i.e. when we physically walk out the door.
-            # Wakeup is already adjusted above for excursion/departure days.
-            # ----------------------------------------------------------------
             if day_idx != 0:
                 if first_real_poi is not None:
                     day_plan.append({
@@ -846,7 +760,6 @@ class ScheduleEngine:
                         "latitude": self.hotel_coords[0], "longitude": self.hotel_coords[1]
                     })
                 else:
-                    # No attractions today — stay at hotel all day
                     day_plan.append({
                         "type": "attraction", "id": f"start_hotel_{day_idx}", "name": "Start Day at Hotel", "bucket": "logistics",
                         "start_time": wakeup_dt.strftime("%H:%M"), "end_time": ready_dt.strftime("%H:%M"),
@@ -855,9 +768,6 @@ class ScheduleEngine:
                     })
                     current_clock = ready_dt
 
-            # ----------------------------------------------------------------
-            # PROCESS EACH POI IN THE USER'S LIST
-            # ----------------------------------------------------------------
             for poi_id in day_poi_ids:
                 if _is_logistics_id(poi_id):
                     continue
@@ -866,7 +776,6 @@ class ScheduleEngine:
                 if not p:
                     continue
 
-                # Insert lunch when the clock crosses 13:00
                 if current_clock.hour >= 13 and not lunch_taken:
                     day_plan.append({
                         "type": "meal", "name": "Lunch Break",
@@ -876,7 +785,6 @@ class ScheduleEngine:
                     current_clock += timedelta(minutes=self.lunch_duration_mins)
                     lunch_taken = True
 
-                # Resolve transit from current position to this POI
                 est_mins = self._get_base_transit_mins(
                     current_loc[0], current_loc[1], p['latitude'], p['longitude']
                 )
@@ -902,9 +810,6 @@ class ScheduleEngine:
                 current_clock = dep_dt
                 current_loc = (p['latitude'], p['longitude'])
 
-            # ----------------------------------------------------------------
-            # RETURN TO HOTEL (non-final days, only if we actually went somewhere)
-            # ----------------------------------------------------------------
             if day_idx != total_days - 1 and first_real_poi is not None:
                 est_ret_mins = self._get_base_transit_mins(
                     current_loc[0], current_loc[1],
@@ -925,9 +830,6 @@ class ScheduleEngine:
                 })
                 current_clock = return_dt
 
-            # ----------------------------------------------------------------
-            # DEPARTURE DAY LOGISTICS
-            # ----------------------------------------------------------------
             if day_idx == total_days - 1:
                 airport_arrival_target = self.departure_dt - timedelta(minutes=self.pre_flight_buffer_mins)
                 est_dep_mins = self._get_base_transit_mins(
@@ -965,7 +867,9 @@ class ScheduleEngine:
                     pid = event["id"]
                     if isinstance(pid, int) or (isinstance(pid, str) and pid.isdigit()):
                         assigned_ids.add(int(pid) if isinstance(pid, str) else pid)
+
         excluded = {"must": [], "want": [], "optional": []}
+        
         for p in pois:
             if p['id'] not in assigned_ids:
                 bucket = p.get('bucket', 'optional').lower()
