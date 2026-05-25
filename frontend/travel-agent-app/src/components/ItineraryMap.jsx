@@ -81,6 +81,18 @@ const getVerifiedLegDashPattern = (dayIdx, legIdx) => {
 
 export default function ItineraryMap({ schedule }) {
     const dayColors = ['#2563eb', '#9333ea', '#ea580c', '#16a34a', '#dc2626', '#0891b2'];
+    const legColors = [
+        '#2563eb',
+        '#9333ea',
+        '#ea580c',
+        '#16a34a',
+        '#dc2626',
+        '#0891b2',
+        '#d97706',
+        '#0d9488',
+        '#7c3aed',
+        '#db2777',
+    ];
     const ESTIMATED_LINE_COLOR = '#94a3b8';
 
     if (!schedule || schedule.length === 0) return null;
@@ -157,15 +169,16 @@ export default function ItineraryMap({ schedule }) {
                                 if (leg && leg.is_verified && leg.polyline) {
                                     const roadPositions = decodePolyline(leg.polyline);
                                     const dynamicDashPattern = getVerifiedLegDashPattern(dIdx, idx);
+                                    const legColor = legColors[(idx - 1) % legColors.length];
                                     
                                     return (
                                         <Polyline 
                                             key={`road-leg-${idx}`}
                                             positions={roadPositions}
                                             pathOptions={{ 
-                                                color: color, 
+                                                color: legColor, 
                                                 weight: 2,
-                                                opacity: 0.4,
+                                                opacity: 0.5,
                                                 lineCap: 'round',
                                                 lineJoin: 'round',
                                                 dashArray: dynamicDashPattern

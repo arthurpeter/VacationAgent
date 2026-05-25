@@ -786,23 +786,30 @@ async def _recalculate_timeline(state: ItineraryState) -> dict:
     existing_transit_legs = {}
     for day in old_schedule:
         events = day.get("events") or []
-        for i in range(1, len(events)):
-            prev_evt = events[i - 1]
-            curr_evt = events[i]
+        last_geo_evt = None  # tracks last event that actually had coordinates
+        
+        for curr_evt in events:
+            lat2 = curr_evt.get("latitude")
+            lng2 = curr_evt.get("longitude")
             leg_state = curr_evt.get("transit_leg")
             
-            if leg_state and leg_state.get("is_verified"):
-                lat1, lng1 = prev_evt.get("latitude"), prev_evt.get("longitude")
-                lat2, lng2 = curr_evt.get("latitude"), curr_evt.get("longitude")
+            # A verified leg on curr_evt describes the transit FROM the last real
+            # geo-located event, skipping any coordinate-less events (meals, etc.)
+            if leg_state and leg_state.get("is_verified") and last_geo_evt is not None:
+                lat1 = last_geo_evt.get("latitude")
+                lng1 = last_geo_evt.get("longitude")
                 
                 if None not in (lat1, lng1, lat2, lng2):
                     leg_key = f"{lat1:.5f},{lng1:.5f}->{lat2:.5f},{lng2:.5f}"
                     active_mode = leg_state.get("mode", "transit")
-                                        
                     existing_transit_legs[leg_key] = {
                         "active_mode": active_mode,
                         "alternatives": leg_state.get("alternatives", {})
                     }
+            
+            # Advance the geo cursor only when this event actually has coordinates
+            if lat2 is not None and lng2 is not None:
+                last_geo_evt = curr_evt
 
     try:
         poi_ids = [p["id"] for p in pois_state]
