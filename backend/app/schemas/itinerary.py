@@ -19,6 +19,10 @@ class AddToBucketRequest(BaseModel):
     bucket: str
     location: Optional[str] = None
 
+class RemoveFromBucketRequest(BaseModel):
+    session_id: int
+    attraction_id: int
+
 class SearchAttractionsRequest(BaseModel):
     session_id: int
     query: Optional[str] = None

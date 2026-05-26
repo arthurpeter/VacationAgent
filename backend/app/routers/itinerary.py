@@ -15,6 +15,8 @@ from app.schemas.itinerary import *
 from app.services.agents.mobility_strategies import MobilityConfig
 from copy import deepcopy
 
+from app.models.global_attraction import GlobalAttraction
+
 log = get_logger(__name__)
 
 router = APIRouter(prefix="/itinerary", tags=["Itinerary"])
@@ -114,6 +116,12 @@ async def get_itinerary_state(
     
     return {k: v for k, v in state.values.items() if k in ui_keys}
 
+BUCKET_COLUMN_MAP = {
+    "must": GlobalAttraction.must_count,
+    "want": GlobalAttraction.want_count,
+    "optional": GlobalAttraction.optional_count
+}
+
 @router.post("/attractions/add-to-bucket")
 async def add_to_bucket(
     data: AddToBucketRequest,
@@ -140,9 +148,81 @@ async def add_to_bucket(
 
     pois = current_state.values.get("pois", [])
 
+    existing_poi = next((p for p in pois if p['id'] == data.attraction_id), None)
+    new_col = BUCKET_COLUMN_MAP.get(data.bucket.lower())
+
+    if existing_poi:
+        old_bucket = existing_poi.get("bucket", "want")
+        if old_bucket != data.bucket:
+            old_col = BUCKET_COLUMN_MAP.get(old_bucket.lower())
+            
+            if old_col is not None:
+                await db.execute(
+                    update(GlobalAttraction)
+                    .where(GlobalAttraction.id == data.attraction_id)
+                    .where(old_col > 0)
+                    .values({old_col: old_col - 1})
+                )
+            if new_col is not None:
+                await db.execute(
+                    update(GlobalAttraction)
+                    .where(GlobalAttraction.id == data.attraction_id)
+                    .values({new_col: new_col + 1})
+                )
+    else:
+        if new_col is not None:
+            await db.execute(
+                update(GlobalAttraction)
+                .where(GlobalAttraction.id == data.attraction_id)
+                .values({new_col: new_col + 1})
+            )
+    
+    await db.commit()
+
     new_poi = {"id": data.attraction_id, "bucket": data.bucket, "time_to_spend": data.time_to_spend, "name": data.name, "image_url": data.image_url, "location": data.location}
     updated_pois = [p for p in pois if p['id'] != data.attraction_id] + [new_poi]
 
+    await graph.aupdate_state(config, {"pois": updated_pois})
+    
+    return {"status": "success", "pois": updated_pois}
+
+@router.post("/attractions/remove-from-bucket")
+async def remove_from_bucket(
+    data: RemoveFromBucketRequest,
+    db: AsyncSession = Depends(get_db),
+    checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
+    token: TokenPayload = Depends(access_token_header)
+):
+    stmt = select(models.VacationSession).where(
+        models.VacationSession.id == data.session_id,
+        models.VacationSession.user_id == token.sub
+    )
+    result = await db.execute(stmt)
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Session or authorization invalid")
+
+    config = {"configurable": {"thread_id": f"itinerary_{data.session_id}"}}
+    graph = generate_itinerary_graph(checkpointer)
+    current_state = await graph.aget_state(config)
+    pois = current_state.values.get("pois", [])
+
+    target_poi = next((p for p in pois if p['id'] == data.attraction_id), None)
+    if not target_poi:
+        return {"status": "success", "pois": pois}
+
+    current_bucket = target_poi.get("bucket", "want")
+    target_col = BUCKET_COLUMN_MAP.get(current_bucket.lower())
+
+    if target_col is not None:
+        await db.execute(
+            update(GlobalAttraction)
+            .where(GlobalAttraction.id == data.attraction_id)
+            .where(target_col > 0)  # Academic protection gate
+            .values({target_col: target_col - 1})
+        )
+        await db.commit()
+
+    updated_pois = [p for p in pois if p['id'] != data.attraction_id]
     await graph.aupdate_state(config, {"pois": updated_pois})
     
     return {"status": "success", "pois": updated_pois}

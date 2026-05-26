@@ -247,7 +247,8 @@ async def picking_attractions(state: ItineraryState) -> dict:
             "recommended_duration_mins": p.recommended_duration_mins,
             "tod_preference": p.tod_preference,
             "id": p.id,
-            "opening_hours": p.opening_hours
+            "opening_hours": p.opening_hours,
+            "needs_reservation": p.needs_reservation
         }
 
     if action == "initial_fetch":
@@ -257,12 +258,16 @@ async def picking_attractions(state: ItineraryState) -> dict:
             stmt = select(GlobalAttraction).where(
                 GlobalAttraction.city.ilike(f"%{city}%") & 
                 GlobalAttraction.country.ilike(f"%{country}%")
-            ).limit(20)
+            ).order_by(GlobalAttraction.dynamic_relevance_rank().desc()).limit(20)
             result = await db.execute(stmt)
             existing_places = result.scalars().all()
 
             if len(existing_places) >= 10:
                 log.info(f"CACHE HIT: Showing {len(existing_places)} existing places from DB.")
+
+                hit_ids = [p.id for p in existing_places]
+                await GlobalAttraction.track_search_metrics(db, hit_ids)
+
                 updates["resolved_attractions"] = Overwrite([format_cached_poi(p) for p in existing_places])
                 return updates
 
@@ -280,6 +285,7 @@ async def picking_attractions(state: ItineraryState) -> dict:
 
             db_hits = []
             new_finds = []
+            loop_hit_ids = []
 
             for name in attraction_names:
                 poi_data = await autosuggest_places(name, coords["lat"], coords["lon"], limit=1)
@@ -292,6 +298,7 @@ async def picking_attractions(state: ItineraryState) -> dict:
 
                 if cached:
                     db_hits.append(format_cached_poi(cached))
+                    loop_hit_ids.append(cached.id)
                 else:
                     resolved = await get_place_details(xid)
                     if resolved:
@@ -300,6 +307,9 @@ async def picking_attractions(state: ItineraryState) -> dict:
                         new_finds.append(resolved)
                 
                 await asyncio.sleep(0.5)
+
+            if loop_hit_ids:
+                await GlobalAttraction.track_search_metrics(db, loop_hit_ids)
 
             updates.update({
                 "unresolved_attractions": new_finds,
@@ -330,6 +340,7 @@ async def picking_attractions(state: ItineraryState) -> dict:
 
         db_hits = []
         new_finds = []
+        custom_hit_ids = []
 
         async with SessionLocal() as db:
             for name in attraction_names:
@@ -344,6 +355,7 @@ async def picking_attractions(state: ItineraryState) -> dict:
                 if cached:
                     log.info(f"SMART CACHE HIT: {name} found in DB.")
                     db_hits.append(format_cached_poi(cached))
+                    custom_hit_ids.append(cached.id)
                 else:
                     log.info(f"NEW ATTRACTION: {name} not in DB, fetching OTM details...")
                     resolved = await get_place_details(xid)
@@ -353,6 +365,9 @@ async def picking_attractions(state: ItineraryState) -> dict:
                         new_finds.append(resolved)
                 
                 await asyncio.sleep(0.5)
+
+            if custom_hit_ids:
+                await GlobalAttraction.track_search_metrics(db, custom_hit_ids)
 
         updates.update({
             "unresolved_attractions": new_finds,
@@ -413,7 +428,8 @@ async def enrich_single_attraction_node(poi_data: dict) -> dict:
         "website_url": extracted_data.website_url or poi_data.get("website_url"),
         "city": extracted_data.city,
         "country": extracted_data.country,
-        "opening_hours": extracted_data.opening_hours.model_dump()
+        "opening_hours": extracted_data.opening_hours.model_dump(),
+        "needs_reservation": extracted_data.needs_reservation
     }
 
     return {"resolved_attractions": [enriched_poi]}
@@ -452,7 +468,8 @@ async def save_attractions_to_db(state: ItineraryState) -> dict:
                     price_tier=poi_data.get("price_tier"),
                     recommended_duration_mins=poi_data.get("recommended_duration_mins", 120),
                     tod_preference=poi_data.get("tod_preference"),
-                    opening_hours=poi_data.get("opening_hours")
+                    opening_hours=poi_data.get("opening_hours"),
+                    needs_reservation=poi_data.get("needs_reservation")
                 )
                 db.add(new_attraction)
                 await db.flush()

@@ -77,6 +77,9 @@ class AttractionEnrichmentSchema(BaseModel):
     opening_hours: OperatingHours = Field(
         description="The weekly opening hours for the attraction. Use the format 'HH:MM-HH:MM' for each day, or 'Closed' if not open that day."
     )
+    needs_reservation: bool = Field(
+        description="True if this place usually requires reserving tickets, passes, or time-slots weeks or days in advance."
+    )
 
 class TransitEnrichmentSchema(BaseModel):
     official_link: str = Field(description="The URL to the official city public transport website or tourist pass page.")

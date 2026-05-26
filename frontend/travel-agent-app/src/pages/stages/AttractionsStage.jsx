@@ -151,6 +151,11 @@ const DiscoveryCard = ({ poi, isAdded, onAdd, onShowDetails, isUpdating }) => {
           </div>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md uppercase tracking-wider">{poi.category}</span>
+            {poi.needs_reservation && (
+              <span className="text-[9px] font-black text-amber-700 bg-amber-50 border border-amber-200/60 px-2 py-0.5 rounded-md uppercase tracking-widest flex items-center gap-1 animate-pulse">
+                ⚠️ Reservation Required
+              </span>
+            )}
             <span className="text-[10px] text-gray-400 font-medium italic truncate">{poi.formatted_address || poi.city}</span>
           </div>
           <p className="text-xs text-gray-500 line-clamp-2 mb-4 leading-relaxed">{poi.description}</p>
@@ -296,6 +301,26 @@ export default function AttractionsStage({ gameState, session, onFinalize }) {
       }
     } catch (err) { console.error(err); } finally {
       setIsUpdatingBucket(null);
+    }
+  };
+
+  const handleRemoveFromBucket = async (attractionId) => {
+    try {
+      const payload = {
+        session_id: sessionId,
+        attraction_id: attractionId
+      };
+      const res = await fetchWithAuth(
+        `${API_BASE_URL}/itinerary/attractions/remove-from-bucket`, 
+        payload, 
+        "POST"
+      );
+      if (res && res.ok) {
+        const data = await res.json();
+        setItinerary(data.pois || []);
+      }
+    } catch (err) {
+      console.error("Error removing from bucket:", err);
     }
   };
 
@@ -468,7 +493,10 @@ export default function AttractionsStage({ gameState, session, onFinalize }) {
                             <p className="font-bold text-xs truncate leading-tight mb-1">{item.name}</p>
                             <p className="text-[10px] text-gray-400 font-black uppercase tracking-tighter">{item.time_to_spend} MINS</p>
                           </div>
-                          <button className="text-gray-600 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100 p-2">
+                          <button 
+                            onClick={() => handleRemoveFromBucket(item.id)}
+                            className="text-gray-600 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100 p-2"
+                          >
                             <Trash2 size={18} />
                           </button>
                         </div>

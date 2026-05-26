@@ -138,7 +138,7 @@ INSTRUCTIONS:
 """
 
 extraction_prompt = """
-You are an expert travel data agent. Your job is to accurately extract specific details about an attraction from raw web search results to fill our database.
+You are an expert travel data agent. Your job is to accurately extract specific details about an attraction from raw web search results or your knowledge(only if you are sure about it) to fill our database.
 
 ### ATTRACTION NAME:
 {name}
@@ -158,6 +158,7 @@ INSTRUCTIONS:
 2. Clean up the Messy Baseline Location. Output the standard, widely recognized ENGLISH name for the City and the standard 2-letter Country Code for the Country.
 3. Write a fresh, engaging 2-sentence travel description for the attraction.
 4. Weekly Opening Hours: Provide a JSON object with keys for all 7 days (monday-sunday).
+5. If the attraction typically requires reserving tickets, passes, or time slots weeks or days in advance, set needs_reservation to True. Otherwise, set it to False.
 """
 
 transit_extraction_prompt = """
