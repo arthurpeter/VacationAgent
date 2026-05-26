@@ -11,6 +11,8 @@ from ortools.constraint_solver import pywrapcp
 from app.core.logger import get_logger
 log = get_logger(__name__)
 
+CITY_DISTANCE_THRESHOLD_KM = 50
+
 class ScheduleEngine:
     def __init__(self, pace: str, arrival_dt: datetime, departure_dt: datetime, 
                  hotel_coords: tuple, airport_coords: tuple,
@@ -323,7 +325,7 @@ class ScheduleEngine:
 
         home_pois, excursion_pois = [], []
         for p in pois:
-            if self._get_real_distance_km(self.hotel_coords[0], self.hotel_coords[1], p['latitude'], p['longitude']) > 55:
+            if self._get_real_distance_km(self.hotel_coords[0], self.hotel_coords[1], p['latitude'], p['longitude']) > CITY_DISTANCE_THRESHOLD_KM:
                 excursion_pois.append(p)
             else:
                 home_pois.append(p)
@@ -681,7 +683,7 @@ class ScheduleEngine:
                 self._get_real_distance_km(
                     self.hotel_coords[0], self.hotel_coords[1],
                     p['latitude'], p['longitude']
-                ) > 55
+                ) > CITY_DISTANCE_THRESHOLD_KM
                 for p in real_pois_today
             )
 
@@ -869,7 +871,7 @@ class ScheduleEngine:
                         assigned_ids.add(int(pid) if isinstance(pid, str) else pid)
 
         excluded = {"must": [], "want": [], "optional": []}
-        
+
         for p in pois:
             if p['id'] not in assigned_ids:
                 bucket = p.get('bucket', 'optional').lower()
