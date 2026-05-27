@@ -945,7 +945,8 @@ export default function OptionsStage() {
                     currency: selectedHotel.currency,
                     latitude: selectedHotel.latitude,
                     longitude: selectedHotel.longitude,
-                    address: selectedHotel.address
+                    address: selectedHotel.address,
+                    name: selectedHotel.hotel_name
                 }, "POST").then(res => ({ type: 'hotel', res }))
             );
         }

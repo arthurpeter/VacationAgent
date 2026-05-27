@@ -64,8 +64,7 @@ class VacationSession(Base):
     accommodation_latitude = Column(Float, nullable=True)
     accommodation_longitude = Column(Float, nullable=True)
     accommodation_address = Column(String, nullable=True)
-    itinerary_data = Column(JSON, nullable=True)
-    transit_strategy = Column(JSON, nullable=True)
+    accommodation_name = Column(String, nullable=True)
 
     is_active = Column(Boolean, default=True, nullable=False)
     

@@ -695,6 +695,7 @@ async def book_accomodation(
                 accommodation_latitude=data.latitude,
                 accommodation_longitude=data.longitude,
                 accommodation_address=data.address,
+                accommodation_name=data.name,
             )
         )
         

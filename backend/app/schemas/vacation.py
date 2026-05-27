@@ -116,6 +116,7 @@ class AccomodationBookingRequest(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     address: Optional[str] = None
+    name: Optional[str] = None
 
 class AccomodationBookingResponse(BaseModel):
     """Schema for accomodation booking response."""

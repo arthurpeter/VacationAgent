@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     ArrowLeft,
     ArrowRight,
@@ -386,6 +387,8 @@ function DroppableParkingLot({ excluded, isManualMode }) {
 // ----------------------------------------------------------------------
 
 export default function ScheduleStage({ gameState, session, refresh, onBack, onNext }) {
+    const navigate = useNavigate();
+
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSimulating, setIsSimulating] = useState(false);
     const [activeDragEvent, setActiveDragEvent] = useState(null);
@@ -806,7 +809,7 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                 <div className="absolute top-3 right-8 z-[100] pointer-events-auto">
                     <button 
                         type="button"
-                        onClick={onNext} 
+                        onClick={() => navigate(`/plan/${session.id}/overview`)} // 🟢 Updated
                         className="px-4 py-3 bg-transparent text-gray-400 hover:text-blue-500 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all duration-300 group"
                     >
                         <span>Overview</span>

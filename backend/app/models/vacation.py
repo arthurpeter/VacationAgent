@@ -15,17 +15,24 @@ class Vacation(Base):
 
     destination = Column(String, nullable=False)
     origin = Column(String, nullable=True)
-    from_date = Column(String, nullable=True)
-    to_date = Column(String, nullable=True)
-    people_count = Column(Integer, nullable=True)
+    from_date = Column(DateTime(timezone=False), nullable=True)
+    to_date = Column(DateTime(timezone=False), nullable=True)
+    adults = Column(Integer, default=1, nullable=False)
+    children = Column(Integer, default=0, nullable=False)
     
+    flights_url = Column(Text, nullable=True)
     flight_price = Column(Float, nullable=True)
-    flight_ccy = Column(String, nullable=True)    
+    flight_ccy = Column(String, nullable=True)
+    airport_name = Column(String, nullable=True)
+    accomodation_url = Column(Text, nullable=True)
     accomodation_price = Column(Float, nullable=True)
     accomodation_ccy = Column(String, nullable=True)
+    accomodation_name = Column(String, nullable=True)
+    accomodation_address = Column(String, nullable=True)
+
     itinerary_data = Column(JSON, nullable=True)
-    transit_strategy = Column(JSON, nullable=True)
     
+    is_finalized = Column(Boolean, default=False, nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     user = relationship("User", back_populates="vacations", lazy="selectin")
