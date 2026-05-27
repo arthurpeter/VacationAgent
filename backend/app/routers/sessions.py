@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from app.schemas.vacation import SessionDataUpdate
-from app.core.database import get_db
+from app.core.database import get_checkpointer, get_db
 from fastapi import APIRouter, Depends, HTTPException
 from app import schemas, models
 from app.core.logger import get_logger
@@ -14,6 +14,7 @@ from app.models.companion import TravelCompanion
 from sqlalchemy.orm import selectinload
 from fastapi import BackgroundTasks
 from app.routers.notifications import get_db_context
+from app.services.agents.itinerary_graph import generate_graph as generate_itinerary_graph
 
 from app.services.email.itinerary_email import send_vacation_blueprint_email
 
@@ -116,6 +117,38 @@ async def get_sessions(
     sessions = result.scalars().all()
     ids = [session.id for session in sessions]
     return {"session_ids": ids}
+
+@router.post("/compile/{session_id}")
+async def compile_session(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    checkpointer = Depends(get_checkpointer),
+    token: TokenPayload = Depends(access_token_header)
+):
+    """Compiles the session data into a finalized vacation plan."""
+    stmt = select(models.VacationSession).where(
+        models.VacationSession.id == session_id,
+        models.VacationSession.user_id == token.sub
+    )
+    session = (await db.execute(stmt)).scalar_one_or_none()
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found for user")
+    
+    graph = generate_itinerary_graph(checkpointer)
+    config = {"configurable": {"thread_id": f"itinerary_{session_id}"}}
+
+    try:
+        current_state = await graph.aget_state(config)
+
+
+    
+
+        return {"message": "Session compiled successfully."}
+    
+    except Exception as e:
+        log.error(f"Session compilation failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error compiling session")
 
 async def process_email_and_notify(user_id: str, email_to: str, session_data: dict):
     """Runs in the background: Sends the email, then safely creates a notification."""
