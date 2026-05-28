@@ -112,6 +112,12 @@ class ScheduleEngine:
                 
                 open_min = open_t.hour * 60 + open_t.minute
                 close_min = close_t.hour * 60 + close_t.minute
+
+                if close_min < open_min:
+                    close_min += 1440
+                    
+                    if close_min > 1440:
+                        close_min = 1440
                 
                 max_start = close_min - duration_mins
                 if max_start < open_min: 
@@ -631,16 +637,24 @@ class ScheduleEngine:
                 open_str, close_str = day_str.split("-", 1)
                 open_t = datetime.strptime(open_str.strip(), "%H:%M").time()
                 close_t = datetime.strptime(close_str.strip(), "%H:%M").time()
-                arr_t = arrival_dt.time()
-                dep_t = departure_dt.time()
-                if open_t <= close_t:
-                    return (open_t <= arr_t and dep_t <= close_t), False
-                else:
-                    return (arr_t >= open_t or dep_t <= close_t), False
+                
+                open_min = open_t.hour * 60 + open_t.minute
+                close_min = close_t.hour * 60 + close_t.minute
+                
+                if close_min < open_min:
+                    close_min += 1440
+                
+                arrival_day_start = datetime.combine(arrival_dt.date(), time.min)
+                arr_min = int((arrival_dt - arrival_day_start).total_seconds() / 60)
+                dep_min = int((departure_dt - arrival_day_start).total_seconds() / 60)
+                
+                is_inside_window = (open_min <= arr_min) and (dep_min <= close_min)
+                return is_inside_window, False
 
         except Exception as e:
             log.warning(f"_is_open_interval: failed to parse opening hours: {e}")
             return True, True
+            
         return True, False
 
     def recalculate_user_timeline(
