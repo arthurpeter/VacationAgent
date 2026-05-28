@@ -1,4 +1,4 @@
-from app.services.search import flights, accomodations_v2, explore
+from app.services.search import flights, accommodations_v2, explore
 from app.core.database import get_db
 from fastapi import APIRouter, Depends, HTTPException, Query
 from app import schemas, models
@@ -480,25 +480,25 @@ async def book_flight(
         booking_url=url
     )
 
-@router.post("/getAccomodations", response_model=list[schemas.AccomodationsResponse])
-async def get_accomodations(
-    data: schemas.AccomodationsRequest,
+@router.post("/getaccommodations", response_model=list[schemas.accommodationsResponse])
+async def get_accommodations(
+    data: schemas.accommodationsRequest,
     db: AsyncSession = Depends(get_db),
     access_token: TokenPayload = Depends(access_token_header)
     ):
     log.info(f"Request data: {data}")
-    log.info(f"Searching accomodations in {data.location}")
+    log.info(f"Searching accommodations in {data.location}")
     try:
-        destination = accomodations_v2.get_destination_id(
+        destination = accommodations_v2.get_destination_id(
             location_name=data.location
         )
     except Exception as e:
-        log.error(f"Error searching accomodations: {e}")
-        raise HTTPException(status_code=500, detail="Error searching accomodations")
+        log.error(f"Error searching accommodations: {e}")
+        raise HTTPException(status_code=500, detail="Error searching accommodations")
 
     if not destination or "dest_id" not in destination or "search_type" not in destination:
-        log.warning("No accomodations found for the given criteria.")
-        raise HTTPException(status_code=404, detail="No accomodations found")
+        log.warning("No accommodations found for the given criteria.")
+        raise HTTPException(status_code=404, detail="No accommodations found")
     
     stmt = select(models.VacationSession).filter(
         models.VacationSession.id == data.session_id,
@@ -510,7 +510,7 @@ async def get_accomodations(
     currency_code = session.currency if session and session.currency else "EUR"
     
     try:
-        results = accomodations_v2.search_hotels(
+        results = accommodations_v2.search_hotels(
             dest_id=destination.get("dest_id"),
             search_type=destination.get("search_type"),
             arrival_date=data.arrival_date,
@@ -524,11 +524,11 @@ async def get_accomodations(
         )
 
         if not results or results.get("message").lower() != "success":
-            log.warning("No accomodations found for the given criteria.")
-            raise HTTPException(status_code=404, detail="No accomodations found")
+            log.warning("No accommodations found for the given criteria.")
+            raise HTTPException(status_code=404, detail="No accommodations found")
     except Exception as e:
-        log.error(f"Error searching accomodations: {e}")
-        raise HTTPException(status_code=500, detail="Error searching accomodations")
+        log.error(f"Error searching accommodations: {e}")
+        raise HTTPException(status_code=500, detail="Error searching accommodations")
     
     hotels_list = results.get("data", {}).get("hotels")
 
@@ -540,7 +540,7 @@ async def get_accomodations(
         hotel_info = hotel.get("property", {})
         price_info = round(hotel_info.get("priceBreakdown", {}).get("grossPrice", {}).get("value", float('inf')), 2)
         ccy = hotel_info.get("priceBreakdown", {}).get("grossPrice", {}).get("currency")
-        response.append(schemas.AccomodationsResponse(
+        response.append(schemas.accommodationsResponse(
             hotel_id=str(hotel.get("hotel_id", "")),
             hotel_name=hotel_info.get("name", ""),
             latitude=hotel_info.get("latitude"),
@@ -561,7 +561,7 @@ async def get_accomodations(
 
 @router.post("/getHotelDetails", response_model=schemas.HotelDetailsResponse)
 async def get_hotel_details(
-    data: schemas.AccomodationsRequest,
+    data: schemas.accommodationsRequest,
     db: AsyncSession = Depends(get_db),
     access_token: TokenPayload = Depends(access_token_header)
 ):
@@ -574,7 +574,7 @@ async def get_hotel_details(
     currency_code = session.currency if session and session.currency else "EUR"
 
     try:
-        results = accomodations_v2.get_hotel_details(
+        results = accommodations_v2.get_hotel_details(
             hotel_id=data.loc_id,
             arrival_date=data.arrival_date,
             departure_date=data.departure_date,
@@ -673,9 +673,9 @@ async def get_hotel_details(
         log.info(f"Raw response data: {results}")
         raise HTTPException(status_code=500, detail="Internal server error fetching details")
 
-@router.post("/bookAccomodation", response_model=schemas.AccomodationBookingResponse)
-async def book_accomodation(
-    data: schemas.AccomodationBookingRequest,
+@router.post("/bookaccommodation", response_model=schemas.accommodationBookingResponse)
+async def book_accommodation(
+    data: schemas.accommodationBookingRequest,
     db: AsyncSession = Depends(get_db),
     access_token: TokenPayload = Depends(access_token_header)
     ):
@@ -689,9 +689,9 @@ async def book_accomodation(
                 models.VacationSession.user_id == access_token.sub
             )
             .values(
-                accomodation_url=data.booking_url,
-                accomodation_price=data.price,
-                accomodation_ccy=data.currency,
+                accommodation_url=data.booking_url,
+                accommodation_price=data.price,
+                accommodation_ccy=data.currency,
                 accommodation_latitude=data.latitude,
                 accommodation_longitude=data.longitude,
                 accommodation_address=data.address,
@@ -709,10 +709,10 @@ async def book_accomodation(
         
     except Exception as e:
         await db.rollback()
-        log.error(f"Error updating session with accomodation booking URL: {e}")
+        log.error(f"Error updating session with accommodation booking URL: {e}")
         raise HTTPException(status_code=500, detail="Internal server error updating booking")
 
-    return schemas.AccomodationBookingResponse(
+    return schemas.accommodationBookingResponse(
         message="ok",
         booking_url=data.booking_url
     )

@@ -67,12 +67,12 @@ def get_vacation_blueprint_html(session_data: dict) -> str:
         """
 
     hotel_html = ""
-    if session_data.get("accomodation_url"):
-        price = f"{session_data.get('accomodation_price', 'N/A')} {session_data.get('accomodation_ccy', 'EUR')}"
+    if session_data.get("accommodation_url"):
+        price = f"{session_data.get('accommodation_price', 'N/A')} {session_data.get('accommodation_ccy', 'EUR')}"
         hotel_html = f"""
         <div style="margin-bottom: 15px; padding: 15px; background: #f8fafc; border-left: 4px solid #10b981; border-radius: 4px;">
             <h4 style="margin: 0 0 5px 0; color: #1e293b;">🏨 Accommodation (Estimated: {price})</h4>
-            <a href="{session_data['accomodation_url']}" style="color: #10b981; text-decoration: none; font-size: 14px;">View & Book Accomodation Options &rarr;</a>
+            <a href="{session_data['accommodation_url']}" style="color: #10b981; text-decoration: none; font-size: 14px;">View & Book accommodation Options &rarr;</a>
         </div>
         """
 

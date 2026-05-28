@@ -802,7 +802,7 @@ export default function OptionsStage() {
     try {
       const [flightRes, hotelRes] = await Promise.all([
         fetchWithAuth(`${API_BASE_URL}/search/getOutboundFlights`, flightsBody, "POST"),
-        fetchWithAuth(`${API_BASE_URL}/search/getAccomodations`, hotelsBody, "POST")
+        fetchWithAuth(`${API_BASE_URL}/search/getaccommodations`, hotelsBody, "POST")
       ]);
 
       if (flightRes.ok) {
@@ -938,7 +938,7 @@ export default function OptionsStage() {
                 return;
             }
             bookingPromises.push(
-                fetchWithAuth(`${API_BASE_URL}/search/bookAccomodation`, {
+                fetchWithAuth(`${API_BASE_URL}/search/bookaccommodation`, {
                     session_id: parseInt(sessionData?.id),
                     booking_url: selectedHotel.booking_url,
                     price: selectedHotel.price,

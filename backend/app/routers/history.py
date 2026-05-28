@@ -26,8 +26,8 @@ class VacationSummary(BaseModel):
     to_date: Optional[str] = None
     flight_price: Optional[float] = None
     flight_ccy: Optional[str] = None
-    accomodation_price: Optional[float] = None
-    accomodation_ccy: Optional[str] = None
+    accommodation_price: Optional[float] = None
+    accommodation_ccy: Optional[str] = None
     created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)

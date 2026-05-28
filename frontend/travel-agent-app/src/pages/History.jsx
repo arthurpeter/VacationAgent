@@ -125,13 +125,13 @@ export default function History() {
                 </p>
               </div>
             )}
-            {vac.accomodation_price && (
+            {vac.accommodation_price && (
               <div className="bg-white border-l-4 border-emerald-500 rounded-2xl p-6 shadow-sm">
                 <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-2">
                   <Building size={16} className="text-emerald-500" /> Estimated Hotel
                 </h4>
                 <p className="text-3xl font-black text-gray-800">
-                  {vac.accomodation_price} <span className="text-lg font-bold text-gray-400">{vac.accomodation_ccy}</span>
+                  {vac.accommodation_price} <span className="text-lg font-bold text-gray-400">{vac.accommodation_ccy}</span>
                 </p>
               </div>
             )}
@@ -247,9 +247,9 @@ export default function History() {
                         <Plane size={18} /> 
                         {trip.flight_price ? `${trip.flight_price} ${trip.flight_ccy}` : 'No Flights'}
                       </div>
-                      <div className={`flex-1 flex flex-col items-center justify-center gap-1 p-3 rounded-xl border ${trip.accomodation_price ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-gray-100 bg-gray-50 text-gray-400 opacity-50'} text-xs font-bold`}>
+                      <div className={`flex-1 flex flex-col items-center justify-center gap-1 p-3 rounded-xl border ${trip.accommodation_price ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-gray-100 bg-gray-50 text-gray-400 opacity-50'} text-xs font-bold`}>
                         <Building size={18} />
-                        {trip.accomodation_price ? `${trip.accomodation_price} ${trip.accomodation_ccy}` : 'No Hotel'}
+                        {trip.accommodation_price ? `${trip.accommodation_price} ${trip.accommodation_ccy}` : 'No Hotel'}
                       </div>
                     </div>
                   </div>

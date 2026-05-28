@@ -24,11 +24,11 @@ class Vacation(Base):
     flight_price = Column(Float, nullable=True)
     flight_ccy = Column(String, nullable=True)
     airport_name = Column(String, nullable=True)
-    accomodation_url = Column(Text, nullable=True)
-    accomodation_price = Column(Float, nullable=True)
-    accomodation_ccy = Column(String, nullable=True)
-    accomodation_name = Column(String, nullable=True)
-    accomodation_address = Column(String, nullable=True)
+    accommodation_url = Column(Text, nullable=True)
+    accommodation_price = Column(Float, nullable=True)
+    accommodation_ccy = Column(String, nullable=True)
+    accommodation_name = Column(String, nullable=True)
+    accommodation_address = Column(String, nullable=True)
 
     itinerary_data = Column(JSON, nullable=True)
     
