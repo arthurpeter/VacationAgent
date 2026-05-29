@@ -207,6 +207,7 @@ async def compile_session(
                 base_event.update({
                     "name": global_poi.official_name,
                     "image_url": global_poi.image_url,
+                    "description": global_poi.description,
                     "website_url": global_poi.website_url,
                     "formatted_address": global_poi.formatted_address,
                     "needs_reservation": global_poi.needs_reservation,
@@ -307,35 +308,38 @@ async def compile_session(
         log.error(f"Database transaction failure during compilation commit: {str(commit_err)}")
         raise HTTPException(status_code=500, detail="Database write error during validation pass")
 
-async def process_email_and_notify(user_id: str, email_to: str, session_data: dict):
-    """Runs in the background: Sends the email, then safely creates a notification."""
+async def process_email_and_notify(user_id: str, email_to: str, vacation_payload: dict):
+    """
+    Runs out-of-band in background workers: Generates and dispatches the travel PDF, 
+    then commits a real-time system notification indicating status.
+    """
+    destination = vacation_payload.get("destination", "your destination")
     try:
-        success = await send_vacation_blueprint_email(email_to, session_data)
+        success = await send_vacation_blueprint_email(email_to, vacation_payload)
         
         async for db in get_db():
             if success:
                 db.add(models.Notification(
                     user_id=user_id,
                     category="EMAIL_SUCCESS",
-                    message=f"🎉 Pack your bags! Your detailed TuRAG Blueprint for {session_data['destination']} is waiting in your inbox."
+                    message=f"🎉 Pack your bags! Your detailed TuRAG Blueprint for {destination} is waiting in your inbox."
                 ))
             else:
                 db.add(models.Notification(
                     user_id=user_id,
                     category="EMAIL_ERROR",
-                    message=f"✈️ Slight turbulence: We couldn't deliver your {session_data['destination']} itinerary. Please click 'Resend' to try again."
+                    message=f"✈️ Slight turbulence: We couldn't deliver your {destination} itinerary email. You can still access it anytime from your dashboard."
                 ))
-            
             await db.commit()
             break
             
     except Exception as e:
-        log.error(f"Background email task completely failed: {e}")
+        log.error(f"Background serialization or mailing runner failure: {str(e)}", exc_info=True)
         async for db in get_db():
             db.add(models.Notification(
                 user_id=user_id,
                 category="EMAIL_ERROR",
-                message=f"⚠️ System error while finalizing your trip to {session_data['destination']}. Your plan is saved, but the email failed to send."
+                message=f"⚠️ Internal network variance occurred while finalizing your trip to {destination}. Your data is safely stored in your travel passport log!"
             ))
             await db.commit()
             break
@@ -348,85 +352,73 @@ async def finalize_and_email_session(
     token: TokenPayload = Depends(access_token_header)
 ):
     """
-    Fetches the completed session from the database and emails the user.
+    Finalizes a vacation sequence: Locks dynamic edits, activates long-term travel 
+    history visibility flags, and queues automated PDF documentation dispatches.
     """
-    stmt = select(models.VacationSession).where(
-        models.VacationSession.id == session_id,
-        models.VacationSession.user_id == token.sub
+    vacation_stmt = select(models.Vacation).where(
+        models.Vacation.session_id == session_id,
+        models.Vacation.user_id == token.sub
     )
-    session = (await db.execute(stmt)).scalar_one_or_none()
+    vacation = (await db.execute(vacation_stmt)).scalar_one_or_none()
     
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+    if not vacation:
+        raise HTTPException(
+            status_code=404, 
+            detail="Compiled itinerary snapshot not found. Please compile the session state matrices first."
+        )
 
     user_stmt = select(models.User).where(models.User.id == token.sub)
     user = (await db.execute(user_stmt)).scalar_one_or_none()
+    
+    if not user or not user.email:
+        raise HTTPException(status_code=400, detail="Authenticated profile lacks a valid communication routing address.")
 
-    formatted_from = session.from_date.strftime("%b %d, %Y") if session.from_date else "TBD"
-    formatted_to = session.to_date.strftime("%b %d, %Y") if session.to_date else "TBD"
+    session_stmt = select(models.VacationSession).where(models.VacationSession.id == session_id)
+    session = (await db.execute(session_stmt)).scalar_one_or_none()
 
-    session_data = {
-        "origin": session.departure,
-        "destination": session.destination,
-        "from_date": formatted_from,
-        "to_date": formatted_to,
-        "flights_url": session.flights_url,
-        "flight_price": session.flight_price,
-        "flight_ccy": session.flight_ccy,
-        "accommodation_url": session.accommodation_url,
-        "accommodation_price": session.accommodation_price,
-        "accommodation_ccy": session.accommodation_ccy,
-        "currency": session.currency,
-        "itinerary_data": session.itinerary_data,
-        "transit_strategy": session.transit_strategy
+    vacation.is_finalized = True
+    
+    if session:
+        session.is_active = False
+
+    vacation_payload = {
+        "id": vacation.id,
+        "destination": vacation.destination,
+        "origin": vacation.origin,
+        "from_date": vacation.from_date.isoformat() if vacation.from_date else None,
+        "to_date": vacation.to_date.isoformat() if vacation.to_date else None,
+        "adults": vacation.adults,
+        "children": vacation.children,
+        "flight_price": vacation.flight_price,
+        "flight_ccy": vacation.flight_ccy,
+        "airport_name": vacation.airport_name,
+        "flights_url": vacation.flights_url,
+        "accommodation_price": vacation.accommodation_price,
+        "accommodation_ccy": vacation.accommodation_ccy,
+        "accommodation_name": vacation.accommodation_name,
+        "accommodation_address": vacation.accommodation_address,
+        "accommodation_url": vacation.accommodation_url,
+        "itinerary_data": vacation.itinerary_data
     }
 
-    vacation_stmt = select(models.Vacation).where(models.Vacation.session_id == session.id)
-    existing_vacation = (await db.execute(vacation_stmt)).scalar_one_or_none()
-
-    if existing_vacation:
-        existing_vacation.destination = session.destination
-        existing_vacation.origin = session.departure
-        existing_vacation.from_date = formatted_from
-        existing_vacation.to_date = formatted_to
-        existing_vacation.people_count = getattr(session, 'people_count', None)
-        existing_vacation.flight_price = session.flight_price
-        existing_vacation.flight_ccy = session.flight_ccy
-        existing_vacation.accommodation_price = session.accommodation_price
-        existing_vacation.accommodation_ccy = session.accommodation_ccy
-        existing_vacation.itinerary_data = session.itinerary_data
-        existing_vacation.transit_strategy = session.transit_strategy
-    else:
-        new_vacation = models.Vacation(
-            user_id=token.sub,
-            session_id=session.id,
-            destination=session.destination,
-            origin=session.departure,
-            from_date=formatted_from,
-            to_date=formatted_to,
-            people_count=getattr(session, 'people_count', None),
-            flight_price=session.flight_price,
-            flight_ccy=session.flight_ccy,
-            accommodation_price=session.accommodation_price,
-            accommodation_ccy=session.accommodation_ccy,
-            itinerary_data=session.itinerary_data,
-            transit_strategy=session.transit_strategy
-        )
-        db.add(new_vacation)
-
-    if session.is_active:
-        session.is_active = False
-        
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception as commit_err:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database state transaction failure: {str(commit_err)}")
 
     background_tasks.add_task(
         process_email_and_notify, 
         user_id=token.sub, 
         email_to=user.email, 
-        session_data=session_data
+        vacation_payload=vacation_payload
     )
 
-    return {"message": "Plan finished. Email queued for sending."}
+    return {
+        "status": "success",
+        "message": "Itinerary locked successfully. Electronic document delivery manifest initialized.",
+        "vacation_id": vacation.id
+    }
 
 @router.delete("/{session_id}")
 async def delete_vacation_session(

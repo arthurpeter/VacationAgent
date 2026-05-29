@@ -50,125 +50,55 @@ def get_password_reset_email_html(reset_link: str) -> str:
 
 def get_vacation_blueprint_html(session_data: dict) -> str:
     """
-    Generates the final trip blueprint email.
-    Works with or without a generated daily itinerary.
+    Generates a streamlined, high-end HTML cover letter informing the 
+    user that their master unmodifiable document package has been attached.
     """
     from_date = session_data.get("from_date", "TBD")
     to_date = session_data.get("to_date", "TBD")
+    destination = session_data.get("destination", "Your Destination")
     
-    flight_html = ""
-    if session_data.get("flights_url"):
-        price = f"{session_data.get('flight_price', 'N/A')} {session_data.get('flight_ccy', 'EUR')}"
-        flight_html = f"""
-        <div style="margin-bottom: 15px; padding: 15px; background: #f8fafc; border-left: 4px solid #3b82f6; border-radius: 4px;">
-            <h4 style="margin: 0 0 5px 0; color: #1e293b;">✈️ Flights (Estimated: {price})</h4>
-            <a href="{session_data['flights_url']}" style="color: #3b82f6; text-decoration: none; font-size: 14px;">View & Book Flight Options &rarr;</a>
-        </div>
-        """
-
-    hotel_html = ""
-    if session_data.get("accommodation_url"):
-        price = f"{session_data.get('accommodation_price', 'N/A')} {session_data.get('accommodation_ccy', 'EUR')}"
-        hotel_html = f"""
-        <div style="margin-bottom: 15px; padding: 15px; background: #f8fafc; border-left: 4px solid #10b981; border-radius: 4px;">
-            <h4 style="margin: 0 0 5px 0; color: #1e293b;">🏨 Accommodation (Estimated: {price})</h4>
-            <a href="{session_data['accommodation_url']}" style="color: #10b981; text-decoration: none; font-size: 14px;">View & Book accommodation Options &rarr;</a>
-        </div>
-        """
-
-    transit_strategy = session_data.get("transit_strategy")
-    transit_html = ""
-    if transit_strategy:
-        pass_name = transit_strategy.get("pass_name", "")
-        price = transit_strategy.get("price", "")
-        desc = transit_strategy.get("description", "")
-        url = transit_strategy.get("purchase_url", "")
-        
-        btn = f'<a href="{url}" style="display:inline-block; margin-top:10px; padding:8px 16px; background:#2563eb; color:white; text-decoration:none; border-radius:6px; font-size:13px; font-weight:bold;">Get Official Pass</a>' if url else ""
-        
-        transit_html = f"""
-        <div style="margin-bottom: 15px; padding: 20px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
-            <p style="margin: 0 0 5px 0; font-size: 11px; font-weight: bold; color: #2563eb; text-transform: uppercase; letter-spacing: 1px;">🚇 Local Transit Strategy</p>
-            <h4 style="margin: 0 0 8px 0; color: #1e3a8a; font-size: 18px;">{pass_name} <span style="color: #64748b; font-weight: normal;">— {price}</span></h4>
-            <p style="margin: 0; color: #475569; font-size: 14px; line-height: 1.5;">{desc}</p>
-            {btn}
-        </div>
-        """
-
-    itinerary_html = ""
-    itinerary_data = session_data.get("itinerary_data")
-    
-    if itinerary_data and isinstance(itinerary_data, list):
-        itinerary_html = """
-        <h3 style="color: #0f172a; margin-top: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
-            📅 Your Daily Itinerary
-        </h3>
-        """
-        for day in itinerary_data:
-            day_title = day.get('title', f"Day {day.get('day', '')}")
-            raw_description = day.get('description', '')
-            html_description = markdown2.markdown(
-                raw_description, 
-                extras=["cuddled-lists", "break-on-newline"]
-            )
-            
-            links_html = ""
-            if day.get("links"):
-                for link in day["links"]:
-                    links_html += f"""
-                    <div style="margin-top: 10px; padding: 10px; background: #e0e7ff; border-radius: 6px;">
-                        <strong>{link.get('name', 'Activity')}</strong><br/>
-                        <a href="{link.get('url', '#')}" style="color: #4f46e5; text-decoration: none; font-size: 13px; font-weight: bold;">
-                            View Details &rarr;
-                        </a>
-                    </div>
-                    """
-
-            itinerary_html += f"""
-            <div style="background: #ffffff; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-bottom: 15px;">
-                <h4 style="margin: 0 0 10px 0; color: #3b82f6; font-size: 18px;">{day_title}</h4>
-                <p style="margin: 0; font-size: 14px; color: #475569; line-height: 1.6;">{html_description}</p>
-                {links_html}
-            </div>
-            """
-    else:
-        itinerary_html = """
-        <div style="margin-top: 30px; padding: 20px; background: #f1f5f9; border-radius: 8px; text-align: center;">
-            <p style="margin: 0; color: #64748b;"><em>You haven't generated a daily itinerary yet, but your travel options are ready above!</em></p>
-        </div>
-        """
+    # Simple date display extraction formatting helper
+    clean_from = from_date.split("T")[0] if isinstance(from_date, str) else getattr(from_date, "strftime", lambda x: "TBD")("%b %d, %Y")
+    clean_to = to_date.split("T")[0] if isinstance(to_date, str) else getattr(to_date, "strftime", lambda x: "TBD")("%b %d, %Y")
 
     return f"""
     <!DOCTYPE html>
     <html>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f5; padding: 20px; margin: 0;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+    <head>
+        <meta charset="utf-8">
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; padding: 20px; margin: 0;">
+        <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);">
             
-            <div style="background-color: #0f172a; padding: 30px 20px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Your TuRAG Vacation Blueprint 🌴</h1>
-                <p style="color: #94a3b8; margin: 10px 0 0 0; font-size: 16px;">{session_data.get('origin', 'Home')} to {session_data.get('destination', 'Paradise')}</p>
+            <div style="background-color: #0f172a; padding: 32px 24px; text-align: center;">
+                <span style="font-size: 10px; font-weight: bold; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.15em; display: block; margin-bottom: 4px;">TuRAG Travel Companion</span>
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 900; tracking-tight: -0.02em;">Pack Your Bags! 🌴</h1>
+                <p style="color: #94a3b8; margin: 8px 0 0 0; font-size: 14px; font-weight: 500;">{session_data.get('origin', 'Home Base')} &rarr; {destination}</p>
             </div>
 
-            <div style="padding: 30px 20px;">
-                <p style="font-size: 16px; color: #334155; margin-top: 0;">Hi,</p>
-                <p style="font-size: 16px; color: #334155;">Your trip details for <strong>{from_date}</strong> to <strong>{to_date}</strong> are ready. Here is everything we've collected for you:</p>
+            <div style="padding: 32px 24px; color: #334155; line-height: 1.6;">
+                <p style="font-size: 15px; margin-top: 0; font-weight: 500;">Hi Traveler,</p>
+                <p style="font-size: 14px;">Your micro-optimized itinerary manifest coordinates for <strong>{destination}</strong> are locked and fully compiled.</p>
+                
+                <p style="font-size: 14px;">We have attached your official, vector-grade **Master Travel Blueprint PDF** directly to this email message header. It contains your complete sequential timeline flow, arranged accommodation references, budget calculations, and flattened transit connection maps.</p>
 
-                <div style="margin-top: 25px;">
-                    {flight_html}
-                    {hotel_html}
+                <div style="margin: 24px 0; padding: 16px; background-color: #f1f5f9; border-radius: 8px; font-size: 13px; color: #475569; border-left: 3px solid #64748b;">
+                    📅 <strong>Travel Timeline Window:</strong> {clean_from} — {clean_to}<br/>
+                    👥 <strong>Manifest Cap:</strong> {session_data.get('adults', 1)} Adult(s) {f"· {session_data.get('children')} Child(ren)" if session_data.get('children', 0) > 0 else ""}
                 </div>
 
-                {transit_html}
+                <p style="font-size: 14px;">You can review dynamic updates, toggle real-time maps, or rearrange active itinerary slots at any point via your workspace browser link.</p>
 
-                {itinerary_html}
-
-                <div style="margin-top: 40px; text-align: center;">
-                    <a href="http://localhost:5173/dashboard" style="display: inline-block; background-color: #0f172a; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">View Trip in Dashboard</a>
+                <div style="margin: 32px 0 16px; text-align: center;">
+                    <a href="http://localhost:5173/dashboard" style="display: inline-block; background-color: #0f172a; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: bold; tracking-wide: 0.05em; text-transform: uppercase; transition: background-color 0.2s;">Open Active Dashboard</a>
                 </div>
             </div>
 
             <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
-                <p style="margin: 0; color: #94a3b8; font-size: 13px;">Safe travels,<br>The TuRAG Team</p>
+                <p style="margin: 0; color: #94a3b8; font-size: 12px; font-weight: 500;">
+                    Safe travels and smooth transits,<br>
+                    <strong>The TuRAG Engineering Team</strong>
+                </p>
             </div>
         </div>
     </body>
