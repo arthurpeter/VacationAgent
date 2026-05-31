@@ -10,6 +10,7 @@ import VacationLayout from "./layouts/VacationLayout";
 import DiscoveryStage from "./pages/stages/DiscoveryStage";
 import OptionsStage from "./pages/stages/OptionsStage";
 import ItineraryStage from "./pages/stages/ItineraryStage";
+import OverviewStage from "./pages/stages/OverviewStage";
 import NotFound from './pages/NotFound';
 import Footer from "./components/Footer";
 import Terms from "./pages/Terms";
@@ -55,6 +56,7 @@ function AppContent() {
               <Route path="discovery" element={<DiscoveryStage />} />
               <Route path="options" element={<OptionsStage />} />
               <Route path="itinerary" element={<ItineraryStage />} />
+              <Route path="overview" element={<OverviewStage />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />

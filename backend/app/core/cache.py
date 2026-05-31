@@ -1,3 +1,5 @@
+import inspect
+
 import redis
 import json
 import functools
@@ -16,31 +18,61 @@ log.info(f"Connected to Redis at {settings.REDIS_HOST}:{settings.REDIS_PORT}")
 
 def redis_cache(expire_time=1800):
     """
-    A custom decorator that caches the result of a function in Redis.
-    expire_time: Time in seconds (default 30 mins)
+    A hybrid custom decorator that transparently caches the results of 
+    both synchronous and asynchronous functions in Redis.
     """
     def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            key_parts = [func.__name__] + [str(arg) for arg in args] + [f"{k}={v}" for k, v in kwargs.items()]
-            cache_key = ":".join(key_parts)
+        if inspect.iscoroutinefunction(func):
+            @functools.wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                key_parts = [func.__name__] + [str(arg) for arg in args] + [f"{k}={v}" for k, v in kwargs.items()]
+                cache_key = ":".join(key_parts)
 
-            try:
-                cached_data = r.get(cache_key)
-                if cached_data:
-                    log.info(f"Cache HIT: Serving {cache_key} from Redis")
-                    return json.loads(cached_data)
-            except redis.ConnectionError:
-                log.error(f" Redis at {settings.REDIS_HOST} is down, skipping cache.")
+                try:
+                    cached_data = r.get(cache_key)
+                    if cached_data:
+                        log.info(f"Cache HIT: Serving {cache_key} from Redis")
+                        return json.loads(cached_data)
+                except redis.ConnectionError:
+                    log.error(f"Redis at {settings.REDIS_HOST} is down, skipping cache check.")
 
-            log.warning(f"Cache MISS: Calling API for {cache_key}")
-            result = func(*args, **kwargs)
+                log.warning(f"Cache MISS: Fetching live data async for {cache_key}")
+                
+                result = await func(*args, **kwargs)
 
-            try:
-                r.setex(cache_key, expire_time, json.dumps(result))
-            except Exception as e:
-                log.error(f"Failed to cache data: {e}")
+                try:
+                    if result is not None:
+                        r.setex(cache_key, expire_time, json.dumps(result))
+                except Exception as e:
+                    log.error(f"Failed to commit async payload cache data to Redis: {e}")
 
-            return result
-        return wrapper
+                return result
+            return async_wrapper
+
+        else:
+            @functools.wraps(func)
+            def sync_wrapper(*args, **kwargs):
+                key_parts = [func.__name__] + [str(arg) for arg in args] + [f"{k}={v}" for k, v in kwargs.items()]
+                cache_key = ":".join(key_parts)
+
+                try:
+                    cached_data = r.get(cache_key)
+                    if cached_data:
+                        log.info(f"Cache HIT: Serving {cache_key} from Redis")
+                        return json.loads(cached_data)
+                except redis.ConnectionError:
+                    log.error(f"Redis at {settings.REDIS_HOST} is down, skipping cache check.")
+
+                log.warning(f"Cache MISS: Fetching live data sync for {cache_key}")
+                result = func(*args, **kwargs)
+
+                try:
+                    if result is not None:
+                        r.setex(cache_key, expire_time, json.dumps(result))
+                except Exception as e:
+                    log.error(f"Failed to commit sync payload cache data to Redis: {e}")
+
+                return result
+            return sync_wrapper
+
     return decorator

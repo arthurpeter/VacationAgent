@@ -79,8 +79,8 @@ export default function Dashboard() {
             'discovery': 'discovery',
             'options': 'options',
             'itinerary': 'itinerary',
-            'booking': 'booking',
-            'completed': 'itinerary' 
+            'booking': 'overview',
+            'completed': 'overview' 
         };
         targetRoute = stageMap[stage] || 'discovery';
     }

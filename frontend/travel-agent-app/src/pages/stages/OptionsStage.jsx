@@ -425,7 +425,7 @@ function HotelDetailsModal({ hotel, details, isLoading, onClose, onSelect }) {
 
                                 <button 
                                     disabled={isLoading}
-                                    onClick={() => onSelect({ ...hotel, booking_url: details.url })}
+                                    onClick={() => onSelect({ ...hotel, booking_url: details.url, address: details.address })}
                                     className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isLoading ? "Loading Details..." : "Select & Save this Hotel"}
@@ -802,7 +802,7 @@ export default function OptionsStage() {
     try {
       const [flightRes, hotelRes] = await Promise.all([
         fetchWithAuth(`${API_BASE_URL}/search/getOutboundFlights`, flightsBody, "POST"),
-        fetchWithAuth(`${API_BASE_URL}/search/getAccomodations`, hotelsBody, "POST")
+        fetchWithAuth(`${API_BASE_URL}/search/getaccommodations`, hotelsBody, "POST")
       ]);
 
       if (flightRes.ok) {
@@ -938,11 +938,15 @@ export default function OptionsStage() {
                 return;
             }
             bookingPromises.push(
-                fetchWithAuth(`${API_BASE_URL}/search/bookAccomodation`, {
+                fetchWithAuth(`${API_BASE_URL}/search/bookaccommodation`, {
                     session_id: parseInt(sessionData?.id),
                     booking_url: selectedHotel.booking_url,
                     price: selectedHotel.price,
-                    currency: selectedHotel.currency
+                    currency: selectedHotel.currency,
+                    latitude: selectedHotel.latitude,
+                    longitude: selectedHotel.longitude,
+                    address: selectedHotel.address,
+                    name: selectedHotel.hotel_name
                 }, "POST").then(res => ({ type: 'hotel', res }))
             );
         }

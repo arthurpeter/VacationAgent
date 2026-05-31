@@ -8,7 +8,7 @@ const getStageFromPath = (pathname) => {
   if (pathname.includes('/discovery')) return 'discovery';
   if (pathname.includes('/options')) return 'options';
   if (pathname.includes('/itinerary')) return 'itinerary';
-  if (pathname.includes('/booking')) return 'booking';
+  if (pathname.includes('/overview')) return 'booking'; // 1. Map overview sub-route to backend booking state
   return null; 
 };
 
@@ -67,14 +67,6 @@ export default function VacationLayout() {
 
   const session = sessionData?.data || sessionData;
 
-  const canFinalize = session && (
-    session.flights_url || 
-    session.accomodation_url || 
-    (session.itinerary_data && session.itinerary_data.length > 0) || 
-    (session.transit_strategy && Object.keys(session.transit_strategy).length > 0) ||
-    (session.extra_links && session.extra_links.length > 0)
-  );
-
   const handleFinalizeTrip = async () => {
     if (!session) return;
     setIsFinalizing(true);
@@ -87,18 +79,9 @@ export default function VacationLayout() {
       );
       
       if (response && response.ok) {
-        if (session.is_active) {
-          toast.success(
-            "Plan finished! ✈️ Generating email... we'll notify you when it's ready.",
-            { duration: 4000 } 
-          );
-          refreshContext();
-        } else {
-          toast.success(
-            "Email queued! ✈️ We'll notify you once it has been dispatched.",
-            { duration: 4000 }
-          );
-        }
+        toast.success("Plan finished! ✈️ Generating email... we'll notify you when it's ready.", { duration: 4000 });
+        await refreshContext();
+        navigate('/dashboard'); // Take them back to dashboard after a successful finish
       } else {
         toast.error("Something went wrong. Please try again.");
       }
@@ -129,12 +112,15 @@ export default function VacationLayout() {
           </p>
         </div>
 
+        {/* 2. Added Step 4 Overview directly to the layout navigation */}
         <nav className="flex bg-gray-100 p-1 rounded-lg shrink-0">
           <StageLink to="discovery" label="1. Discovery" />
           <StageLink to="options" label="2. Options" />
           <StageLink to="itinerary" label="3. Itinerary" />
+          <StageLink to="overview" label="4. Overview" />
         </nav>
 
+        {/* 3. Completely removed the finalize button from the right header actions */}
         <div className="flex-1 flex justify-end items-center gap-6 pl-4">
           <div className="flex flex-col items-end">
             {session?.budget ? (
@@ -150,50 +136,13 @@ export default function VacationLayout() {
               </span>
             )}
           </div>
-
-          {canFinalize && (
-            <button 
-              onClick={handleFinalizeTrip} 
-              disabled={isFinalizing}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold transition-all ${
-                isFinalizing 
-                  ? 'bg-gray-200 cursor-not-allowed text-gray-500 shadow-none' 
-                  : session.is_active
-                    ? 'bg-gray-900 hover:bg-gray-800 text-white shadow-md hover:-translate-y-0.5' 
-                    : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50' 
-              }`}
-            >
-              {isFinalizing ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span className="text-sm">Processing...</span>
-                </>
-              ) : session.is_active ? (
-                <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                  <span className="text-sm">Finish Plan</span>
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-                  </svg>
-                  <span className="text-sm">Resend Email</span>
-                </>
-              )}
-            </button>
-          )}
         </div>
         
       </header>
 
       <main className="flex-grow overflow-hidden flex">
-        <Outlet context={{ sessionData, refreshContext }} />
+        {/* 4. FIXED: Kept sessionData EXACTLY as it was to prevent sibling page crashes, simply adding handlers down the line */}
+        <Outlet context={{ sessionData, refreshContext, handleFinalizeTrip, isFinalizing }} />
       </main>
     </div>
   );
@@ -206,7 +155,7 @@ function StageLink({ to, label }) {
       className={({ isActive }) =>
         `px-4 py-2 text-sm font-medium rounded-md transition ${
           isActive
-            ? "bg-white text-blue-600 shadow-sm"
+            ? "bg-white text-blue-600 shadow-sm font-bold"
             : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
         }`
       }

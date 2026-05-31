@@ -36,7 +36,7 @@ Booking Link Retrieval: Uses the booking_token to retrieve the final URL for the
 Docs: https://serpapi.com/google-flights-api
 
 ## Accommodations Service v2 (Booking.com via RapidAPI)
-Source: accomodations_v2.py
+Source: accommodations_v2.py
 Provider: Booking.com API via RapidAPI
 
 This is an alternative accommodation service that queries Booking.com directly. It follows a strictly hierarchical flow: find the location ID first, then search for hotels, then fetch details for deep links.

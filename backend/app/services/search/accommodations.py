@@ -8,7 +8,7 @@ GoogleSearch.SERP_API_KEY = settings.SERPAPI_API_KEY
 if not GoogleSearch.SERP_API_KEY:
     raise ValueError("SERPAPI_API_KEY environment variable is required")
 
-def call_accomodation_api(
+def call_accommodation_api(
     query: str,
     check_in_date: str,
     check_out_date: str,
@@ -159,7 +159,7 @@ if __name__ == "__main__":
         
         # --- (SIMPLIFIED) STEP 1: Get all data in one call ---
         print("--- STEP 1: Searching for hotels and links... ---")
-        hotel_results = call_accomodation_api(
+        hotel_results = call_accommodation_api(
             query=search_query,
             check_in_date=ci_date,
             check_out_date=co_date,

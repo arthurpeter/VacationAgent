@@ -1,5 +1,7 @@
+from typing_extensions import Literal
+
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Any, Dict, Optional, List
 
 class ExtractionResult(BaseModel):
     """Reflects all mandatory and optional slots in VacationSession."""
@@ -32,30 +34,123 @@ class ExtractionResult(BaseModel):
         description="True if the user is explicitly correcting or changing existing info"
     )
 
-class DailyTheme(BaseModel):
-    day_number: int = Field(description="The day number of the trip (e.g., 1, 2, 3)")
-    theme: str = Field(description="A high-level title/theme for the day. e.g., 'Arrival & Trastevere Food Tour'")
+class AttractionList(BaseModel):
+    attractions: List[str] = Field(
+        description="A list of up to 15 specific, highly famous tourist attractions, museums, or landmarks."
+    )
 
-class ArchitectResult(BaseModel):
-    themes: List[DailyTheme] = Field(description="The complete list of high-level themes for EVERY day of the trip.")
+class OperatingHours(BaseModel):
+    monday: Optional[str] = Field(
+        default=None,
+        description="24h format e.g. '09:00-18:00', or 'Closed' if confirmed shut, or N/A if unknown."
+    )
+    tuesday: Optional[str] = Field(
+        default=None,
+        description="24h format e.g. '09:00-18:00', or 'Closed' if confirmed shut, or N/A if unknown."
+    )
+    wednesday: Optional[str] = Field(
+        default=None,
+        description="24h format e.g. '09:00-18:00', or 'Closed' if confirmed shut, or N/A if unknown."
+    )
+    thursday: Optional[str] = Field(
+        default=None,
+        description="24h format e.g. '09:00-18:00', or 'Closed' if confirmed shut, or N/A if unknown."
+    )
+    friday: Optional[str] = Field(
+        default=None,
+        description="24h format e.g. '09:00-18:00', or 'Closed' if confirmed shut, or N/A if unknown."
+    )
+    saturday: Optional[str] = Field(
+        default=None,
+        description="24h format e.g. '09:00-18:00', or 'Closed' if confirmed shut, or N/A if unknown."
+    )
+    sunday: Optional[str] = Field(
+        default=None,
+        description="24h format e.g. '09:00-18:00', or 'Closed' if confirmed shut, or N/A if unknown."
+    )
+ 
+ 
+class AttractionEnrichmentSchema(BaseModel):
+    city: str = Field(
+        description="The standard English name of the city this attraction is in (e.g., 'Rome' instead of 'Roma', 'Munich' instead of 'München')."
+    )
+    country: str = Field(
+        description="The standard 2-letter Country Code (e.g., 'IT' instead of 'Italy', 'DE' instead of 'Germany')."
+    )
+    price_tier: Optional[int] = Field(
+        default=None,
+        description="A number from 1 to 5 representing the cost (1=Free, 2=Cheap, 3=Moderate, 4=Expensive, 5=Very Expensive)."
+    )
+    recommended_duration_mins: int = Field(
+        default=120,
+        description="Recommended time to spend at the attraction in minutes (e.g., 60, 120, 180)."
+    )
+    tod_preference: Optional[str] = Field(
+        default=None,
+        description="Best time of day to visit (e.g., 'Morning', 'Afternoon', 'Evening', or 'Any')."
+    )
+    rating: Optional[float] = Field(
+        default=None,
+        description="The standard user rating out of 5 stars (e.g., 4.5, 4.8). Look for Google Maps or TripAdvisor ratings in the text."
+    )
+    website_url: Optional[str] = Field(
+        default=None,
+        description="The official website URL for tickets or visitor information."
+    )
+    description: str = Field(
+        description="Write a short, engaging 2-3 sentence travel description based on the search context."
+    )
+    opening_hours: OperatingHours = Field(
+        description="Weekly opening hours. Each day: 'HH:MM-HH:MM' if known, 'Closed' if confirmed shut, null if unknown."
+    )
+    needs_reservation: bool = Field(
+        default=False,
+        description="True if this place usually requires reserving tickets, passes, or time-slots weeks or days in advance."
+    )
 
-class DetailerResult(BaseModel):
-    """CRITICAL: Use this tool to submit the detailed daily plans you create for each day of the itinerary."""
-    day_number: int = Field(description="The specific day being detailed")
-    detailed_plan: str = Field(description="The full schedule (Morning, Afternoon, Evening) formatted in Markdown")
+class TransitEnrichmentSchema(BaseModel):
+    official_link: str = Field(description="The URL to the official city public transport website or tourist pass page.")
+    pass_price_est: float = Field(description="The estimated cost for a standard 48h or 72h tourist transport pass. Numeric value only.")
+    currency: str = Field(description="The 3-letter ISO currency code for the price (e.g., EUR, RON, USD).")
+    operating_hours: Dict[str, str] = Field(
+        description="General daily operating window. Keys: 'open' and 'close'. Format: HH:MM",
+        default={"open": "05:30", "close": "23:30"}
+    )
+    details_found: bool = Field(description="Set to true if specific 2026 price data was found, false if estimated.")
 
-class ResourceLink(BaseModel):
-    name: str = Field(description="Name of the place, activity, or restaurant")
-    url: str = Field(description="A valid URL to book or learn more")
+class RentalEnrichmentSchema(BaseModel):
+    official_link: str = Field(description="URL to a major rental aggregator or local provider in the city.")
+    daily_price_est: float = Field(description="Estimated daily cost for an economy car hire.")
+    currency: str = Field(description="ISO currency code (e.g., EUR).")
+    ztl_warning: bool = Field(description="True if the city has strict Limited Traffic Zones (ZTL) or high congestion fees.")
+    operating_hours: Dict[str, str] = Field(
+        description="Standard rental office hours. Keys: 'open', 'close'. Format: HH:MM",
+        default={"open": "08:00", "close": "20:00"}
+    )
 
-class SubmitLinks(BaseModel):
-    """CRITICAL: Use this tool to submit the final list of official links you found for the day's activities."""
-    day_number: int = Field(description="The specific day these links belong to")
-    links: List[ResourceLink] = Field(description="The list of links found")
+class RecommendationSchema(BaseModel):
+    recommendation: str = Field(description="A concise, actionable recommendation for the user based on the itinerary context.")
+    reasoning: str = Field(description="A brief explanation of why this recommendation was made, referencing specific itinerary details.")
 
-class SaveTransitStrategy(BaseModel):
-    """Saves the final recommended transit pass strategy to the database/state."""
-    pass_name: str = Field(description="The exact name of the recommended pass (e.g., 'Navigo Easy', 'Oyster Card').")
-    description: str = Field(description="A brief explanation of why this is the best option and what it covers.")
-    price: str = Field(description="The estimated cost (e.g., '€29.90', '£15.00').")
-    purchase_url: str = Field(description="The official website URL where the user can buy or read more about this exact pass.")
+class MobilityRecommendationSchema(RecommendationSchema):
+    should_rent_car: bool = Field(
+        description="Whether renting a car is recommended for most of the trip."
+    )
+
+class PaceRecommendationSchema(RecommendationSchema):
+    recommended_pace: Literal["Relaxed", "Moderate", "Fast-Paced"] = Field(
+        description="A recommendation for the overall pace of the trip, e.g., 'Relaxed', 'Moderate', 'Fast-Paced'."
+    )
+
+class SuggestionOption(BaseModel):
+    action_type: str = Field(..., description="Programmatic UI action token: 'PACE_UP', 'SWAP_DROP', or 'MANUAL_FORCE'.")
+    label: str = Field(..., description="Friendly explanation of the choice for the button text.")
+    target_swap_id: Optional[Any] = Field(None, description="If action_type is 'SWAP_DROP', the exact ID of a lower-priority attraction to remove.")
+
+class POIDiagnostic(BaseModel):
+    poi_id: Any = Field(..., description="The exact ID of the excluded attraction.")
+    reason: str = Field(..., description="A short, clear explanation of why it couldn't fit into the current itinerary constraints.")
+    suggestions: List[SuggestionOption] = Field(..., description="2-3 actionable ways the user can make this attraction fit.")
+
+class ExplanationResponseSchema(BaseModel):
+    explanations: List[POIDiagnostic] = Field(..., description="Collection of diagnostics for the excluded attractions.")

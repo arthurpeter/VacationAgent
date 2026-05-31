@@ -9,7 +9,7 @@ from sqlalchemy import select, text, update
 from sqlalchemy.orm import defer
 from authx import TokenPayload
 from app.core.auth import access_token_header
-from datetime import datetime
+from datetime import date, datetime
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from pydantic import BaseModel, ConfigDict
 
@@ -19,23 +19,42 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/history", tags=["history"])
 
 class VacationSummary(BaseModel):
+    """
+    Lightweight Schema for the Dashboard Cards.
+    Includes pricing and names so cards can render stats immediately,
+    but completely drops heavy strings and giant JSON blocks.
+    """
     id: str
     destination: str
     origin: Optional[str] = None
-    from_date: Optional[str] = None
-    to_date: Optional[str] = None
+    from_date: Optional[date] = None
+    to_date: Optional[date] = None
+    adults: int = 1
+    children: int = 0
+    
+    # Financial snapshots for quick rendering
     flight_price: Optional[float] = None
     flight_ccy: Optional[str] = None
-    accomodation_price: Optional[float] = None
-    accomodation_ccy: Optional[str] = None
+    airport_name: Optional[str] = None
+    
+    accommodation_price: Optional[float] = None
+    accommodation_ccy: Optional[str] = None
+    accommodation_name: Optional[str] = None
+    
     created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
 
+
 class VacationDetail(VacationSummary):
-    people_count: Optional[int] = None
+    """
+    Heavyweight Schema for the Full Detailed Document / Step 4 Overview.
+    Inherits all metadata from Summary and appends the bulky actionable fields.
+    """
+    flights_url: Optional[str] = None
+    accommodation_url: Optional[str] = None
+    accommodation_address: Optional[str] = None
     itinerary_data: Optional[Any] = None
-    transit_strategy: Optional[Any] = None
 
 @router.get("/vacations", response_model=List[VacationSummary])
 async def get_all_history(
@@ -43,16 +62,19 @@ async def get_all_history(
     token: TokenPayload = Depends(access_token_header)
 ):
     """
-    Fetches the lightweight summary of all vacations for the grid view.
-    Defers the heavy JSON columns to save bandwidth and DB memory.
+    Fetches lightweight summaries for the history card grids.
+    Filters out active step-4 compiler drafts natively.
     """
     stmt = select(models.Vacation).where(
-        models.Vacation.user_id == token.sub
+        models.Vacation.user_id == token.sub,
+        models.Vacation.is_finalized == True
     ).order_by(
         models.Vacation.created_at.desc()
     ).options(
-        defer(models.Vacation.itinerary_data),
-        defer(models.Vacation.transit_strategy)
+        defer(models.Vacation.flights_url),
+        defer(models.Vacation.accommodation_url),
+        defer(models.Vacation.accommodation_address),
+        defer(models.Vacation.itinerary_data)
     )
     
     result = await db.execute(stmt)

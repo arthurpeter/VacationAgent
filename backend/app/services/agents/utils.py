@@ -8,6 +8,8 @@ from app.utils.generic import calculate_age
 import httpx
 from typing import Optional
 
+from app.services.agents.mobility_strategies import MobilityConfig
+
 
 async def get_formatted_travel_history(db: AsyncSession, user_id: str) -> str:
     """
@@ -215,17 +217,38 @@ async def get_initial_itinerary_state(db: AsyncSession, session_id: int) -> Itin
         "currency": session.currency,
         "budget": session.budget,
         "flight_price": session.flight_price,
-        "accomodation_price": session.accomodation_price
+        "accommodation_price": session.accommodation_price,
+        "airport_name": session.airport_name,
+        "hotel_address": session.accommodation_address,
+    }
+
+    hotel_coords = (float(session.accommodation_latitude), float(session.accommodation_longitude)) if session.accommodation_latitude else (0.0, 0.0)
+    airport_coords = (float(session.airport_latitude), float(session.airport_longitude)) if session.airport_latitude else (0.0, 0.0)
+
+    trip_details = {
+        "arrival_dt": session.destination_arrival.isoformat() if session.destination_arrival else None,
+        "departure_dt": session.destination_departure.isoformat() if session.destination_departure else None,
+        "hotel_coords": hotel_coords,
+        "airport_coords": airport_coords,
+        "wakeup_time": "08:00",
+        "lunch_duration_mins": 90
     }
 
     return {
         "messages": [], 
         "user_id": str(session.user_id),
         "session_id": session.id,
+        "stage": 0,
+        "action": None,
+        "search_location": session.destination,
         "persona_context": persona,
         "data": itinerary_db_context,
-        "daily_themes": {},
-        "daily_plans": {},
-        "daily_links": {},
-        "are_themes_confirmed": False
+        "pois": [],
+        "mobility_config": MobilityConfig.create_default().model_dump(mode='json'),
+        "mobility_recommendation": None,
+        "pace_recommendation": None,
+        "pace": "Moderate",
+        "trip_details": trip_details,
+        "schedule": None,
+        "excluded_pois": None
     }

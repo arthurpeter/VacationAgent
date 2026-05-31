@@ -61,8 +61,8 @@ class FlightsRequest(BaseModel):
     destination_arrival: Optional[str] = ""
     destination_departure: Optional[str] = ""
 
-class AccomodationsRequest(BaseModel):
-    """Schema for accomodations search request."""
+class accommodationsRequest(BaseModel):
+    """Schema for accommodations search request."""
     session_id: int
     loc_id: Optional[str] = None
     location: str
@@ -75,8 +75,8 @@ class AccomodationsRequest(BaseModel):
     price_min: Optional[int]
     price_max: Optional[int]
 
-class AccomodationsResponse(BaseModel):
-    """Schema for accomodations search response."""
+class accommodationsResponse(BaseModel):
+    """Schema for accommodations search response."""
     hotel_id: str
     hotel_name: str
     latitude: Optional[float]
@@ -107,15 +107,19 @@ class HotelDetailsResponse(BaseModel):
     bed_details: Optional[str]
     address: Optional[str]
 
-class AccomodationBookingRequest(BaseModel):
-    """Simplified schema for booking an accomodation."""
+class accommodationBookingRequest(BaseModel):
+    """Simplified schema for booking an accommodation."""
     session_id: int
     booking_url: str
     price: Optional[float] = None
     currency: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    address: Optional[str] = None
+    name: Optional[str] = None
 
-class AccomodationBookingResponse(BaseModel):
-    """Schema for accomodation booking response."""
+class accommodationBookingResponse(BaseModel):
+    """Schema for accommodation booking response."""
     message: str
     booking_url: str
 

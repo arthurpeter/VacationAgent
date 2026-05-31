@@ -1,9 +1,12 @@
+import pprint
+
 import orjson
 
 from langgraph.graph import START, END, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langchain_core.messages import HumanMessage
+from langgraph.types import Send
 from psycopg_pool import AsyncConnectionPool
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,161 +18,95 @@ from app.core.logger import get_logger
 
 log = get_logger(__name__)
 
-def route_phase(state: ItineraryState):
-    """
-    The Gatekeeper: Routes the graph based on the user's UI action.
-    """
-    if state.get("are_themes_confirmed"):
-        return "focused_detailer"
-    return "global_architect"
-
-def route_link_finder(state: ItineraryState):
-    """The Traffic Cop for the ReAct loop."""
-    messages = state.get("messages", [])
-    if not messages:
-        return "itinerary_responder"
+def route_stage(state: ItineraryState):
+    """Routes the graph from START based on the current stage of the funnel."""
+    stage = state.get("stage", 0)
     
-    last_message = messages[-1]
+    if stage == 0:
+        return "picking_attractions"
+    elif stage == 1:
+        return "picking_transit"
+    elif stage == 2:
+        return "organize_itinerary"
+    else:
+        return "picking_attractions"
     
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        if any(tc["name"] == "SubmitLinks" for tc in last_message.tool_calls):
-            return "save_links_and_cleanup"
+def route_unresolved_attractions(state: ItineraryState):
+    action = state.get("action")
+    unresolved = state.get("unresolved_attractions", [])
+    
+    if action == "resolve_attractions" and len(unresolved) > 0:
+        return [Send("enrich_single_attraction_node", poi) for poi in unresolved]
         
-        return "link_finder_tools"
-        
-    return "link_finder_guard"
-
-def route_detailer(state: ItineraryState):
-    """Decides whether to call detailer tools or not."""
-    messages = state.get("messages", [])
-    if not messages:
-        return "itinerary_responder"
-    
-    last_message = messages[-1]
-    
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        if any(tc["name"] == "DetailerResult" for tc in last_message.tool_calls):
-            return "save_details_and_cleanup"
-        
-        return "detailer_tools"
-        
-    return "detailer_guard"
-
-def route_transit(state: ItineraryState):
-    """Transit Advisor ReAct loop."""
-    messages = state.get("messages", [])
-    if not messages: return "itinerary_responder"
-    last_message = messages[-1]
-    
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        if any(tc["name"] == "SaveTransitStrategy" for tc in last_message.tool_calls):
-            return "save_transit_and_cleanup"
-        return "transit_tools"
-    return "itinerary_responder"
+    return END
 
 def generate_graph(checkpointer=None):
     
     builder = StateGraph(ItineraryState)
-    builder.add_node("global_architect", global_architect)
-    builder.add_node("transit_advisor", transit_advisor)
-    builder.add_node("transit_tools", ToolNode([web_search_tool]))
-    builder.add_node("save_transit_and_cleanup", save_transit_and_cleanup)
-    builder.add_node("focused_detailer", focused_detailer)
-    builder.add_node("link_finder", link_finder)
-    builder.add_node("itinerary_responder", itinerary_responder)
-    builder.add_node("link_finder_tools", ToolNode(link_finder_tools))
-    builder.add_node("detailer_tools", ToolNode(detailer_tools))
-    builder.add_node("save_links_and_cleanup", save_links_and_cleanup)
-    builder.add_node("save_details_and_cleanup", save_details_and_cleanup)
-    # builder.add_node("detailer_guard", detailer_guard)
-    # builder.add_node("link_finder_guard", link_finder_guard)
 
-    builder.add_conditional_edges(START, route_phase, {
-            "focused_detailer": "focused_detailer",
-            "global_architect": "global_architect"
-        })
-    builder.add_edge("global_architect", "transit_advisor")
-    builder.add_conditional_edges("transit_advisor", route_transit, {
-            "transit_tools": "transit_tools",
-            "save_transit_and_cleanup": "save_transit_and_cleanup",
-            "itinerary_responder": "itinerary_responder"
-        })
-    builder.add_edge("transit_tools", "transit_advisor")
-    builder.add_edge("save_transit_and_cleanup", "itinerary_responder")
-    builder.add_conditional_edges("link_finder", route_link_finder, {
-            "save_links_and_cleanup": "save_links_and_cleanup",
-            "link_finder_tools": "link_finder_tools",
-            "itinerary_responder": "itinerary_responder",
-            "link_finder_guard": "itinerary_responder"
-        })
-    builder.add_conditional_edges("focused_detailer", route_detailer, {
-            "detailer_tools": "detailer_tools",
-            "save_details_and_cleanup": "save_details_and_cleanup",
-            "itinerary_responder": "itinerary_responder",
-            "detailer_guard": "itinerary_responder"
-        })
-    # builder.add_edge("link_finder_guard", "link_finder")
-    # builder.add_edge("detailer_guard", "focused_detailer")
-    builder.add_edge("link_finder_tools", "link_finder")
-    builder.add_edge("detailer_tools", "focused_detailer")
-    builder.add_edge("save_details_and_cleanup", "link_finder")
-    builder.add_edge("save_links_and_cleanup", "itinerary_responder")
-    builder.add_edge("itinerary_responder", END)
+    builder.add_node("picking_attractions", picking_attractions)
+    builder.add_node("picking_transit", picking_transit)
+    builder.add_node("organize_itinerary", organize_itinerary)
+    builder.add_node("enrich_single_attraction_node", enrich_single_attraction_node)
+    builder.add_node("save_attractions_to_db", save_attractions_to_db)
+
+    builder.add_conditional_edges(START, route_stage, {
+        "picking_attractions": "picking_attractions",
+        "picking_transit": "picking_transit",
+        "organize_itinerary": "organize_itinerary"
+    })
+
+    builder.add_conditional_edges(
+        "picking_attractions",
+        route_unresolved_attractions,
+        {
+            "enrich_single_attraction_node": "enrich_single_attraction_node",
+            END: END
+        }
+    )
+    
+    builder.add_edge("enrich_single_attraction_node", "save_attractions_to_db")
+    builder.add_edge("save_attractions_to_db", END)
+    builder.add_edge("picking_transit", END)
+    builder.add_edge("organize_itinerary", END)
 
     return builder.compile(checkpointer=checkpointer)
 
-async def stream_itinerary_message(
-    session_id: int, 
-    user_message: str, 
-    db: AsyncSession, 
+async def run_itinerary_graph(
+    session_id: int,
+    action: str,
+    stage: int,
+    query: Optional[str],
+    db: AsyncSession,
     checkpointer: AsyncPostgresSaver
-):
-    graph = generate_graph(checkpointer) 
+) -> dict:
+    """
+    Executes the itinerary graph to completion for a specific action and stage.
+    Returns the full final state of the graph.
+    """
+    graph = generate_graph(checkpointer)
     config = {"configurable": {"thread_id": f"itinerary_{session_id}"}}
 
     current_state = await graph.aget_state(config)
 
     if not current_state.values:
-        log.info(f"Starting new LangGraph itinerary thread for session {session_id}...")
+        log.info(f"Initializing new itinerary state for session {session_id}...")
         input_data = await get_initial_itinerary_state(db, session_id)
-        input_data["messages"].append(HumanMessage(content=user_message))
     else:
-        log.info(f"Resuming existing LangGraph itinerary thread for session {session_id}...")
-        input_data = {
-            "messages": [HumanMessage(content=user_message)]
-        }
+        log.info(f"Resuming itinerary state for session {session_id}...")
+        input_data = {}
 
-    final_ai_text = ""
+    input_data["action"] = action
+    input_data["stage"] = stage
+    
+    if query:
+        input_data["messages"] = [HumanMessage(content=query)]
 
-    async for event in graph.astream(input_data, config=config, stream_mode="updates"):
-        for node_name, node_updates in event.items():
+    final_state = await graph.ainvoke(input_data, config=config)
+    
+    return final_state
 
-            if not node_updates or not isinstance(node_updates, dict):
-                continue
-            
-            new_messages = node_updates.get("messages", [])
-            if new_messages:
-                last_msg = new_messages[-1] if isinstance(new_messages, list) else new_messages
-                if getattr(last_msg, "type", "") == "ai":
-                    final_ai_text = last_msg.content
-            
-            payload = {
-                "status": "processing",
-                "current_node": node_name,
-                "daily_themes": node_updates.get("daily_themes"),
-                "daily_plans": node_updates.get("daily_plans"),
-                "daily_links": node_updates.get("daily_links"),
-                "transit_strategy": node_updates.get("transit_strategy"),
-            }
-            
-            yield f"data: {orjson.dumps(payload, option=orjson.OPT_NON_STR_KEYS).decode()}\n\n"
-
-    final_payload = {
-        "status": "complete", 
-        "ai_message": final_ai_text
-    }
-    yield f"data: {orjson.dumps(final_payload).decode()}\n\n"
-
+# import asyncio
 
 if __name__ == "__main__":
     print("This module is not meant to be run directly. It provides the execution graph for the itinerary process.\n\n")
@@ -181,3 +118,36 @@ if __name__ == "__main__":
         f.write(png_bytes)
         
     print("Graph saved successfully to itinerary_graph_v2.png!")
+
+    # async def test_initial_fetch():
+    #     print("🚀 Compiling the Itinerary Graph...")
+    #     graph = generate_graph()
+
+    #     initial_state = {
+    #         "stage": 0,
+    #         "action": "initial_fetch",
+    #         "data": {
+    #             "destination": "Rome, It"
+    #         },
+    #         "persona": "History Buff",
+    #         "pois": [],
+    #         "unresolved_attractions": [],
+    #         "resolved_attractions": [],
+    #         "messages": []
+    #     }
+
+    #     print(f"🌍 Starting graph execution for {initial_state['data']['destination']}...")
+
+    #     final_state = await graph.ainvoke(initial_state)
+
+    #     print("\n✅ Graph Execution Finished!\n")
+
+    #     print("--- Final POIs Collected ---")
+    #     pprint.pprint(final_state.get("pois"))
+
+    #     print("\n--- Final Graph State Keys ---")
+    #     print(f"Action: {final_state.get('action')}")
+    #     print(f"Unresolved Count: {len(final_state.get('unresolved_attractions', []))}")
+    #     print(f"Resolved Count: {len(final_state.get('resolved_attractions', []))}")
+
+    # asyncio.run(test_initial_fetch())

@@ -1,8 +1,8 @@
 """initial migration
 
-Revision ID: 10d27dbdc81b
+Revision ID: 818f6ae5af85
 Revises: 
-Create Date: 2026-04-15 15:34:13.451270
+Create Date: 2026-05-28 12:39:58.403862
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '10d27dbdc81b'
+revision: str = '818f6ae5af85'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -27,6 +27,44 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('token')
     )
     op.create_index(op.f('ix_blacklist_tokens_token'), 'blacklist_tokens', ['token'], unique=False)
+    op.create_table('global_attractions',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('external_place_id', sa.String(), nullable=True),
+    sa.Column('wikidata_id', sa.String(), nullable=True),
+    sa.Column('official_name', sa.String(), nullable=False),
+    sa.Column('opening_hours', sa.JSON(), nullable=True),
+    sa.Column('city', sa.String(), nullable=False),
+    sa.Column('state_province', sa.String(), nullable=True),
+    sa.Column('country', sa.String(), nullable=False),
+    sa.Column('formatted_address', sa.String(), nullable=True),
+    sa.Column('timezone', sa.String(), nullable=True),
+    sa.Column('latitude', sa.Float(), nullable=False),
+    sa.Column('longitude', sa.Float(), nullable=False),
+    sa.Column('category', sa.String(), nullable=True),
+    sa.Column('tags', sa.String(), nullable=True),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('image_url', sa.String(), nullable=True),
+    sa.Column('website_url', sa.String(), nullable=True),
+    sa.Column('rating', sa.Float(), nullable=True),
+    sa.Column('price_tier', sa.Integer(), nullable=True),
+    sa.Column('recommended_duration_mins', sa.Integer(), nullable=True),
+    sa.Column('tod_preference', sa.String(), nullable=True),
+    sa.Column('needs_reservation', sa.Boolean(), nullable=True),
+    sa.Column('search_count', sa.Integer(), nullable=False),
+    sa.Column('must_count', sa.Integer(), nullable=False),
+    sa.Column('want_count', sa.Integer(), nullable=False),
+    sa.Column('optional_count', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_global_attractions_category'), 'global_attractions', ['category'], unique=False)
+    op.create_index(op.f('ix_global_attractions_city'), 'global_attractions', ['city'], unique=False)
+    op.create_index(op.f('ix_global_attractions_country'), 'global_attractions', ['country'], unique=False)
+    op.create_index(op.f('ix_global_attractions_external_place_id'), 'global_attractions', ['external_place_id'], unique=True)
+    op.create_index(op.f('ix_global_attractions_id'), 'global_attractions', ['id'], unique=False)
+    op.create_index(op.f('ix_global_attractions_official_name'), 'global_attractions', ['official_name'], unique=False)
+    op.create_index(op.f('ix_global_attractions_state_province'), 'global_attractions', ['state_province'], unique=False)
     op.create_table('users',
     sa.Column('id', sa.String(), nullable=False),
     sa.Column('email', sa.String(), nullable=False),
@@ -90,10 +128,17 @@ def upgrade() -> None:
     sa.Column('destination_departure', sa.DateTime(), nullable=True),
     sa.Column('flights_url', sa.Text(), nullable=True),
     sa.Column('flight_price', sa.Float(), nullable=True),
-    sa.Column('accomodation_url', sa.Text(), nullable=True),
-    sa.Column('accomodation_price', sa.Float(), nullable=True),
-    sa.Column('itinerary_text', sa.Text(), nullable=True),
-    sa.Column('extra_links', sa.JSON(), nullable=True),
+    sa.Column('flight_ccy', sa.String(), nullable=True),
+    sa.Column('airport_latitude', sa.Float(), nullable=True),
+    sa.Column('airport_longitude', sa.Float(), nullable=True),
+    sa.Column('airport_name', sa.String(), nullable=True),
+    sa.Column('accommodation_url', sa.Text(), nullable=True),
+    sa.Column('accommodation_price', sa.Float(), nullable=True),
+    sa.Column('accommodation_ccy', sa.String(), nullable=True),
+    sa.Column('accommodation_latitude', sa.Float(), nullable=True),
+    sa.Column('accommodation_longitude', sa.Float(), nullable=True),
+    sa.Column('accommodation_address', sa.String(), nullable=True),
+    sa.Column('accommodation_name', sa.String(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
@@ -105,23 +150,32 @@ def upgrade() -> None:
     op.create_index(op.f('ix_vacation_sessions_user_id'), 'vacation_sessions', ['user_id'], unique=False)
     op.create_table('vacations',
     sa.Column('id', sa.String(), nullable=False),
-    sa.Column('departure', sa.String(), nullable=False),
-    sa.Column('destination', sa.String(), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('start_date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('end_date', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('flights', sa.JSON(), nullable=True),
-    sa.Column('hotels', sa.JSON(), nullable=True),
-    sa.Column('itinerary', sa.Text(), nullable=True),
-    sa.Column('total_price', sa.Numeric(precision=12, scale=2), nullable=True),
-    sa.Column('currency', sa.String(length=8), nullable=True),
     sa.Column('user_id', sa.String(), nullable=False),
+    sa.Column('session_id', sa.Integer(), nullable=True),
+    sa.Column('destination', sa.String(), nullable=False),
+    sa.Column('origin', sa.String(), nullable=True),
+    sa.Column('from_date', sa.DateTime(), nullable=True),
+    sa.Column('to_date', sa.DateTime(), nullable=True),
+    sa.Column('adults', sa.Integer(), nullable=False),
+    sa.Column('children', sa.Integer(), nullable=False),
+    sa.Column('flights_url', sa.Text(), nullable=True),
+    sa.Column('flight_price', sa.Float(), nullable=True),
+    sa.Column('flight_ccy', sa.String(), nullable=True),
+    sa.Column('airport_name', sa.String(), nullable=True),
+    sa.Column('accommodation_url', sa.Text(), nullable=True),
+    sa.Column('accommodation_price', sa.Float(), nullable=True),
+    sa.Column('accommodation_ccy', sa.String(), nullable=True),
+    sa.Column('accommodation_name', sa.String(), nullable=True),
+    sa.Column('accommodation_address', sa.String(), nullable=True),
+    sa.Column('itinerary_data', sa.JSON(), nullable=True),
+    sa.Column('is_finalized', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('session_id')
     )
     op.create_index(op.f('ix_vacations_id'), 'vacations', ['id'], unique=False)
+    op.create_index(op.f('ix_vacations_is_finalized'), 'vacations', ['is_finalized'], unique=False)
     op.create_table('vacation_companions',
     sa.Column('vacation_session_id', sa.Integer(), nullable=False),
     sa.Column('companion_id', sa.String(), nullable=False),
@@ -136,6 +190,7 @@ def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
     op.drop_table('vacation_companions')
+    op.drop_index(op.f('ix_vacations_is_finalized'), table_name='vacations')
     op.drop_index(op.f('ix_vacations_id'), table_name='vacations')
     op.drop_table('vacations')
     op.drop_index(op.f('ix_vacation_sessions_user_id'), table_name='vacation_sessions')
@@ -148,6 +203,14 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_users_id'), table_name='users')
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
+    op.drop_index(op.f('ix_global_attractions_state_province'), table_name='global_attractions')
+    op.drop_index(op.f('ix_global_attractions_official_name'), table_name='global_attractions')
+    op.drop_index(op.f('ix_global_attractions_id'), table_name='global_attractions')
+    op.drop_index(op.f('ix_global_attractions_external_place_id'), table_name='global_attractions')
+    op.drop_index(op.f('ix_global_attractions_country'), table_name='global_attractions')
+    op.drop_index(op.f('ix_global_attractions_city'), table_name='global_attractions')
+    op.drop_index(op.f('ix_global_attractions_category'), table_name='global_attractions')
+    op.drop_table('global_attractions')
     op.drop_index(op.f('ix_blacklist_tokens_token'), table_name='blacklist_tokens')
     op.drop_table('blacklist_tokens')
     # ### end Alembic commands ###

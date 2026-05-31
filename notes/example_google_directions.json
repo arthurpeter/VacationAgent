@@ -1,0 +1,562 @@
+{
+   "geocoded_waypoints":[
+      {
+         "geocoder_status":"OK",
+         "place_id":"ChIJAQDMdbdhLxMRYG8mgGriq_U",
+         "types":[
+            "street_address",
+            "subpremise"
+         ]
+      },
+      {
+         "geocoder_status":"OK",
+         "place_id":"ChIJk7yaBmRgLxMRsLdfNmo3n6Y",
+         "types":[
+            "premise",
+            "street_address"
+         ]
+      }
+   ],
+   "routes":[
+      {
+         "bounds":{
+            "northeast":{
+               "lat":41.9086107,
+               "lng":12.4934781
+            },
+            "southwest":{
+               "lat":41.8836147,
+               "lng":12.4551599
+            }
+         },
+         "copyrights":"Powered by Google, ©2026 Google",
+         "legs":[
+            {
+               "arrival_time":{
+                  "text":"12:30\u202fPM",
+                  "time_zone":"Europe/Rome",
+                  "value":1779791431
+               },
+               "departure_time":{
+                  "text":"11:31\u202fAM",
+                  "time_zone":"Europe/Rome",
+                  "value":1779787910
+               },
+               "distance":{
+                  "text":"7.4 km",
+                  "value":7437
+               },
+               "duration":{
+                  "text":"59 mins",
+                  "value":3521
+               },
+               "end_address":"WF43+9VH, 00120 Vatican City",
+               "end_location":{
+                  "lat":41.9060161,
+                  "lng":12.4551676
+               },
+               "start_address":"P.za del Colosseo, 1, 00184 Roma RM, Italy",
+               "start_location":{
+                  "lat":41.8898917,
+                  "lng":12.4918766
+               },
+               "steps":[
+                  {
+                     "distance":{
+                        "text":"0.5 km",
+                        "value":521
+                     },
+                     "duration":{
+                        "text":"7 mins",
+                        "value":413
+                     },
+                     "end_location":{
+                        "lat":41.888199,
+                        "lng":12.490008
+                     },
+                     "html_instructions":"Walk to S. Gregorio",
+                     "polyline":{
+                        "points":"yrt~FgyfkADKDOBKHi@Bi@Aa@I]Oa@SOTqAFFBDJLLLDFBFBFN^DJ@H@D@DBP?DBV?P?B?PARADATE`@JDNFB?@R?R@TDf@@@BPDRFTL\\JVPVPXDFTXRVX^JBVFVF"
+                     },
+                     "start_location":{
+                        "lat":41.8898917,
+                        "lng":12.4918766
+                     },
+                     "steps":[
+                        {
+                           "distance":{
+                              "text":"0.1 km",
+                              "value":113
+                           },
+                           "duration":{
+                              "text":"2 mins",
+                              "value":90
+                           },
+                           "end_location":{
+                              "lat":41.8899836,
+                              "lng":12.4930698
+                           },
+                           "html_instructions":"Head <b>southeast</b>",
+                           "polyline":{
+                              "points":"yrt~FgyfkADKDOBKHi@Bi@Aa@I]Oa@SO"
+                           },
+                           "start_location":{
+                              "lat":41.8898917,
+                              "lng":12.4918766
+                           },
+                           "travel_mode":"WALKING"
+                        },
+                        {
+                           "distance":{
+                              "text":"36 m",
+                              "value":36
+                           },
+                           "duration":{
+                              "text":"1 min",
+                              "value":31
+                           },
+                           "end_location":{
+                              "lat":41.8898728,
+                              "lng":12.4934781
+                           },
+                           "html_instructions":"Turn <b>right</b>",
+                           "maneuver":"turn-right",
+                           "polyline":{
+                              "points":"kst~Fu`gkATqA"
+                           },
+                           "start_location":{
+                              "lat":41.8899836,
+                              "lng":12.4930698
+                           },
+                           "travel_mode":"WALKING"
+                        },
+                        {
+                           "distance":{
+                              "text":"0.1 km",
+                              "value":143
+                           },
+                           "duration":{
+                              "text":"2 mins",
+                              "value":115
+                           },
+                           "end_location":{
+                              "lat":41.8894852,
+                              "lng":12.4919701
+                           },
+                           "html_instructions":"Turn <b>right</b> toward <b>Via Celio Vibenna</b>",
+                           "maneuver":"turn-right",
+                           "polyline":{
+                              "points":"urt~FgcgkAFFBDJLLLDFBFBFN^DJ@H@D@DBP?DBV?P?B?PARADATE`@"
+                           },
+                           "start_location":{
+                              "lat":41.8898728,
+                              "lng":12.4934781
+                           },
+                           "travel_mode":"WALKING"
+                        },
+                        {
+                           "distance":{
+                              "text":"24 m",
+                              "value":24
+                           },
+                           "duration":{
+                              "text":"1 min",
+                              "value":28
+                           },
+                           "end_location":{
+                              "lat":41.8893294,
+                              "lng":12.491896
+                           },
+                           "html_instructions":"Turn <b>left</b> toward <b>Via Celio Vibenna</b><div style=\"font-size:0.9em\">Take the stairs</div>",
+                           "maneuver":"turn-left",
+                           "polyline":{
+                              "points":"ipt~FyyfkAJDNFB?"
+                           },
+                           "start_location":{
+                              "lat":41.8894852,
+                              "lng":12.4919701
+                           },
+                           "travel_mode":"WALKING"
+                        },
+                        {
+                           "distance":{
+                              "text":"0.2 km",
+                              "value":155
+                           },
+                           "duration":{
+                              "text":"2 mins",
+                              "value":109
+                           },
+                           "end_location":{
+                              "lat":41.8884963,
+                              "lng":12.4901115
+                           },
+                           "html_instructions":"Turn <b>right</b> onto <b>Via Celio Vibenna</b>",
+                           "maneuver":"turn-right",
+                           "polyline":{
+                              "points":"iot~FkyfkA@R?R@TDf@@@BPDRFTL\\JVPVPXDFTXRVX^"
+                           },
+                           "start_location":{
+                              "lat":41.8893294,
+                              "lng":12.491896
+                           },
+                           "travel_mode":"WALKING"
+                        },
+                        {
+                           "distance":{
+                              "text":"50 m",
+                              "value":50
+                           },
+                           "duration":{
+                              "text":"1 min",
+                              "value":40
+                           },
+                           "end_location":{
+                              "lat":41.888199,
+                              "lng":12.490008
+                           },
+                           "html_instructions":"Continue onto <b>Via di S. Gregorio</b><div style=\"font-size:0.9em\">Destination will be on the right</div>",
+                           "polyline":{
+                              "points":"cjt~FenfkAJBVFVF"
+                           },
+                           "start_location":{
+                              "lat":41.8884963,
+                              "lng":12.4901115
+                           },
+                           "travel_mode":"WALKING"
+                        }
+                     ],
+                     "travel_mode":"WALKING"
+                  },
+                  {
+                     "distance":{
+                        "text":"6.1 km",
+                        "value":6081
+                     },
+                     "duration":{
+                        "text":"38 mins",
+                        "value":2296
+                     },
+                     "end_location":{
+                        "lat":41.906075,
+                        "lng":12.459162
+                     },
+                     "html_instructions":"Bus towards Crescenzio/Risorgimento",
+                     "polyline":{
+                        "points":"cht~FwmfkA@S@?x@NND|Bd@fDn@x@Nh@JlAVVDTDPBRDVFPFNFPFd@ZRNNNRVZd@\\d@NVb@j@MXKTMVa@t@MTENWj@CDOZCDWd@KRADKPCFEHEHCDGLINEHGLKPIRGHGFEDEDk@v@U\\kA|BOj@k@rAK^A@IPKNKPe@r@[b@c@`@EFo@|@CBWXk@s@}@_AQOg@i@WUUd@[n@ILKNCBU`@MRKP]j@St@GRUr@KXSFe@NOFGBYJE@KDs@TKBi@PWHiAZUJa@J]JSF_@HM@I?I?IAGAKEICQGWIICi@QUKAAQAIGIKKKKOIMU]Ye@QSIMOQUUCAMOCEACCACAGASCMAGAC?ECOCEAG?KAMCSGQEEACAGAOAO?SBQBMDUGGAIAEACAEAECCCECCC]MU?SB{@RWHmAZ]F@VDH?@@BNtALdABTVtBt@lEB\\Bf@Br@BzC@|@GRCf@ALAJAPARCFADAHCNA@?DERGXCLEX?@?NERAFMl@AHCHAH?LCR?JADGpACf@C^ATs@OE~@K?G@K?}@FMB}AVSBG@k@Bw@FmBJc@Bk@@Q?QAQ?K?I?U@S@WBk@DC?C?C?CBC@CB?FALAJ?`@?X@X?l@?X?TWNOHa@RMFIDOJOF}@b@MHc@Pg@VWJg@KCOMYc@{ACC?AESEMGQEKa@cAYm@S]IOIMIKMQc@c@CEo@k@WQKI[USMSOICa@SQKQEOGWM]GAXCdAAX?@ARIfC?HAVA^?BCr@Cx@InCC`ACx@C|@OLIFID_@RULMFo@\\CDCDABADAD?B?B?D@D@FDN@DH\\?BJ^Pv@FVWPwAr@E@w@`@YN_Ad@GB]PaChAo@\\IDg@Vm@ZJj@D^Lx@TrARlARnARpA?@Lt@BRDTJp@D\\PfAN~@b@pCFXJr@tA_@lA_@b@M^M`@KPGHC^GE|AK|CGhBAj@A\\ARA^AVIfCC`BEbBAHG?"
+                     },
+                     "start_location":{
+                        "lat":41.888184,
+                        "lng":12.4900395
+                     },
+                     "transit_details":{
+                        "arrival_stop":{
+                           "location":{
+                              "lat":41.906075,
+                              "lng":12.459162
+                           },
+                           "name":"Crescenzio/Risorgimento"
+                        },
+                        "arrival_time":{
+                           "text":"12:17\u202fPM",
+                           "time_zone":"Europe/Rome",
+                           "value":1779790620
+                        },
+                        "departure_stop":{
+                           "location":{
+                              "lat":41.888184,
+                              "lng":12.4900395
+                           },
+                           "name":"S. Gregorio"
+                        },
+                        "departure_time":{
+                           "text":"11:38\u202fAM",
+                           "time_zone":"Europe/Rome",
+                           "value":1779788324
+                        },
+                        "headsign":"Crescenzio/Risorgimento",
+                        "line":{
+                           "agencies":[
+                              {
+                                 "name":"ATAC",
+                                 "phone":"011 39 06 57003",
+                                 "url":"https://romamobilita.it/it"
+                              }
+                           ],
+                           "color":"#336d4a",
+                           "short_name":"81",
+                           "text_color":"#ffffff",
+                           "url":"https://muoversiaroma.it/it/linea?numero=81",
+                           "vehicle":{
+                              "icon":"//maps.gstatic.com/mapfiles/transit/iw2/6/bus2.png",
+                              "name":"Bus",
+                              "type":"BUS"
+                           }
+                        },
+                        "num_stops":16
+                     },
+                     "travel_mode":"TRANSIT"
+                  },
+                  {
+                     "distance":{
+                        "text":"0.8 km",
+                        "value":835
+                     },
+                     "duration":{
+                        "text":"13 mins",
+                        "value":785
+                     },
+                     "end_location":{
+                        "lat":41.9060161,
+                        "lng":12.4551676
+                     },
+                     "html_instructions":"Walk to WF43+9VH, 00120 Vatican City",
+                     "polyline":{
+                        "points":"gxw~Fyl`kAAZB?XBB??JZ?L]VLBBGNB@ARGAIlA?PCb@ALAJGl@p@?@Rh@@RCZ?bABPCd@?PDhAB?RC`AER?\\ATEtAA??HD??h@AN?PG??D?FABF@Cp@ABAR?Hw@AiAAC??RE?}@C{@AG?G?G?E?E@E@G@CDEFA@EBKDIBI?W@M?O?O??D@B@BB@@@@@B?B?d@A"
+                     },
+                     "start_location":{
+                        "lat":41.9061217,
+                        "lng":12.459167
+                     },
+                     "steps":[
+                        {
+                           "distance":{
+                              "text":"22 m",
+                              "value":22
+                           },
+                           "duration":{
+                              "text":"1 min",
+                              "value":17
+                           },
+                           "end_location":{
+                              "lat":41.9061115,
+                              "lng":12.4590251
+                           },
+                           "html_instructions":"Head <b>west</b> on <b>Via Crescenzio</b> toward <b>Piazza del Risorgimento</b>",
+                           "polyline":{
+                              "points":"gxw~Fyl`kAAZB?"
+                           },
+                           "start_location":{
+                              "lat":41.9061217,
+                              "lng":12.459167
+                           },
+                           "travel_mode":"WALKING"
+                        },
+                        {
+                           "distance":{
+                              "text":"32 m",
+                              "value":32
+                           },
+                           "duration":{
+                              "text":"1 min",
+                              "value":35
+                           },
+                           "end_location":{
+                              "lat":41.9056345,
+                              "lng":12.4589239
+                           },
+                           "html_instructions":"Turn <b>left</b> onto <b>Piazza del Risorgimento</b>",
+                           "maneuver":"turn-left",
+                           "polyline":{
+                              "points":"exw~F}k`kAXBB??JZ?L]VLBBGNB@"
+                           },
+                           "start_location":{
+                              "lat":41.9061115,
+                              "lng":12.4590251
+                           },
+                           "travel_mode":"WALKING"
+                        },
+                        {
+                           "distance":{
+                              "text":"90 m",
+                              "value":90
+                           },
+                           "duration":{
+                              "text":"1 min",
+                              "value":82
+                           },
+                           "end_location":{
+                              "lat":41.9058096,
+                              "lng":12.4578127
+                           },
+                           "html_instructions":"Turn <b>right</b> to stay on <b>Piazza del Risorgimento</b>",
+                           "maneuver":"turn-right",
+                           "polyline":{
+                              "points":"euw~Fgk`kAARGAIlA?PCb@ALAJGl@"
+                           },
+                           "start_location":{
+                              "lat":41.9056345,
+                              "lng":12.4589239
+                           },
+                           "travel_mode":"WALKING"
+                        },
+                        {
+                           "distance":{
+                              "text":"0.2 km",
+                              "value":215
+                           },
+                           "duration":{
+                              "text":"3 mins",
+                              "value":178
+                           },
+                           "end_location":{
+                              "lat":41.9040235,
+                              "lng":12.4576709
+                           },
+                           "html_instructions":"Turn <b>left</b> onto <b>V. di Porta Angelica</b>",
+                           "maneuver":"turn-left",
+                           "polyline":{
+                              "points":"ivw~Fid`kAp@?@Rh@@RCZ?bABPCd@?PDhAB"
+                           },
+                           "start_location":{
+                              "lat":41.9058096,
+                              "lng":12.4578127
+                           },
+                           "travel_mode":"WALKING"
+                        },
+                        {
+                           "distance":{
+                              "text":"10 m",
+                              "value":10
+                           },
+                           "duration":{
+                              "text":"1 min",
+                              "value":8
+                           },
+                           "end_location":{
+                              "lat":41.9040235,
+                              "lng":12.4576709
+                           },
+                           "html_instructions":"Turn <b>right</b> onto <b>V. Sant\\'Anna</b><div style=\"font-size:0.9em\">Restricted usage road</div><div style=\"font-size:0.9em\">Entering Vatican City</div>",
+                           "maneuver":"turn-right",
+                           "polyline":{
+                              "points":"ckw~Fmc`kA"
+                           },
+                           "start_location":{
+                              "lat":41.9040235,
+                              "lng":12.4576709
+                           },
+                           "travel_mode":"WALKING"
+                        },
+                        {
+                           "distance":{
+                              "text":"0.1 km",
+                              "value":127
+                           },
+                           "duration":{
+                              "text":"2 mins",
+                              "value":126
+                           },
+                           "end_location":{
+                              "lat":41.9040954,
+                              "lng":12.4561065
+                           },
+                           "html_instructions":"Continue straight to stay on <b>V. Sant\\'Anna</b><div style=\"font-size:0.9em\">Restricted usage road</div>",
+                           "maneuver":"straight",
+                           "polyline":{
+                              "points":"ckw~Fmc`kA?RC`AER?\\ATEtAA??HD??h@AN"
+                           },
+                           "start_location":{
+                              "lat":41.9040235,
+                              "lng":12.4576709
+                           },
+                           "travel_mode":"WALKING"
+                        },
+                        {
+                           "distance":{
+                              "text":"55 m",
+                              "value":55
+                           },
+                           "duration":{
+                              "text":"1 min",
+                              "value":53
+                           },
+                           "end_location":{
+                              "lat":41.90415309999999,
+                              "lng":12.4554988
+                           },
+                           "html_instructions":"Slight <b>right</b> to stay on <b>V. Sant\\'Anna</b><div style=\"font-size:0.9em\">Restricted usage road</div>",
+                           "maneuver":"turn-slight-right",
+                           "polyline":{
+                              "points":"skw~Fuy_kA?PG??D?FABF@Cp@ABAR?H"
+                           },
+                           "start_location":{
+                              "lat":41.9040954,
+                              "lng":12.4561065
+                           },
+                           "travel_mode":"WALKING"
+                        },
+                        {
+                           "distance":{
+                              "text":"0.2 km",
+                              "value":246
+                           },
+                           "duration":{
+                              "text":"4 mins",
+                              "value":252
+                           },
+                           "end_location":{
+                              "lat":41.9063136,
+                              "lng":12.4552562
+                           },
+                           "html_instructions":"Turn <b>right</b><div style=\"font-size:0.9em\">Restricted usage road</div>",
+                           "maneuver":"turn-right",
+                           "polyline":{
+                              "points":"}kw~F{u_kAw@AiAAC??RE?}@C{@AG?G?G?E?E@E@G@CDEFA@EBKDIBI?W@M?O?O?"
+                           },
+                           "start_location":{
+                              "lat":41.90415309999999,
+                              "lng":12.4554988
+                           },
+                           "travel_mode":"WALKING"
+                        },
+                        {
+                           "distance":{
+                              "text":"38 m",
+                              "value":38
+                           },
+                           "duration":{
+                              "text":"1 min",
+                              "value":34
+                           },
+                           "end_location":{
+                              "lat":41.9060161,
+                              "lng":12.4551676
+                           },
+                           "html_instructions":"Turn <b>left</b><div style=\"font-size:0.9em\">Restricted usage road</div><div style=\"font-size:0.9em\">Destination will be on the right</div>",
+                           "maneuver":"turn-left",
+                           "polyline":{
+                              "points":"myw~Fkt_kA?D@B@BB@@@@@B?B?d@A"
+                           },
+                           "start_location":{
+                              "lat":41.9063136,
+                              "lng":12.4552562
+                           },
+                           "travel_mode":"WALKING"
+                        }
+                     ],
+                     "travel_mode":"WALKING"
+                  }
+               ],
+               "traffic_speed_entry":[
+                  
+               ],
+               "via_waypoint":[
+                  
+               ]
+            }
+         ],
+         "overview_polyline":{
+            "points":"yrt~FgyfkAJ[Lu@Bi@Aa@I]Oa@SOTqAJLb@j@Z|@Fb@Bl@E`AE`@JDRFHdBR|@Xt@b@p@hAxAb@JVFBEBShAThKpBlCf@j@L`@Nv@b@b@^|AzBb@j@MXYl@o@jA]z@o@lA]r@{@`BQ\\MLq@|@U\\kA|B{@~BM`@gAfB[b@c@`@u@dA[\\iBsBy@y@WUUd@e@|@ORmArB[hAa@lAqAb@_Bh@aGfBm@JS?g@M}Ag@WMQAIGUWU]kAeBw@y@EIGCq@I_@ISAa@Kc@K_@Ae@FMDUGQCUIIGa@Qi@BsA\\mAZ]FF`@^`DZjCt@lEB\\FzADxEKz@CXIr@G`@WtA?PGZUjAEr@QnDs@OE~@S@iAFkBZ_CPqCN}@@y@AmBLOBGDAT?`B?fA?TWNq@\\WLkB`AkAh@WJg@KQi@g@_BSu@g@oAm@kA]i@q@u@s@q@sA_A]Ss@_@a@Mu@UGzBM|D_@zMYTi@Xc@Ts@b@IT@Rx@nDmDhB_CjAcFdCm@ZJj@RxApAbIV`Br@vEj@jDJr@tA_@pBm@`AYZK^GE|ASfGChAOrEIdEAHG?GAAZ\\BB??JZ?L]VLBBGN@TGAIlACt@CXGl@p@?@Rh@@n@CbABPCv@DhAB?RC`AERAr@GtA?HD?Ax@?PG??LABF@Et@A\\aCCC??RcACcAA[@MBILGDUH_A@O??DBFJDh@A"
+         },
+         "summary":"",
+         "warnings":[
+            "Walking directions are in beta. Use caution – This route may be missing sidewalks or pedestrian paths."
+         ],
+         "waypoint_order":[
+            
+         ]
+      }
+   ],
+   "status":"OK"
+}
