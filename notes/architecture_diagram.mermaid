@@ -1,0 +1,109 @@
+graph TD
+
+    %% --- CONFIGURARE STILURI SI CULORI ---
+    classDef user fill:#fef2f2,stroke:#ef4444,stroke-width:2px,color:#991b1b;
+    classDef proxy fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#065f46;
+    classDef frontend fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1;
+    classDef backend fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#6b21a8;
+    classDef storage fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e;
+    classDef external fill:#f8fafc,stroke:#475569,stroke-width:2px,color:#334155;
+
+    %% ======================================================================
+    %% CONTAINERUL MASTER
+    %% ======================================================================
+    subgraph Master_Architecture ["Diagrama UML de Arhitectura si Componente - Platforma TuRAG"]
+
+        subgraph Client_Platform ["Stratul Client (User Access)"]
+            User(Traveler Browser):::user
+        end
+
+        subgraph Docker_Environment ["Infrastructura Core (Docker Compose Network)"]
+
+            Nginx["Nginx Reverse Proxy"]:::proxy
+
+            subgraph Frontend_Container ["Frontend Container (Vite + React)"]
+                UI["React UI Views<br>(Discovery, Options, Itinerary)"]:::frontend
+                APIClient["Fetch API Client"]:::frontend
+            end
+
+            subgraph Backend_Container ["Backend Container (FastAPI + Uvicorn)"]
+
+                FastAPIRouter["FastAPI Endpoints Router"]:::backend
+                Auth["AuthX Middleware<br>(Token Auth & Access Control)"]:::backend
+
+                subgraph Discovery_Module ["1. Discovery Subsystem"]
+                    Chat["Chat Interface Module"]:::backend
+                    Extract["LLM Entity Extraction"]:::backend
+                end
+
+                subgraph Options_Module ["2. Options Subsystem"]
+                    FlightSvc["Flights Service"]:::backend
+                    HotelSvc["Hotels Service"]:::backend
+                end
+
+                subgraph Itinerary_Module ["3. Itinerary & Pipeline Subsystem"]
+                    Pipeline["POI Pipeline Engine"]:::backend
+                    DeepSearch["Web Data Extraction"]:::backend
+                    ScheduleEngine["OR-Tools Local Solver"]:::backend
+                end
+
+            end
+
+            subgraph Storage_Layer ["Persistence & Caching Layer"]
+                direction LR
+                Postgres[("PostgreSQL DB<br>(Checkpoints + pg_cron)")]:::storage
+                Redis[("Redis Cache DB")]:::storage
+                Postgres ~~~ Redis
+            end
+
+        end
+
+        subgraph External_APIs ["Servicii Cloud Externe (Third-Party APIs Ecosystem)"]
+            direction LR
+            Gemini["Google Gemini API<br>(gemini-2.5-flash)"]:::external
+            SerpAPI["SerpAPI Engine<br>(Google Flights)"]:::external
+            BookingAPI["Booking API<br>(via RapidAPI)"]:::external
+            OpenTripMap["OpenTripMap API<br>(POI Geolocation)"]:::external
+            Tavily["Tavily AI Search<br>(Web Research)"]:::external
+            DirectionsAPI["Google Directions API<br>(Real-time Transit)"]:::external
+            SMTP["Gmail SMTP Server"]:::external
+        end
+
+    end
+
+    %% ======================================================================
+    %% RUTE SI FLUXURI DE DATE
+    %% ======================================================================
+
+    User -->|Port 5173 / HTTP Requests| Nginx
+    Nginx -->|Servire UI Statica| UI
+
+    UI -.-> APIClient
+
+    APIClient -->|HTTP Requests / JSON| Nginx
+    Nginx -->|Proxy Pass Port 8000| FastAPIRouter
+
+    FastAPIRouter --> Auth
+
+    Auth --> Chat
+    Auth --> FlightSvc
+    Auth --> HotelSvc
+    Auth --> Pipeline
+    Auth --> ScheduleEngine
+
+    Chat --> Storage_Layer
+    FlightSvc --> Storage_Layer
+    HotelSvc --> Storage_Layer
+    Pipeline --> Storage_Layer
+    DeepSearch --> Storage_Layer
+    ScheduleEngine --> Storage_Layer
+
+    Chat --> Extract
+
+    Extract --> External_APIs
+    FlightSvc ==> External_APIs
+    HotelSvc ==> External_APIs
+    Pipeline --> External_APIs
+    DeepSearch --> External_APIs
+    ScheduleEngine ==> External_APIs
+    FastAPIRouter --> External_APIs
