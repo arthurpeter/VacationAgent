@@ -36,9 +36,25 @@ def upgrade() -> None:
         $$);
     """)
 
+    op.execute("""
+        SELECT cron.schedule('cleanup_langgraph_checkpoints', '0 * * * *', $$
+            DELETE FROM checkpoints 
+            WHERE (thread_id, checkpoint_id) NOT IN (
+                SELECT thread_id, checkpoint_id
+                FROM (
+                    SELECT thread_id, checkpoint_id,
+                           ROW_NUMBER() OVER (PARTITION BY thread_id ORDER BY checkpoint_id DESC) as row_num
+                    FROM checkpoints
+                ) sub
+                WHERE row_num <= 3
+            );
+        $$);
+    """)
+
 
 def downgrade() -> None:
     """Downgrade schema."""
+    op.execute("SELECT cron.unschedule('cleanup_langgraph_checkpoints');")
     op.execute("SELECT cron.unschedule('cleanup_vacation_sessions');")
     op.execute("SELECT cron.unschedule('cleanup_blacklist_tokens');")
     op.execute("DROP EXTENSION IF EXISTS pg_cron;")
