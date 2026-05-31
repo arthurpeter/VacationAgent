@@ -138,26 +138,30 @@ INSTRUCTIONS:
 """
 
 extraction_prompt = """
-You are an expert travel data agent. Your job is to accurately extract specific details about an attraction from raw web search results or your knowledge(only if you are sure about it) to fill our database.
-
+You are an expert travel data agent. Your job is to accurately extract specific details about an attraction from raw web search results or your knowledge (only if you are sure about it) to fill our database.
+ 
 ### ATTRACTION NAME:
 {name}
-
+ 
 ### MESSY BASELINE LOCATION:
 City: {otm_city}
 Country: {otm_country}
-
+ 
 ### BASELINE DESCRIPTION:
 {otm_description}
-
+ 
 ### WEB SEARCH RESULTS:
 {context}
-
+ 
 INSTRUCTIONS:
 1. Extract the requested fields (price tier, duration, tod, rating, website).
 2. Clean up the Messy Baseline Location. Output the standard, widely recognized ENGLISH name for the City and the standard 2-letter Country Code for the Country.
 3. Write a fresh, engaging 2-sentence travel description for the attraction.
 4. Weekly Opening Hours: Provide a JSON object with keys for all 7 days (monday-sunday).
+   - Use "HH:MM-HH:MM" format (24-hour) if you found the hours in the search results.
+   - Use "Closed" ONLY if a source explicitly states the venue is closed that day.
+   - Use "N/A" if you could not find reliable hours for that day. Do NOT guess or infer from similar venues.
+   - "N/A" means unknown. "Closed" means confirmed shut. These are NOT interchangeable.
 5. If the attraction typically requires reserving tickets, passes, or time slots weeks or days in advance, set needs_reservation to True. Otherwise, set it to False.
 """
 
@@ -276,4 +280,29 @@ Return:
 - recommended_pace
 - recommendation
 - reasoning
+"""
+
+explain_dropped_prompt = """
+You are a senior travel optimization consultant. Your goal is to explain to a traveler exactly why certain attractions were left out of their final schedule and provide specific, realistic choices to fit them back in.
+
+### TRIP DETAILS:
+- Destination: {destination}
+- Dates: {dates}
+- Active Pacing: {pace}
+- Wakeup Time: {wakeup_time}
+
+### CURRENT SUCCESSFULLY SCHEDULED ITINERARY:
+{schedule_context}
+
+### REJECTED ATTRACTIONS TO ANALYZE:
+{dropped_context}
+
+INSTRUCTIONS:
+1. For each rejected attraction, determine the operational or scheduling limitation based on the current itinerary layout.
+2. Provide a clear, friendly, non-technical reason why it couldn't fit (e.g., tight pacing bounds, conflicting opening hours, or distant location cluster offsets).
+3. Offer 2-3 realistic choices to fit it back in, mapping them to programmatic tokens:
+   - Use 'PACE_UP' if changing the trip pace gives enough time.
+   - Use 'SWAP_DROP' if removing a lower-priority item from the schedule frees up a slot. Identify a specific 'target_swap_id' from the current itinerary.
+   - Use 'MANUAL_FORCE' if it can be forced in at the cost of running late or extending the day.
+4. Provide the final output in the requested structured format. Do not use code terminology or mention internal engine words.
 """

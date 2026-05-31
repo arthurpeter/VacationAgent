@@ -15,7 +15,8 @@ import {
   Compass,
   Hotel,
   Car,
-  TrainFront
+  TrainFront,
+  Loader2
 } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
 import { fetchWithAuth } from '../authService';
@@ -350,6 +351,7 @@ const fmtDate = (d, opts = { day: 'numeric', month: 'short', year: 'numeric' }) 
   if (!d) return '—';
   try { return new Date(d).toLocaleDateString('en-GB', opts); } catch { return d; }
 };
+const fmtShort = d => fmtDate(d, { day: 'numeric', month: 'short', year: 'numeric' });
 
 const fmtDayLabel = d => fmtDate(d, { weekday: 'long', day: 'numeric', month: 'long' });
 

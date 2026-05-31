@@ -50,8 +50,8 @@ def get_password_reset_email_html(reset_link: str) -> str:
 
 def get_vacation_blueprint_html(session_data: dict) -> str:
     """
-    Generates a streamlined, high-end HTML cover letter informing the 
-    user that their master unmodifiable document package has been attached.
+    Generates a clean, friendly HTML cover letter informing the 
+    user that their itinerary PDF has been attached.
     """
     from_date = session_data.get("from_date", "TBD")
     to_date = session_data.get("to_date", "TBD")
@@ -78,26 +78,26 @@ def get_vacation_blueprint_html(session_data: dict) -> str:
 
             <div style="padding: 32px 24px; color: #334155; line-height: 1.6;">
                 <p style="font-size: 15px; margin-top: 0; font-weight: 500;">Hi Traveler,</p>
-                <p style="font-size: 14px;">Your micro-optimized itinerary manifest coordinates for <strong>{destination}</strong> are locked and fully compiled.</p>
+                <p style="font-size: 14px;">Great news! Your custom travel itinerary for <strong>{destination}</strong> is ready.</p>
                 
-                <p style="font-size: 14px;">We have attached your official, vector-grade **Master Travel Blueprint PDF** directly to this email message header. It contains your complete sequential timeline flow, arranged accommodation references, budget calculations, and flattened transit connection maps.</p>
+                <p style="font-size: 14px;">We have attached a finalized copy of your itinerary PDF directly to this email. It contains your complete daily timeline, accommodation references, costs, and transport directions so you can access them offline at any time.</p>
 
                 <div style="margin: 24px 0; padding: 16px; background-color: #f1f5f9; border-radius: 8px; font-size: 13px; color: #475569; border-left: 3px solid #64748b;">
-                    📅 <strong>Travel Timeline Window:</strong> {clean_from} — {clean_to}<br/>
-                    👥 <strong>Manifest Cap:</strong> {session_data.get('adults', 1)} Adult(s) {f"· {session_data.get('children')} Child(ren)" if session_data.get('children', 0) > 0 else ""}
+                    📅 <strong>Trip Dates:</strong> {clean_from} — {clean_to}<br/>
+                    👥 <strong>Travelers:</strong> {session_data.get('adults', 1)} Adult(s) {f"· {session_data.get('children')} Child(ren)" if session_data.get('children', 0) > 0 else ""}
                 </div>
 
-                <p style="font-size: 14px;">You can review dynamic updates, toggle real-time maps, or rearrange active itinerary slots at any point via your workspace browser link.</p>
+                <p style="font-size: 14px;">This blueprint has been saved securely. You can look back at this plan or review any of your past trips at any time by visiting your travel history page.</p>
 
                 <div style="margin: 32px 0 16px; text-align: center;">
-                    <a href="http://localhost:5173/dashboard" style="display: inline-block; background-color: #0f172a; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: bold; tracking-wide: 0.05em; text-transform: uppercase; transition: background-color 0.2s;">Open Active Dashboard</a>
+                    <a href="http://localhost:5173/history" style="display: inline-block; background-color: #0f172a; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: bold; tracking-wide: 0.05em; text-transform: uppercase; transition: background-color 0.2s;">View in Travel History</a>
                 </div>
             </div>
 
             <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
                 <p style="margin: 0; color: #94a3b8; font-size: 12px; font-weight: 500;">
                     Safe travels and smooth transits,<br>
-                    <strong>The TuRAG Engineering Team</strong>
+                    <strong>The TuRAG Team</strong>
                 </p>
             </div>
         </div>

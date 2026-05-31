@@ -337,7 +337,7 @@ function SortableEventCard({ event, isManualMode, hideBucketTag, dayIndex, onTra
     );
 }
 
-function DroppableParkingLot({ excluded, isManualMode }) {
+function DroppableParkingLot({ excluded, isManualMode, isExplaining, onAskAI }) {
     const { setNodeRef, isOver } = useDroppable({ id: 'parking-lot' });
 
     const allItems = [];
@@ -346,6 +346,7 @@ function DroppableParkingLot({ excluded, isManualMode }) {
     });
 
     const dropTargetStyle = isOver ? "ring-2 ring-blue-500 bg-blue-50/50" : "";
+    const hasExplanations = allItems.some(item => !!item?.reason);
 
     if (allItems.length === 0) {
         return (
@@ -360,6 +361,29 @@ function DroppableParkingLot({ excluded, isManualMode }) {
 
     return (
         <div ref={setNodeRef} className={`flex flex-col gap-4 min-h-[120px] rounded-xl transition-all p-2 -mx-2 ${dropTargetStyle}`}>
+            
+            {/* Interactive Sparkles Trigger Button */}
+            {!hasExplanations && (
+                <button
+                    type="button"
+                    onClick={onAskAI}
+                    disabled={isExplaining}
+                    className="w-full bg-gradient-to-r from-purple-50 to-blue-50 hover:from-purple-100 hover:to-blue-100 text-purple-700 font-black text-xs uppercase tracking-wider py-2.5 px-4 rounded-xl border border-purple-100 flex items-center justify-center gap-2 shadow-sm transition disabled:opacity-50 cursor-pointer"
+                >
+                    {isExplaining ? (
+                        <>
+                            <Loader2 size={13} className="animate-spin text-purple-600" />
+                            <span>Consulting Travel Assistant...</span>
+                        </>
+                    ) : (
+                        <>
+                            <Sparkles size={13} className="text-purple-500" />
+                            <span>Why didn't these fit? Ask AI</span>
+                        </>
+                    )}
+                </button>
+            )}
+
             {['must', 'want', 'optional'].map(bucketKey => {
                 const items = excluded?.[bucketKey] || excluded?.[`${bucketKey}-see`] || [];
                 if (items.length === 0) return null;
@@ -367,14 +391,43 @@ function DroppableParkingLot({ excluded, isManualMode }) {
                 return (
                     <div key={bucketKey} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">{bucketKey}</h4>
-                        <ul className="space-y-2">
+                        <div className="space-y-4">
                             {items.map((rawItem, i) => {
                                 const safeItem = typeof rawItem === 'string'
                                     ? { id: `legacy-${bucketKey}-${i}`, name: rawItem, type: 'attraction', bucket: bucketKey }
                                     : rawItem;
-                                return <SortableEventCard key={safeItem.id || i} event={safeItem} isManualMode={isManualMode} hideBucketTag={true} />;
+                                
+                                return (
+                                    <div key={safeItem.id || i} className="space-y-2">
+                                        <SortableEventCard event={safeItem} isManualMode={isManualMode} hideBucketTag={true} />
+                                        
+                                        {/* Dynamic Diagnostic Block */}
+                                        {safeItem.reason && (
+                                            <div className="bg-white border border-gray-100 rounded-xl p-3 text-xs text-gray-600 space-y-2 shadow-sm ml-2 animate-fadeIn border-l-4 border-l-amber-500">
+                                                <p className="font-medium text-gray-700 leading-relaxed">
+                                                    <span className="font-black text-amber-600 uppercase text-[10px] tracking-wider block mb-0.5">AI Diagnosis</span>
+                                                    {safeItem.reason}
+                                                </p>
+                                                {safeItem.suggestions && safeItem.suggestions.length > 0 && (
+                                                    <div className="flex flex-col gap-1.5 pt-2 border-t border-gray-100">
+                                                        {safeItem.suggestions.map((sug, sIdx) => (
+                                                            <button
+                                                                key={sIdx}
+                                                                type="button"
+                                                                className="text-left bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-semibold p-2 rounded-lg transition text-[11px] leading-tight cursor-pointer"
+                                                                onClick={() => console.log("Action trigger intercept token:", sug.action_type)}
+                                                            >
+                                                                💡 {sug.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
                             })}
-                        </ul>
+                        </div>
                     </div>
                 );
             })}
@@ -391,6 +444,7 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSimulating, setIsSimulating] = useState(false);
+    const [isExplaining, setIsExplaining] = useState(false);
     const [activeDragEvent, setActiveDragEvent] = useState(null);
     const [localSchedule, setLocalSchedule] = useState(null);
     const [localExcluded, setLocalExcluded] = useState(null);
@@ -442,6 +496,27 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
             generateSchedule();
         }
     }, [schedule]);
+
+    const handleExplainDroppedAttractions = async () => {
+        setIsExplaining(true);
+        try {
+            const res = await fetchWithAuth(`${API_BASE_URL}/itinerary/schedule/action`, {
+                session_id: session.id,
+                action: "explain_dropped"
+            }, "POST");
+            
+            if (res.ok) {
+                const data = await res.json();
+                if (data.excluded_pois) {
+                    setLocalExcluded(data.excluded_pois); // Silently updates UI state array
+                }
+            }
+        } catch (e) {
+            console.error("AI diagnostics pipeline connectivity fail:", e);
+        } finally {
+            setIsExplaining(false);
+        }
+    };
 
     const generateSchedule = async () => {
         setIsGenerating(true);
@@ -886,7 +961,12 @@ export default function ScheduleStage({ gameState, session, refresh, onBack, onN
                                     </p>
 
                                     <SortableContext id="parking-lot" items={allExcludedIds} strategy={verticalListSortingStrategy}>
-                                        <DroppableParkingLot excluded={excluded} isManualMode={isManualMode} />
+                                        <DroppableParkingLot 
+                                            excluded={excluded} 
+                                            isManualMode={isManualMode} 
+                                            isExplaining={isExplaining}
+                                            onAskAI={handleExplainDroppedAttractions}
+                                        />
                                     </SortableContext>
                                 </div>
                             )}

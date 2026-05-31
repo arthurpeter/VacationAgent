@@ -2,6 +2,7 @@ import asyncio
 from typing import Literal
 
 import orjson
+import json
 
 from app.services.agents.memory import DiscoveryState, ItineraryState
 from app.services.agents.prompts import *
@@ -417,6 +418,9 @@ async def enrich_single_attraction_node(poi_data: dict) -> dict:
     tf = TimezoneFinder()
     tz_string = tf.timezone_at(lat=lat, lng=lon) if lat and lon else None
 
+    raw_hours = extracted_data.opening_hours.model_dump()
+    clean_hours = {day: (val if val and val.strip() else "N/A") for day, val in raw_hours.items()}
+
     enriched_poi = {
         **poi_data,
         "price_tier": extracted_data.price_tier,
@@ -428,7 +432,7 @@ async def enrich_single_attraction_node(poi_data: dict) -> dict:
         "website_url": extracted_data.website_url or poi_data.get("website_url"),
         "city": extracted_data.city,
         "country": extracted_data.country,
-        "opening_hours": extracted_data.opening_hours.model_dump(),
+        "opening_hours": clean_hours,
         "needs_reservation": extracted_data.needs_reservation
     }
 
@@ -706,6 +710,8 @@ async def organize_itinerary(state: ItineraryState) -> dict:
         return await _recalculate_timeline(state)
     elif action == "sync_transit":
         return await _sync_transit(state)
+    elif action == "explain_dropped":
+        return await _explain_dropped(state)
     
     return {}
 
@@ -1086,6 +1092,56 @@ async def _sync_transit(state: ItineraryState) -> dict:
         "excluded_pois": recalc_result.get("excluded"),
         "action": "idle" 
     }
+
+async def _explain_dropped(state: dict) -> dict:
+    log.info("Executing _explain_dropped diagnostics pass...")
+    
+    excluded_pois = dict(state.get("excluded_pois", {}) or {})
+    
+    all_dropped_pois = []
+    for bucket in ["must", "want", "optional"]:
+        all_dropped_pois.extend(excluded_pois.get(bucket, []))
+        
+    if not all_dropped_pois:
+        return {"excluded_pois": excluded_pois}
+
+    destination = state.get("destination", "Your Destination")
+    from_date = state.get("from_date", "TBD")
+    to_date = state.get("to_date", "TBD")
+    pace = state.get("pace", "moderate")
+    wakeup_time = state.get("wakeup_time", "08:00")
+    schedule_context = state.get("schedule", [])
+
+    structured_llm = llm.with_structured_output(ExplanationResponseSchema)
+    formatted_prompt = explain_dropped_prompt.format(
+        destination=destination,
+        dates=f"{from_date} to {to_date}",
+        pace=pace,
+        wakeup_time=wakeup_time,
+        schedule_context=json.dumps(schedule_context, indent=2),
+        dropped_context=json.dumps(all_dropped_pois, indent=2)
+    )
+
+    extracted_data = await structured_llm.ainvoke(formatted_prompt)
+    
+    diag_lookup = {str(d.poi_id): d for d in extracted_data.explanations}
+
+    for bucket in ["must", "want", "optional"]:
+        if bucket in excluded_pois:
+            for item in excluded_pois[bucket]:
+                item_id_str = str(item.get("id", ""))
+                if item_id_str in diag_lookup:
+                    diag = diag_lookup[item_id_str]
+                    item["reason"] = diag.reason
+                    item["suggestions"] = [
+                        {
+                            "action_type": opt.action_type,
+                            "label": opt.label,
+                            "target_swap_id": opt.target_swap_id
+                        } for opt in diag.suggestions
+                    ]
+
+    return {"action": "idle", "excluded_pois": excluded_pois}
 
 if __name__ == "__main__":
     print("This module is not meant to be run directly. It provides the agent nodes and decisional edges.")

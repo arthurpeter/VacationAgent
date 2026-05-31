@@ -668,7 +668,7 @@ export default function OverviewStage() {
       
       if (res && res.ok) {
         // 2. Dispatch alert validation notice (supports hot-toast and window native configurations)
-        const successMessage = "🚀 Master manifest locked! Your itinerary PDF is compiling and will arrive in your email shortly.";
+        const successMessage = "Your itinerary PDF is compiling and will arrive in your email shortly.";
         if (typeof toast !== 'undefined' && toast.success) {
           toast.success(successMessage);
         } else {
@@ -676,7 +676,7 @@ export default function OverviewStage() {
         }
         
         // 3. Kick user out of the active editing workflow context back to the primary landing frame
-        navigate('/dashboard');
+        navigate('/');
       } else {
         if (typeof toast !== 'undefined' && toast.error) {
           toast.error("Turbulence encountered: Failed to serialize and seal vacation record.");
