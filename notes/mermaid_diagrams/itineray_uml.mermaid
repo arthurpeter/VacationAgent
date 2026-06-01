@@ -1,0 +1,61 @@
+%%{init: { 'theme': 'default', 'themeVariables': { 'background': '#f8fafc', 'primaryColor': '#e0f2fe', 'lineColor': '#475569', 'fontSize': '14px', 'subgraphFontSize': '16px' }}}%%
+flowchart LR
+    subgraph FRONTEND ["Client (React UI)"]
+        direction TB
+        A1[Cautare destinatie]
+        A2[Bucket: Must/Want]
+        A3[Cerere orar zilnic]
+        A4[Sincronizare tranzit]
+        A5[Update UI]
+    end
+
+    subgraph BACKEND ["Executie (FastAPI)"]
+        direction TB
+        B1[API Endpoints]
+        B2[LangGraph Engine]
+        B3[ScheduleEngine]
+    end
+
+    subgraph PERSISTENCE ["Infrastructura Date"]
+        direction TB
+        C1[(Postgres: Atractii)]
+        C2[(Postgres: Checkpoints)]
+        C3[(Redis: Transit Cache)]
+    end
+
+    subgraph SERVICES ["Servicii Externe (APIs)"]
+        direction TB
+        S1[OpenTripMap API]
+        S2[Tavily AI Search]
+        S3[Google Directions]
+        S4[Google Gemini]
+    end
+
+    %% Intrari din Frontend spre API
+    A1 -->|Cautare POI| B1
+    A2 -->|Gestiune bucket| B1
+    A3 -->|Generare orar| B1
+    A4 -->|Modificare tranzit| B1
+
+    %% Rutare din API spre Motorul Agentic
+    B1 -->|Invocare graf| B2
+
+    %% Etapa 0: Cautare si Imbunatatire Date POI
+    B2 <-->|Citire/Scriere POI| C1
+    B2 <-->|Cere coordonate| S1
+    B2 <-->|Cere detalii web| S4
+    S4 <--> S2
+
+    %% Etapa 2: Optimizare Matematica locala
+    B2 <-->|Rulare K-Means + VRP| B3
+
+    %% Etapa 1 & 3: Strategia de Cache pentru Tranzit
+    B2 <-->|Verificare rute| C3
+    C3 <-->|Fetch rute API| S3
+
+    %% Managementul Starii Grafului
+    B2 -->|Update state| C2
+
+    %% Intoarcerea datelor spre Client
+    B2 -->|Returneaza State| B1
+    B1 -->|Trimitere JSON| A5
