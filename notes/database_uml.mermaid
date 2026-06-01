@@ -1,0 +1,166 @@
+%%{init: { 'theme': 'default', 'themeVariables': { 'background': '#f8fafc', 'primaryColor': '#e0f2fe', 'lineColor': '#475569' }}}%%
+erDiagram
+    users {
+        string id PK
+        string email UK
+        string hashed_password
+        boolean is_active
+        boolean is_superuser
+        boolean is_verified
+        datetime date_of_birth
+        string location
+        string user_description
+        string currency_preference
+        json home_airports
+        datetime created_at
+        datetime updated_at
+    }
+    vacation_sessions {
+        int id PK
+        string user_id FK
+        Enum current_stage
+        string currency
+        datetime from_date
+        datetime to_date
+        string departure
+        string destination
+        int adults
+        int children
+        int infants_in_seat
+        int infants_on_lap
+        string children_ages
+        int room_qty
+        int budget
+        datetime destination_arrival
+        datetime destination_departure
+        text flights_url
+        float flight_price
+        string flight_ccy
+        float airport_latitude
+        float airport_longitude
+        string airport_name
+        text accommodation_url
+        float accommodation_price
+        string accommodation_ccy
+        float accommodation_latitude
+        float accommodation_longitude
+        string accommodation_address
+        string accommodation_name
+        boolean is_active
+        datetime created_at
+        datetime updated_at
+        datetime expires_at
+    }
+    travel_companions {
+        string id PK
+        string user_id FK
+        string name
+        datetime date_of_birth
+        string description
+        boolean is_infant_on_lap
+    }
+    vacation_companions {
+        int vacation_session_id PK_FK
+        string companion_id PK_FK
+    }
+    vacations {
+        string id PK
+        string user_id FK
+        int session_id UK
+        string destination
+        string origin
+        datetime from_date
+        datetime to_date
+        int adults
+        int children
+        text flights_url
+        float flight_price
+        string flight_ccy
+        string airport_name
+        text accommodation_url
+        float accommodation_price
+        string accommodation_ccy
+        string accommodation_name
+        string accommodation_address
+        json itinerary_data
+        boolean is_finalized
+        datetime created_at
+    }
+    global_attractions {
+        int id PK
+        string external_place_id UK
+        string wikidata_id
+        string official_name
+        json opening_hours
+        string city
+        string state_province
+        string country
+        string formatted_address
+        string timezone
+        float latitude
+        float longitude
+        string category
+        string tags
+        text description
+        string image_url
+        string website_url
+        float rating
+        int price_tier
+        int recommended_duration_mins
+        string tod_preference
+        boolean needs_reservation
+        int search_count
+        int must_count
+        int want_count
+        int optional_count
+        datetime created_at
+        datetime updated_at
+    }
+    blacklist_tokens {
+        string token PK
+        datetime expires_at
+    }
+    checkpoint_migrations {
+        int v PK
+    }
+    checkpoints {
+        text thread_id PK
+        text checkpoint_ns PK
+        text checkpoint_id PK
+        text parent_checkpoint_id
+        text type
+        jsonb checkpoint
+        jsonb metadata
+    }
+    checkpoint_blobs {
+        text thread_id PK
+        text checkpoint_ns PK
+        text channel PK
+        text version PK
+        text type
+        bytea blob
+    }
+    checkpoint_writes {
+        text thread_id PK
+        text checkpoint_ns PK
+        text checkpoint_id PK
+        text task_id PK
+        int idx PK
+        text channel
+        text type
+        bytea blob
+        text task_path
+    }
+
+    users ||--o{ vacation_sessions : "creates"
+    users ||--o{ travel_companions : "manages"
+    users ||--o{ vacations : "owns"
+    vacation_sessions ||--o{ vacation_companions : "includes"
+    travel_companions ||--o{ vacation_companions : "joined_in"
+    vacation_sessions ||--|| vacations : "concludes_to"
+    checkpoints ||--o{ checkpoint_writes : "logs"
+
+    vacation_sessions ||..o{ checkpoints : "cascades"
+    vacation_sessions ||..o{ checkpoint_blobs : "cascades"
+    vacation_sessions ||..o{ checkpoint_writes : "cascades"
+    checkpoints ||..o{ global_attractions : "references"
