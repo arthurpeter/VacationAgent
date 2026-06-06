@@ -5,9 +5,8 @@ import sys
 from app.core.config import settings
 from app.core.airport_data import AIRPORTS_DB
 from app.core.cache import redis_cache
-import json
+import asyncio
 
-@redis_cache(expire_time=3600 * 24 * 14)
 def get_location_data(area_input: str, country_filter: str = None):
     """
     Takes an area (City Name OR Airport Code) and returns all necessary
@@ -69,7 +68,82 @@ if not GoogleSearch.SERP_API_KEY:
 
 # change to 3 - 15 minutes in prod
 @redis_cache(expire_time=3600 * 24 * 14)
-def call_flights_api(
+async def call_flights_api(departure_id: Optional[str] = None,
+    arrival_id: Optional[str] = None,
+    gl: Optional[str] = None,
+    hl: Optional[str] = None,
+    currency: Optional[str] = None,
+    type: Optional[int] = 1,
+    outbound_date: Optional[str] = None,
+    return_date: Optional[str] = None,
+    travel_class: Optional[int] = None,
+    multi_city_json: Optional[str] = None,
+    show_hidden: Optional[bool] = None,
+    deep_search: Optional[bool] = True,
+    adults: Optional[int] = None,
+    children: Optional[int] = None,
+    infants_in_seat: Optional[int] = None,
+    infants_on_lap: Optional[int] = None,
+    sort_by: Optional[int] = None,
+    stops: Optional[int] = None,
+    exclude_airlines: Optional[str] = None,
+    include_airlines: Optional[str] = None,
+    bags: Optional[int] = None,
+    max_price: Optional[int] = None,
+    outbound_times: Optional[str] = None,
+    return_times: Optional[str] = None,
+    emissions: Optional[int] = None,
+    layover_duration: Optional[str] = None,
+    exclude_conns: Optional[str] = None,
+    max_duration: Optional[int] = None,
+    departure_token: Optional[str] = None,
+    booking_token: Optional[str] = None,
+    no_cache: Optional[bool] = None,
+    async_search: Optional[bool] = None,
+    zero_trace: Optional[bool] = None,
+    output: Optional[str] = None,
+    json_restrictor: Optional[str] = None,
+    sort_by_price: Optional[bool] = None
+) -> Dict[str, Any]:
+    return await asyncio.to_thread(_call_flights_api,
+                                    departure_id,
+                                    arrival_id,
+                                    gl,
+                                    hl,
+                                    currency,
+                                    type,
+                                    outbound_date,
+                                    return_date,
+                                    travel_class,
+                                    multi_city_json,
+                                    show_hidden,
+                                    deep_search, 
+                                    adults, 
+                                    children, 
+                                    infants_in_seat, 
+                                    infants_on_lap, 
+                                    sort_by, 
+                                    stops, 
+                                    exclude_airlines, 
+                                    include_airlines, 
+                                    bags, 
+                                    max_price, 
+                                    outbound_times, 
+                                    return_times, 
+                                    emissions, 
+                                    layover_duration, 
+                                    exclude_conns, 
+                                    max_duration, 
+                                    departure_token, 
+                                    booking_token, 
+                                    no_cache, 
+                                    async_search, 
+                                    zero_trace, 
+                                    output, 
+                                    json_restrictor, 
+                                    sort_by_price)
+
+def _call_flights_api(
     departure_id: Optional[str] = None,
     arrival_id: Optional[str] = None,
     gl: Optional[str] = None,
