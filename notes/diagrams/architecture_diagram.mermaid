@@ -10,65 +10,65 @@ graph TD
     %% ======================================================================
     %% CONTAINERUL MASTER CU FUNDAL STABILIT PENTRU EXPORT
     %% ======================================================================
-    subgraph Master_Architecture ["Diagrama UML de Arhitectura si Componente - Platforma TuRAG"]
+    subgraph Master_Architecture ["Conceptual System Architecture Diagram"]
 
         %% --- CLIENT ---
-        subgraph Client_Platform ["Stratul Client (User Access)"]
+        subgraph Client_Platform ["Client Layer (User Access)"]
             User(User Browser):::user
         end
 
         %% --- CORE INFRASTRUCTURE ---
-        subgraph Docker_Environment ["Infrastructura Core (Docker Compose Network)"]
+        subgraph Docker_Environment ["Core Infrastructure (Isolated Container Environment)"]
 
-            Nginx["Nginx Reverse Proxy"]:::proxy
+            Nginx["API Gateway / Reverse Proxy"]:::proxy
 
-            subgraph Frontend_Container ["Frontend Container (Vite + React)"]
-                UI["React UI Views"]:::frontend
-                APIClient["Fetch API Client (fetchWithAuth)"]:::frontend
+            subgraph Frontend_Container ["Presentation Layer (Web Client)"]
+                UI["UI Views"]:::frontend
+                APIClient["HTTP Client (Token Management)"]:::frontend
             end
 
-            subgraph Backend_Container ["Backend Container (FastAPI + Uvicorn)"]
+            subgraph Backend_Container ["Business Logic Layer (Application Server)"]
 
-                FastAPIRouter["FastAPI Endpoints Router"]:::backend
-                Auth["AuthX Middleware<br>(Token Auth & Access Control)"]:::backend
+                FastAPIRouter["API Router & Endpoint Controller"]:::backend
+                Auth["Security Middleware<br>(Auth & Access Control)"]:::backend
 
                 subgraph Discovery_Module ["1. Discovery Subsystem"]
-                    Chat["Chat Interface Module"]:::backend
-                    Extract["LLM Entity Extraction"]:::backend
+                    Chat["Conversational Interface Module"]:::backend
+                    Extract["Entity Extraction Engine"]:::backend
                 end
 
                 subgraph Options_Module ["2. Options Subsystem"]
-                    FlightSvc["Flights Service"]:::backend
-                    HotelSvc["Hotels Service"]:::backend
+                    FlightSvc["Flights Query Service"]:::backend
+                    HotelSvc["Hotels Query Service"]:::backend
                 end
 
-                subgraph Itinerary_Module ["3. Itinerary & Pipeline Subsystem"]
-                    Pipeline["POI Pipeline Engine"]:::backend
-                    DeepSearch["Web Data Extraction"]:::backend
-                    ScheduleEngine["OR-Tools Local Solver"]:::backend
+                subgraph Itinerary_Module ["3. Itinerary Subsystem"]
+                    Pipeline["POI Orchestration Engine"]:::backend
+                    DeepSearch["Web Data Extraction Module"]:::backend
+                    ScheduleEngine["Routing & Optimization Engine"]:::backend
                 end
 
             end
 
             subgraph Storage_Layer ["Persistence & Caching Layer"]
                 direction LR
-                Postgres[("PostgreSQL DB<br>(Async Pool + Sync LangGraph Pool)")]:::storage
-                Redis[("Redis Cache DB")]:::storage
+                Postgres[("Relational Database<br>(System Persistence & Agent State)")]:::storage
+                Redis[("In-Memory Cache Database")]:::storage
                 Postgres ~~~ Redis
             end
 
         end
 
         %% --- API-URI EXTERNE ---
-        subgraph External_APIs ["Servicii Cloud Externe (Third-Party APIs Ecosystem)"]
+        subgraph External_APIs ["External Services Ecosystem (Third-Party APIs)"]
             direction LR
-            Gemini["Google Gemini API<br>(gemini-2.5-flash)"]:::external
-            SerpAPI["SerpAPI Engine<br>(Google Flights)"]:::external
-            BookingAPI["Booking API<br>(via RapidAPI)"]:::external
-            OpenTripMap["OpenTripMap API<br>(POI Geolocation)"]:::external
-            Tavily["Tavily AI Search<br>(Web Research)"]:::external
-            DirectionsAPI["Google Directions API<br>(Real-time Transit)"]:::external
-            SMTP["Gmail SMTP Server"]:::external
+            Gemini["Large Language Model (LLM)"]:::external
+            SerpAPI["Flights Aggregation Engine"]:::external
+            BookingAPI["Accommodation Distribution Platform"]:::external
+            OpenTripMap["Geolocation & POI Data System"]:::external
+            Tavily["Real-Time Web Search Engine"]:::external
+            DirectionsAPI["Spatial Routing Service (Real-Time Transit)"]:::external
+            SMTP["Email Sending Service (SMTP)"]:::external
         end
 
     end
@@ -81,13 +81,13 @@ graph TD
     %% RUTE SI FLUXURI DE DATE
     %% ======================================================================
 
-    User -->|Port 5173 / HTTP Requests| Nginx
-    Nginx -->|Servire UI Statica| UI
+    User -->|HTTP / HTTPS Requests| Nginx
+    Nginx -->|Static UI Serving| UI
 
     UI -.-> APIClient
 
-    APIClient -->|HTTP Requests / JSON| Nginx
-    Nginx -->|Proxy Pass Port 5000 /api| FastAPIRouter
+    APIClient -->|HTTP Requests| Nginx
+    Nginx -->|Internal Traffic Routing| FastAPIRouter
 
     FastAPIRouter --> Auth
 

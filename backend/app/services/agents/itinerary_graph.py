@@ -23,20 +23,20 @@ def route_stage(state: ItineraryState):
     stage = state.get("stage", 0)
     
     if stage == 0:
-        return "picking_attractions"
+        return "pick_attractions"
     elif stage == 1:
-        return "picking_transit"
+        return "pick_transit"
     elif stage == 2:
         return "organize_itinerary"
     else:
-        return "picking_attractions"
-    
+        return "pick_attractions"
+
 def route_unresolved_attractions(state: ItineraryState):
     action = state.get("action")
     unresolved = state.get("unresolved_attractions", [])
     
     if action == "resolve_attractions" and len(unresolved) > 0:
-        return [Send("enrich_single_attraction_node", poi) for poi in unresolved]
+        return [Send("enrich_single_attraction", poi) for poi in unresolved]
         
     return END
 
@@ -44,30 +44,30 @@ def generate_graph(checkpointer=None):
     
     builder = StateGraph(ItineraryState)
 
-    builder.add_node("picking_attractions", picking_attractions)
-    builder.add_node("picking_transit", picking_transit)
+    builder.add_node("pick_attractions", picking_attractions)
+    builder.add_node("pick_transit", picking_transit)
     builder.add_node("organize_itinerary", organize_itinerary)
-    builder.add_node("enrich_single_attraction_node", enrich_single_attraction_node)
+    builder.add_node("enrich_single_attraction", enrich_single_attraction_node)
     builder.add_node("save_attractions_to_db", save_attractions_to_db)
 
     builder.add_conditional_edges(START, route_stage, {
-        "picking_attractions": "picking_attractions",
-        "picking_transit": "picking_transit",
+        "pick_attractions": "pick_attractions",
+        "pick_transit": "pick_transit",
         "organize_itinerary": "organize_itinerary"
     })
 
     builder.add_conditional_edges(
-        "picking_attractions",
+        "pick_attractions",
         route_unresolved_attractions,
         {
-            "enrich_single_attraction_node": "enrich_single_attraction_node",
+            "enrich_single_attraction": "enrich_single_attraction",
             END: END
         }
     )
     
-    builder.add_edge("enrich_single_attraction_node", "save_attractions_to_db")
+    builder.add_edge("enrich_single_attraction", "save_attractions_to_db")
     builder.add_edge("save_attractions_to_db", END)
-    builder.add_edge("picking_transit", END)
+    builder.add_edge("pick_transit", END)
     builder.add_edge("organize_itinerary", END)
 
     return builder.compile(checkpointer=checkpointer)
@@ -114,10 +114,10 @@ if __name__ == "__main__":
     
     png_bytes = my_graph.get_graph(xray=True).draw_mermaid_png()
     
-    with open("itinerary_graph_v2.png", "wb") as f:
+    with open("itinerary_graph.png", "wb") as f:
         f.write(png_bytes)
         
-    print("Graph saved successfully to itinerary_graph_v2.png!")
+    print("Graph saved successfully to itinerary_graph.png!")
 
     # async def test_initial_fetch():
     #     print("🚀 Compiling the Itinerary Graph...")

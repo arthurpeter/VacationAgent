@@ -1,0 +1,71 @@
+@startuml use_case_diagram
+' --- SETARI PENTRU REZOLUTIE GIGANT (PNG) ---
+skinparam dpi 300
+skinparam nodesep 50
+skinparam ranksep 45
+
+' --- CONFIGURARI GRAFICE SI STILIZARE ---
+skinparam monochrome false
+skinparam packageStyle rectangle
+skinparam shadowing true
+
+' Stiluri implicite pentru Use Case si Actor
+skinparam usecaseBackgroundColor #E1F5FE
+skinparam usecaseBorderColor #0288D1
+skinparam actorBackgroundColor #FFFFFF
+skinparam actorBorderColor #333333
+
+' --- DEFINIRE ACTOR ---
+actor "Authenticated User" as User
+
+' --- GRANITA SISTEMULUI ---
+rectangle "Intelligent Traveler Platform" as System {
+
+    ' GRUPUL 1: EXPLORATION
+    rectangle "Group 1: Exploration" as G1 #F5F5F5 {
+        usecase "Provide User\nHistory & Context" as UC_History
+        usecase "Discover Destination\nvia Chat" as UC_Discover
+        usecase "Save Travel\nParameters" as UC_SaveParams
+        
+        UC_History -right-> UC_Discover : <<extend>>
+        UC_Discover -right-> UC_SaveParams : <<include>>
+    }
+
+    ' GRUPUL 2: BOOKING
+    rectangle "Group 2: Booking" as G2 #E8F5E9 {
+        usecase "Search & Select\nFlights" as UC_Flights
+        usecase "Search & Select\nAccommodation" as UC_Hotels
+        usecase "Redirect to\nVendor Platform" as UC_Redirect
+        
+        UC_Flights -right-> UC_Hotels : [hidden]
+        UC_Flights -down-> UC_Redirect : <<include>>
+        UC_Hotels -down-> UC_Redirect : <<include>>
+    }
+
+    ' GRUPUL 3: ITINERARY MANAGEMENT
+    rectangle "Group 3: Itinerary Management" as G3 #FFF3E0 {
+        usecase "Generate Daily\nItinerary" as UC_Itinerary
+        usecase "Optimize Routing\n(OR-Tools Engine)" as UC_Optimize
+        usecase "Sync Real-Time\nTransit Data" as UC_Transit
+        usecase "Explain Excluded\nAttractions (AI)" as UC_Explain
+        
+        UC_Itinerary -right-> UC_Optimize : <<include>>
+        UC_Optimize -right-> UC_Transit : <<include>>
+        UC_Itinerary -down-> UC_Explain : <<extend>>
+    }
+    
+    ' --- STRUCTURA LAYOUT VERTICAL INVIZIBIL ---
+    UC_SaveParams -[hidden]down-> UC_Flights
+    
+    ' --- NOI LEGATURI DE DEPENDENTA REALE (Itinerary depinde de Booking) ---
+    UC_Itinerary -[dashed]up-> UC_Flights : <<dependency>>
+    UC_Itinerary -[dashed]up-> UC_Hotels : <<dependency>>
+}
+
+' --- LEGATURI ACTOR ---
+User -right-> UC_Discover
+User -right-> UC_Flights
+User -right-> UC_Hotels
+User -right-> UC_Itinerary
+
+@enduml

@@ -1,0 +1,51 @@
+%%{init: { 'theme': 'default', 'themeVariables': { 'background': '#f8fafc', 'primaryColor': '#e0f2fe', 'lineColor': '#475569' }}}%%
+sequenceDiagram
+    autonumber
+    
+    actor U as Client Browser (Web App)
+    participant N as API Gateway (Reverse Proxy)
+    participant R as API Router (Controller)
+    participant A as Security Middleware
+    participant B as Business Logic Service
+    participant DB as Relational Database
+
+    Note over U, R: Phase 1: Failed Request (Expired Access Token)
+    U->>N: HTTP GET /api/protected-route (Authorization Bearer)
+    N->>R: Proxy Pass to Application Server
+    R->>A: Trigger Access Token Validation
+    A->>A: Validation Failed: Token Expired
+    A-->>R: Return 401 Unauthorized
+    R-->>N: HTTP 401 Response
+    N-->>U: HTTP 401 Unauthorized
+
+    Note over U, DB: Phase 2: 401 Interception & Silent Refresh Mechanism
+    U->>N: HTTP POST /api/auth/refresh (HttpOnly Cookie)
+    N->>R: Proxy Pass to Application Server
+    R->>A: Validate Refresh Token from Cookie
+    A->>A: Extract and Verify Refresh Token
+    A->>DB: Check Revocation Status (Blacklist)
+    activate DB
+    DB-->>A: Token Valid (Not Revoked)
+    deactivate DB
+    A->>DB: Insert Old Token into Blacklist (Revocation)
+    A->>A: Generate New Access Token & Refresh Token
+    A-->>R: Return New Credentials
+    R-->>N: HTTP 200 OK (New Tokens)
+    N-->>U: Save New Access Token to Client Memory
+
+    Note over U, B: Phase 3: Automatic Retry of Initial Request
+    U->>N: HTTP GET /api/protected-route (NEW Authorization Bearer)
+    N->>R: Proxy Pass to Application Server
+    R->>A: Trigger Access Token Validation
+    A->>A: Validation Success: Token Valid
+    A-->>R: Return Token Payload (User ID)
+    R->>B: Execute Requested Endpoint
+    activate B
+    B->>DB: Resource Ownership Validation (owner_id == user_id)
+    activate DB
+    DB-->>B: Confirm Access Rights
+    deactivate DB
+    B-->>R: Return Requested Data
+    deactivate B
+    R-->>N: HTTP 200 OK (JSON Data)
+    N-->>U: HTTP 200 OK (Data is rendered in UI)
