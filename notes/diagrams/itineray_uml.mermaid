@@ -1,0 +1,61 @@
+%%{init: { 'theme': 'default', 'themeVariables': { 'background': '#f8fafc', 'primaryColor': '#e0f2fe', 'lineColor': '#475569', 'fontSize': '14px', 'subgraphFontSize': '16px' }}}%%
+flowchart LR
+    subgraph FRONTEND ["Presentation Layer (Web Client)"]
+        direction TB
+        A1[Destination Search]
+        A2[Manage POI Priorities]
+        A3[Request Daily Schedule]
+        A4[Sync Transit Times]
+        A5[Update UI State]
+    end
+
+    subgraph BACKEND ["Business Logic Layer (Application Server)"]
+        direction TB
+        B1[API Endpoints Controller]
+        B2[Agent Orchestration Engine]
+        B3[Routing & Optimization Engine]
+    end
+
+    subgraph PERSISTENCE ["Data Infrastructure"]
+        direction TB
+        C1[(Relational DB: POIs)]
+        C2[(Relational DB: Agent State)]
+        C3[(In-Memory DB: Transit Cache)]
+    end
+
+    subgraph SERVICES ["External Services (Third-Party APIs)"]
+        direction TB
+        S1[Geolocation API]
+        S2[Web Search API]
+        S3[Routing & Transit API]
+        S4[Large Language Model]
+    end
+
+    %% Intrari din Frontend spre API
+    A1 -->|Search POIs| B1
+    A2 -->|Manage Priorities| B1
+    A3 -->|Generate Schedule| B1
+    A4 -->|Request Transit Sync| B1
+
+    %% Rutare din API spre Motorul Agentic
+    B1 -->|Invoke Agent Graph| B2
+
+    %% Etapa 0: Cautare si Imbunatatire Date POI
+    B2 <-->|Read/Write POIs| C1
+    B2 <-->|Fetch Coordinates| S1
+    B2 <-->|Request Web Details| S4
+    S4 <--> S2
+
+    %% Etapa 2: Optimizare Matematica locala
+    B2 <-->|Run Clustering & Routing| B3
+
+    %% Etapa 1 & 3: Strategia de Cache pentru Tranzit
+    B2 <-->|Check Cached Routes| C3
+    C3 <-->|Fetch API Routes| S3
+
+    %% Managementul Starii Grafului
+    B2 -->|Update Execution State| C2
+
+    %% Intoarcerea datelor spre Client
+    B2 -->|Return Final State| B1
+    B1 -->|Send JSON Response| A5

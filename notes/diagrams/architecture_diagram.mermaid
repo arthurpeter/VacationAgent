@@ -1,0 +1,114 @@
+graph TD
+    %% --- CONFIGURARE STILURI SI CULORI ---
+    classDef user fill:#fef2f2,stroke:#ef4444,stroke-width:2px,color:#991b1b;
+    classDef proxy fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#065f46;
+    classDef frontend fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1;
+    classDef backend fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#6b21a8;
+    classDef storage fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e;
+    classDef external fill:#f8fafc,stroke:#475569,stroke-width:2px,color:#334155;
+
+    %% ======================================================================
+    %% CONTAINERUL MASTER CU FUNDAL STABILIT PENTRU EXPORT
+    %% ======================================================================
+    subgraph Master_Architecture ["Conceptual System Architecture Diagram"]
+
+        %% --- CLIENT ---
+        subgraph Client_Platform ["Client Layer (User Access)"]
+            User(User Browser):::user
+        end
+
+        %% --- CORE INFRASTRUCTURE ---
+        subgraph Docker_Environment ["Core Infrastructure (Isolated Container Environment)"]
+
+            Nginx["API Gateway / Reverse Proxy"]:::proxy
+
+            subgraph Frontend_Container ["Presentation Layer (Web Client)"]
+                UI["UI Views"]:::frontend
+                APIClient["HTTP Client (Token Management)"]:::frontend
+            end
+
+            subgraph Backend_Container ["Business Logic Layer (Application Server)"]
+
+                FastAPIRouter["API Router & Endpoint Controller"]:::backend
+                Auth["Security Middleware<br>(Auth & Access Control)"]:::backend
+
+                subgraph Discovery_Module ["1. Discovery Subsystem"]
+                    Chat["Conversational Interface Module"]:::backend
+                    Extract["Entity Extraction Engine"]:::backend
+                end
+
+                subgraph Options_Module ["2. Options Subsystem"]
+                    FlightSvc["Flights Query Service"]:::backend
+                    HotelSvc["Hotels Query Service"]:::backend
+                end
+
+                subgraph Itinerary_Module ["3. Itinerary Subsystem"]
+                    Pipeline["POI Orchestration Engine"]:::backend
+                    DeepSearch["Web Data Extraction Module"]:::backend
+                    ScheduleEngine["Routing & Optimization Engine"]:::backend
+                end
+
+            end
+
+            subgraph Storage_Layer ["Persistence & Caching Layer"]
+                direction LR
+                Postgres[("Relational Database<br>(System Persistence & Agent State)")]:::storage
+                Redis[("In-Memory Cache Database")]:::storage
+                Postgres ~~~ Redis
+            end
+
+        end
+
+        %% --- API-URI EXTERNE ---
+        subgraph External_APIs ["External Services Ecosystem (Third-Party APIs)"]
+            direction LR
+            Gemini["Large Language Model (LLM)"]:::external
+            SerpAPI["Flights Aggregation Engine"]:::external
+            BookingAPI["Accommodation Distribution Platform"]:::external
+            OpenTripMap["Geolocation & POI Data System"]:::external
+            Tavily["Real-Time Web Search Engine"]:::external
+            DirectionsAPI["Spatial Routing Service (Real-Time Transit)"]:::external
+            SMTP["Email Sending Service (SMTP)"]:::external
+        end
+
+    end
+
+    %% --- STILIZARE HACK PENTRU FUNDAL CONTAINER MASTER ---
+    style Master_Architecture fill:#f8fafc,stroke:#334155,stroke-width:3px;
+    style Docker_Environment fill:#f1f5f9,stroke:#475569,stroke-width:2px;
+
+    %% ======================================================================
+    %% RUTE SI FLUXURI DE DATE
+    %% ======================================================================
+
+    User -->|HTTP / HTTPS Requests| Nginx
+    Nginx -->|Static UI Serving| UI
+
+    UI -.-> APIClient
+
+    APIClient -->|HTTP Requests| Nginx
+    Nginx -->|Internal Traffic Routing| FastAPIRouter
+
+    FastAPIRouter --> Auth
+
+    Auth --> Chat
+    Auth --> FlightSvc
+    Auth --> HotelSvc
+    Auth --> Pipeline
+    Auth --> ScheduleEngine
+
+    Chat --> Storage_Layer
+    FlightSvc --> Storage_Layer
+    HotelSvc --> Storage_Layer
+    Pipeline --> Storage_Layer
+    DeepSearch --> Storage_Layer
+    ScheduleEngine --> Storage_Layer
+
+    Chat --> Extract
+
+    Extract --> External_APIs
+    FlightSvc ==> External_APIs
+    HotelSvc ==> External_APIs
+    Pipeline --> External_APIs
+    DeepSearch --> External_APIs
+    ScheduleEngine ==> External_APIs

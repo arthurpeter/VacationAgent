@@ -10,7 +10,7 @@ log = get_logger(__name__)
 safe_max_connections = max(1, settings.DB_MAX_CONNECTIONS - 10)
 pool_size_per_worker = max(1, safe_max_connections // settings.WORKER_COUNT)
 
-lg_pool_size = max(1, min(3, int(pool_size_per_worker * 0.2)))
+lg_pool_size = max(1, pool_size_per_worker // 2)
 
 app_pool_size = max(1, pool_size_per_worker - lg_pool_size)
 

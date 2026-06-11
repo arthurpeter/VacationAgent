@@ -173,7 +173,7 @@ async def search_outbound_flights(
         raise HTTPException(status_code=400, detail="Invalid location format")
 
     log.info("Searching for outbound flights...")
-    flight_results = flights.call_flights_api(
+    flight_results = await flights.call_flights_api(
         departure_id=results.get("departure_id"),
         arrival_id=arrival_id,
         outbound_date=data.outbound_date,
@@ -286,7 +286,7 @@ async def search_inbound_flights(
         raise HTTPException(status_code=400, detail="Invalid location format")
 
     log.info("Searching for inbound flights...")
-    flight_results = flights.call_flights_api(
+    flight_results = await flights.call_flights_api(
         departure_token=data.token,
         departure_id=results.get("departure_id"),
         arrival_id=arrival_id,
@@ -399,7 +399,7 @@ async def book_flight(
         raise HTTPException(status_code=400, detail="Invalid location format")
 
     log.info("Searching for booking link...")
-    booking_results = flights.call_flights_api(
+    booking_results = await flights.call_flights_api(
         booking_token=data.token,
         departure_id=results.get("departure_id"),
         arrival_id=arrival_id,
@@ -489,7 +489,7 @@ async def get_accommodations(
     log.info(f"Request data: {data}")
     log.info(f"Searching accommodations in {data.location}")
     try:
-        destination = accommodations_v2.get_destination_id(
+        destination = await accommodations_v2.get_destination_id(
             location_name=data.location
         )
     except Exception as e:
@@ -510,7 +510,7 @@ async def get_accommodations(
     currency_code = session.currency if session and session.currency else "EUR"
     
     try:
-        results = accommodations_v2.search_hotels(
+        results = await accommodations_v2.search_hotels(
             dest_id=destination.get("dest_id"),
             search_type=destination.get("search_type"),
             arrival_date=data.arrival_date,
@@ -574,7 +574,7 @@ async def get_hotel_details(
     currency_code = session.currency if session and session.currency else "EUR"
 
     try:
-        results = accommodations_v2.get_hotel_details(
+        results = await accommodations_v2.get_hotel_details(
             hotel_id=data.loc_id,
             arrival_date=data.arrival_date,
             departure_date=data.departure_date,

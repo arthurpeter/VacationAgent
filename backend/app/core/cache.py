@@ -1,6 +1,6 @@
 import inspect
 
-import redis
+import redis.asyncio as redis
 import json
 import functools
 from app.core.config import settings
@@ -29,7 +29,7 @@ def redis_cache(expire_time=1800):
                 cache_key = ":".join(key_parts)
 
                 try:
-                    cached_data = r.get(cache_key)
+                    cached_data = await r.get(cache_key)
                     if cached_data:
                         log.info(f"Cache HIT: Serving {cache_key} from Redis")
                         return json.loads(cached_data)
@@ -42,37 +42,11 @@ def redis_cache(expire_time=1800):
 
                 try:
                     if result is not None:
-                        r.setex(cache_key, expire_time, json.dumps(result))
+                        await r.setex(cache_key, expire_time, json.dumps(result))
                 except Exception as e:
                     log.error(f"Failed to commit async payload cache data to Redis: {e}")
 
                 return result
             return async_wrapper
-
-        else:
-            @functools.wraps(func)
-            def sync_wrapper(*args, **kwargs):
-                key_parts = [func.__name__] + [str(arg) for arg in args] + [f"{k}={v}" for k, v in kwargs.items()]
-                cache_key = ":".join(key_parts)
-
-                try:
-                    cached_data = r.get(cache_key)
-                    if cached_data:
-                        log.info(f"Cache HIT: Serving {cache_key} from Redis")
-                        return json.loads(cached_data)
-                except redis.ConnectionError:
-                    log.error(f"Redis at {settings.REDIS_HOST} is down, skipping cache check.")
-
-                log.warning(f"Cache MISS: Fetching live data sync for {cache_key}")
-                result = func(*args, **kwargs)
-
-                try:
-                    if result is not None:
-                        r.setex(cache_key, expire_time, json.dumps(result))
-                except Exception as e:
-                    log.error(f"Failed to commit sync payload cache data to Redis: {e}")
-
-                return result
-            return sync_wrapper
 
     return decorator

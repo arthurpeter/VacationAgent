@@ -1,14 +1,12 @@
 from serpapi import GoogleSearch
 from typing import Dict, Any, Optional
 from app.core.config import settings
-from app.core.cache import redis_cache
 
 
 GoogleSearch.SERP_API_KEY = settings.SERPAPI_API_KEY
 if not GoogleSearch.SERP_API_KEY:
     raise ValueError("SERPAPI_API_KEY environment variable is required")
 
-@redis_cache(expire_time=3600 * 24)
 def call_explore_api(
     departure_id: str,
     arrival_id: Optional[str] = None,

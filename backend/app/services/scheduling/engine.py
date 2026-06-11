@@ -195,8 +195,7 @@ class ScheduleEngine:
             priority_order = {"optional": 0, "want": 1, "must": 2}
             candidates = [
                 p for p in balanced[max_k]
-                if p.get('bucket', 'want').lower() != 'must'
-                and self._get_real_distance_km(
+                if self._get_real_distance_km(
                     p['latitude'], p['longitude'],
                     dest_centroid[0], dest_centroid[1]
                 ) <= max_distance_km
