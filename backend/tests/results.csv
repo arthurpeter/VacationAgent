@@ -1,0 +1,16 @@
+Endpoint,Cache,Concurrency,Pipelining,Duration,Requests,Requests_Per_Second,Avg_Latency_ms,P97.5_Latency_ms,Errors
+mockup/refresh,no,10,1,20,4000,189,52ms,59ms,0
+mockup/refresh,no,50,1,20,6000,315,156ms,323ms,0
+mockup/refresh,no,100,2,20,7000,354,553ms,1257ms,0
+mockup/refresh,no,250,2,20,7246,366,1297ms,3687ms,0
+mock/offers/{id},no,10,1,10,1000,112,88ms,51ms,0
+mock/offers/{id},yes,50,1,20,20000,1016,48ms,56ms,0
+mock/offers/{id},yes,100,2,20,22000,1093,182ms,335ms,0
+mock/offers/{id},yes,250,2,20,22000,1085,455ms,574ms,0
+mock/discovery/stream/{id},no,10,1,60,120,1.84,5109ms,5120ms,0
+mock/discovery/stream/{id},no,50,1,60,600,9.17,5121ms,5169ms,0
+mock/discovery/stream/{id},no,100,1,60,1000,18.34,5125ms,5207ms,0
+mock/discovery/stream/{id},no,250,1,60,3000,45.84,5173ms,5478ms,0
+itinerary/schedule/action,no,5,1,60,22,0.29,16s,21s,0
+itinerary/schedule/action,no,20,1,60,60,0.67,30s,33s,0
+itinerary/schedule/action,no,50,1,120,100,0.42,62s,63s,0

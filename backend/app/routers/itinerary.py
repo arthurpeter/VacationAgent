@@ -374,6 +374,8 @@ async def trigger_schedule_action(
     if not session:
         log.warning(f"Unauthorized schedule access: {data.session_id} by user {token.sub}")
         raise HTTPException(status_code=404, detail="Session not found")
+    
+    await db.close()
 
     try:
         final_state = await run_itinerary_graph(

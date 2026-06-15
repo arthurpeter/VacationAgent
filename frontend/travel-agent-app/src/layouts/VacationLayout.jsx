@@ -122,20 +122,6 @@ export default function VacationLayout() {
 
         {/* 3. Completely removed the finalize button from the right header actions */}
         <div className="flex-1 flex justify-end items-center gap-6 pl-4">
-          <div className="flex flex-col items-end">
-            {session?.budget ? (
-              <>
-                <span className="text-xs text-gray-400 uppercase font-bold tracking-wider mb-0.5">Target Budget</span>
-                <span className="text-lg font-black text-green-600 leading-none">
-                  {session.budget.toLocaleString()} <span className="text-sm">{session.currency || ''}</span>
-                </span>
-              </>
-            ) : (
-              <span className="text-sm font-semibold text-gray-400 border border-gray-200 px-3 py-1 rounded-full">
-                No Budget Set
-              </span>
-            )}
-          </div>
         </div>
         
       </header>

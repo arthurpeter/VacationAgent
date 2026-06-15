@@ -20,6 +20,7 @@ from app.routers.chat import router as chat_router
 from app.routers.itinerary import router as itinerary_router
 from app.routers.notifications import router as notifications_router
 from app.routers.history import router as history_router
+from app.routers.mockup import router as mockup_router
 from app.core.logger import get_logger
 
 log = get_logger(__name__)
@@ -43,7 +44,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origins= settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -57,6 +58,7 @@ app.include_router(chat_router)
 app.include_router(itinerary_router)
 app.include_router(notifications_router)
 app.include_router(history_router)
+app.include_router(mockup_router)
 auth.handle_errors(app)
 
 

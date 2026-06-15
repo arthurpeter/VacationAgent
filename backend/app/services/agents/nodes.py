@@ -3,6 +3,7 @@ from typing import Literal
 
 import orjson
 import json
+import anyio
 
 from app.services.agents.memory import DiscoveryState, ItineraryState
 from app.services.agents.prompts import *
@@ -779,7 +780,7 @@ async def _generate_schedule(state: ItineraryState) -> dict:
             lunch_duration_mins=lunch_duration_mins
         )
 
-        result = engine.generate_schedule(engine_pois)
+        result = await anyio.to_thread.run_sync(engine.generate_schedule, engine_pois)
         
         return {
             "schedule": result.get("schedule", []),
@@ -884,11 +885,7 @@ async def _recalculate_timeline(state: ItineraryState) -> dict:
             lunch_duration_mins=lunch_duration_mins
         )
 
-        result = engine.recalculate_user_timeline(
-            user_days_poi_ids=user_timeline, 
-            pois=engine_pois,
-            existing_transit_legs=existing_transit_legs
-        )
+        result = await anyio.to_thread.run_sync(engine.recalculate_user_timeline, user_timeline, engine_pois, existing_transit_legs)
 
         return {
             "schedule": result.get("schedule", []),
@@ -1081,11 +1078,7 @@ async def _sync_transit(state: ItineraryState) -> dict:
         lunch_duration_mins=int(lunch_duration_mins)
     )
 
-    recalc_result = engine.recalculate_user_timeline(
-        user_days_poi_ids=user_days_poi_ids,
-        pois=engine_pois,  
-        existing_transit_legs=existing_transit_legs
-    )
+    recalc_result = await anyio.to_thread.run_sync(engine.recalculate_user_timeline, user_days_poi_ids, engine_pois, existing_transit_legs)
 
     return {
         "schedule": recalc_result.get("schedule"),
