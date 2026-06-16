@@ -11,6 +11,7 @@ mock/discovery/stream/{id},no,10,1,60,120,1.84,5109ms,5120ms,0
 mock/discovery/stream/{id},no,50,1,60,600,9.17,5121ms,5169ms,0
 mock/discovery/stream/{id},no,100,1,60,1000,18.34,5125ms,5207ms,0
 mock/discovery/stream/{id},no,250,1,60,3000,45.84,5173ms,5478ms,0
+itinerary/schedule/action,no,1,1,120,14,0.11,9s,9s,0
 itinerary/schedule/action,no,5,1,60,22,0.29,16s,21s,0
 itinerary/schedule/action,no,20,1,60,60,0.67,30s,33s,0
 itinerary/schedule/action,no,50,1,120,100,0.42,62s,63s,0

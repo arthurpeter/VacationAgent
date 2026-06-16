@@ -1,0 +1,57 @@
+%%{init: {'theme':'default','themeVariables': {'fontSize':'22px'}}}%%
+
+graph TD
+    %% --- GLOBAL CLASS DEFINITIONS FOR LARGE FONTS ---
+    classDef component fill:#ffffff,stroke:#334155,stroke-width:2px,font-size:18px,font-weight:bold,padding:12px;
+    classDef layer fill:#f8fafc,stroke:#475569,stroke-width:2px,font-size:16px,font-weight:bold;
+
+    subgraph System_Architecture [" "]
+
+        %% --- PRESENTATION LAYER (Executed on Client) ---
+        subgraph Presentation_Layer ["Presentation Layer (Client Side)"]
+            Browser["Web Browser / UI"]:::component
+            Frontend["Frontend Application"]:::component
+        end
+
+        %% --- ROUTING LAYER ---
+        subgraph Routing_Layer ["Routing & Proxy Layer"]
+            Proxy["Reverse Proxy & Asset Server"]:::component
+        end
+
+        %% --- BUSINESS LOGIC LAYER ---
+        subgraph Logic_Layer ["Business Logic Layer (Server Side)"]
+            Backend["Backend Application Server"]:::component
+        end
+
+        %% --- BOTTOM PILARS (Side-by-side to maintain square shape) ---
+        subgraph Storage_Layer ["Persistence & Caching"]
+            Database[("Database")]:::component
+            Cache[("Cache")]:::component
+        end
+
+        subgraph External_Layer ["External Integration"]
+            External["External Services"]:::component
+        end
+
+    end
+
+    %% --- SUBGRAPH STYLING (Universal Compatibility) ---
+    style System_Architecture fill:#f1f5f9,stroke:#1e293b,stroke-width:3px;
+    style Presentation_Layer fill:#f8fafc,stroke:#475569,stroke-width:2px;
+    style Routing_Layer fill:#f8fafc,stroke:#475569,stroke-width:2px;
+    style Logic_Layer fill:#f8fafc,stroke:#475569,stroke-width:2px;
+    style Storage_Layer fill:#f8fafc,stroke:#475569,stroke-width:2px;
+    style External_Layer fill:#f8fafc,stroke:#475569,stroke-width:2px;
+
+    %% --- CORRECT LOGICAL TRAFFIC FLOW ---
+    %% Browser interacts with Proxy for everything
+    Browser ==>|HTTP Requests & Asset Fetching| Proxy
+    
+    %% Proxy delegates
+    Proxy -->|Serves Static Files| Frontend
+    Proxy ==>|Routes API Requests| Backend
+
+    %% Backend dependencies split at the bottom
+    Backend ==> Database
+    Backend -.-> Cache
+    Backend ==> External

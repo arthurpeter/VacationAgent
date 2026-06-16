@@ -1,0 +1,221 @@
+@startuml
+' --- CONFIGURĂRI DE MODALITATE ȘI STIL ERD ---
+allow_mixing
+skinparam theme plain
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+skinparam class {
+    BackgroundColor #F8FAFC
+    BorderColor #475569
+    ArrowColor #64748B
+    FontName "Segoe UI"
+    FontSize 12
+}
+
+' --- GRUPURI ȘI ENTITĂȚI ---
+
+package "Gestiune Utilizatori & Securitate" #E0F2FE {
+    entity "users" as users {
+        id : string [PK]
+        --
+        email : string [UK]
+        hashed_password : string
+        is_active : boolean
+        is_superuser : boolean
+        is_verified : boolean
+        date_of_birth : datetime
+        location : string
+        user_description : string
+        currency_preference : string
+        home_airports : json
+        created_at : datetime
+        updated_at : datetime
+    }
+
+    entity "travel_companions" as travel_companions {
+        id : string [PK]
+        --
+        user_id : string [FK]
+        name : string
+        date_of_birth : datetime
+        description : string
+        is_infant_on_lap : boolean
+    }
+
+    entity "blacklist_tokens" as blacklist_tokens {
+        token : string [PK]
+        --
+        expires_at : datetime
+    }
+}
+
+package "Flux Sesiuni și Planificare" #F0FDF4 {
+    entity "vacation_sessions" as vacation_sessions {
+        id : int [PK]
+        --
+        user_id : string [FK]
+        current_stage : Enum
+        currency : string
+        from_date : datetime
+        to_date : datetime
+        departure : string
+        destination : string
+        adults : int
+        children : int
+        infants_in_seat : int
+        infants_on_lap : int
+        children_ages : string
+        room_qty : int
+        budget : int
+        destination_arrival : datetime
+        destination_departure : datetime
+        flights_url : text
+        flight_price : float
+        flight_ccy : string
+        airport_latitude : float
+        airport_longitude : float
+        airport_name : string
+        accommodation_url : text
+        accommodation_price : float
+        accommodation_ccy : string
+        accommodation_latitude : float
+        accommodation_longitude : float
+        accommodation_address : string
+        accommodation_name : string
+        is_active : boolean
+        created_at : datetime
+        updated_at : datetime
+        expires_at : datetime
+    }
+
+    entity "vacation_companions" as vacation_companions {
+        vacation_session_id : int [PK, FK]
+        companion_id : string [PK, FK]
+    }
+
+    entity "vacations" as vacations {
+        id : string [PK]
+        --
+        user_id : string [FK]
+        session_id : int [UK]
+        destination : string
+        origin : string
+        from_date : datetime
+        to_date : datetime
+        adults : int
+        children : int
+        flights_url : text
+        flight_price : float
+        flight_ccy : string
+        airport_name : string
+        accommodation_url : text
+        accommodation_price : float
+        accommodation_ccy : string
+        accommodation_name : string
+        accommodation_address : string
+        itinerary_data : json
+        is_finalized : boolean
+        created_at : datetime
+    }
+}
+
+package "Date Globale" #FFFBEB {
+    entity "global_attractions" as global_attractions {
+        id : int [PK]
+        --
+        external_place_id : string [UK]
+        wikidata_id : string
+        official_name : string
+        opening_hours : json
+        city : string
+        state_province : string
+        country : string
+        formatted_address : string
+        timezone : string
+        latitude : float
+        longitude : float
+        category : string
+        tags : string
+        description : text
+        image_url : string
+        website_url : string
+        rating : float
+        price_tier : int
+        recommended_duration_mins : int
+        tod_preference : string
+        needs_reservation : boolean
+        search_count : int
+        must_count : int
+        want_count : int
+        optional_count : int
+        created_at : datetime
+        updated_at : datetime
+    }
+}
+
+package "Persistență Motor Agentic (LangGraph)" #F1F5F9 {
+    entity "checkpoints" as checkpoints {
+        thread_id : text [PK]
+        checkpoint_ns : text [PK]
+        checkpoint_id : text [PK]
+        --
+        parent_checkpoint_id : text
+        type : text
+        checkpoint : jsonb
+        metadata : jsonb
+    }
+
+    entity "checkpoint_blobs" as checkpoint_blobs {
+        thread_id : text [PK]
+        checkpoint_ns : text [PK]
+        channel : text [PK]
+        version : text [PK]
+        --
+        type : text
+        blob : bytea
+    }
+
+    entity "checkpoint_writes" as checkpoint_writes {
+        thread_id : text [PK]
+        checkpoint_ns : text [PK]
+        checkpoint_id : text [PK]
+        task_id : text [PK]
+        idx : int [PK]
+        --
+        channel : text
+        type : text
+        blob : bytea
+        task_path : text
+    }
+    
+    entity "checkpoint_migrations" as checkpoint_migrations {
+        v : int [PK]
+    }
+}
+
+' --- FORȚARE LAYOUT STRUCTURAT (Aliniere pe coloane) ---
+' Forțăm pachetul Date Globale să stea la dreapta pachetului Utilizatori
+"Gestiune Utilizatori & Securitate" -right[hidden]- "Date Globale"
+' Forțăm LangGraph să stea sub Date Globale
+"Date Globale" -down[hidden]- "Persistență Motor Agentic (LangGraph)"
+
+' --- RELAȚII FINALE ȘI DIRECȚII ---
+users ||-down-o{ vacation_sessions : "creates"
+users ||-right-o{ travel_companions : "manages"
+users ||-down-o{ vacations : "owns"
+
+vacation_sessions ||-right-o{ vacation_companions : "includes"
+travel_companions ||-down-o{ vacation_companions : "joined_in"
+vacation_sessions ||-down-|| vacations : "concludes_to"
+
+' Relații logice tip trigger reflectate curat
+vacation_sessions .right.o{ checkpoints : "cascades"
+vacation_sessions .right.o{ checkpoint_blobs : "cascades"
+vacation_sessions .right.o{ checkpoint_writes : "cascades"
+
+checkpoints ||-down-o{ checkpoint_writes : "logs"
+checkpoints .up.> global_attractions : "references"
+
+@endum

@@ -14,7 +14,7 @@ autocannon -c 100 -p 1 -d 60 --timeout 15 http://localhost:5000/mock/discovery/s
 autocannon -c 250 -p 1 -d 60 --timeout 15 http://localhost:5000/mock/discovery/stream/999
 
 autocannon -c 50 -p 1 -d 120 --timeout 120 -m POST \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ZTA0NTljNC05OTEzLTQzNzMtOWI4YS1kYTcxOTQ0MWU1YmMiLCJqdGkiOiI0ODk3MzZiYS00ZjU0LTQzMGYtOGQ4Zi02YTE3YWU4NTlmMTQiLCJ0eXBlIjoiYWNjZXNzIiwiZnJlc2giOmZhbHNlLCJjc3JmIjoiNjc0OTEyMjYtMjNiMy00MGMzLWFiNTctN2NhMDMxMGM1NjA2IiwiaWF0IjoxNzgxNTYwMTIzLCJleHAiOjE3ODE1NjEwMjMuODMyMDY4fQ.WlhzT2UQlY85ZPflWaDeXN0S2ErxmZXTFsHCsvvrBoU" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ZTA0NTljNC05OTEzLTQzNzMtOWI4YS1kYTcxOTQ0MWU1YmMiLCJqdGkiOiIzYzcxYmMwZC0zN2QxLTRlNjEtYTQwOC0yNDg5ODUwMzI3ZmQiLCJ0eXBlIjoiYWNjZXNzIiwiZnJlc2giOmZhbHNlLCJjc3JmIjoiNGRjN2FhNjUtN2Y4NS00NWFiLTlhODctZjZlM2EwNWU0MmZiIiwiaWF0IjoxNzgxNTk5MDExLCJleHAiOjE3ODE1OTk5MTEuMjM2MjU5fQ.IOnY1vSDVJ6NhIhCVi1A9hrBwxOBVlN2j8mYzgII0DU" \
   -H "Content-Type: application/json" \
   -b '{"session_id": 1, "action": "generate_schedule"}' \
   http://localhost:5000/itinerary/schedule/action

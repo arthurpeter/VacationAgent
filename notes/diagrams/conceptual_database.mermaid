@@ -1,0 +1,17 @@
+erDiagram
+    USER ||--o{ VACATION_SESSION : "creates"
+    USER ||--o{ VACATION : "owns"
+    USER ||--o{ TRAVEL_COMPANION : "manages"
+
+    VACATION_SESSION ||--|| VACATION : "results_in"
+    VACATION_SESSION ||--o{ GLOBAL_ATTRACTION : "references"
+    VACATION ||--o{ GLOBAL_ATTRACTION : "includes"
+    
+    VACATION_SESSION ||..|| AGENT_STATE : "maps_to"
+
+    USER
+    VACATION_SESSION
+    VACATION
+    TRAVEL_COMPANION
+    GLOBAL_ATTRACTION
+    AGENT_STATE
