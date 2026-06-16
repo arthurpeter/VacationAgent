@@ -87,8 +87,7 @@ df_offers['Cache_Status'] = df_offers['Cache'].apply(lambda x: "With Cache" if s
 
 plt.figure(figsize=(8, 5))
 sns.barplot(data=df_offers, x='Concurrency_Label', y='Requests_Per_Second', hue='Cache_Status', palette='Set1')
-# Titlu corectat: contine numele serviciului si focusul pe stratul de cache
-# plt.title('Offers Service Performance via Caching Layer')
+plt.yscale('log')
 plt.xlabel('Concurrency & Pipelining Factor: X (P=Pipeline)')
 plt.ylabel('Throughput (Requests Per Second - RPS)')
 plt.legend(title='Data Management State')
