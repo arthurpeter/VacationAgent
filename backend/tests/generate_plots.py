@@ -73,9 +73,9 @@ lines = line1 + line2
 labels = [l.get_label() for l in lines]
 ax1.legend(lines, labels, loc='upper left')
 
-plt.title('Token Refresh Service Scalability Profile (AuthX + DB Blacklist)')
+# plt.title('Token Refresh Service Scalability Profile (AuthX + DB Blacklist)')
 plt.tight_layout()
-plt.savefig('plot_6_1_1_auth.png', dpi=300)
+plt.savefig('plot_auth.png', dpi=300)
 plt.close()
 
 
@@ -88,12 +88,12 @@ df_offers['Cache_Status'] = df_offers['Cache'].apply(lambda x: "Cache HIT (Redis
 plt.figure(figsize=(8, 5))
 sns.barplot(data=df_offers, x='Concurrency_Label', y='Requests_Per_Second', hue='Cache_Status', palette='Set1')
 # Titlu corectat: contine numele serviciului si focusul pe stratul de cache
-plt.title('Offers Service Performance via Caching Layer')
+# plt.title('Offers Service Performance via Caching Layer')
 plt.xlabel('Concurrency & Pipelining Factor: X (P=Pipeline)')
 plt.ylabel('Throughput (Requests Per Second - RPS)')
 plt.legend(title='Data Management State')
 plt.tight_layout()
-plt.savefig('plot_6_1_2_cache.png', dpi=300)
+plt.savefig('plot_cache.png', dpi=300)
 plt.close()
 
 
@@ -121,9 +121,9 @@ labels = [l.get_label() for l in lines]
 ax1.legend(lines, labels, loc='center left')
 
 # Titlu corectat: contine explicatia tehnica legata de non-blocking calls in paranteza
-plt.title('Discovery Graph Scalability (Non-Blocking Async Nodes)')
+# plt.title('Discovery Graph Scalability (Non-Blocking Async Nodes)')
 plt.tight_layout()
-plt.savefig('plot_6_1_3_sse.png', dpi=300)
+plt.savefig('plot_sse.png', dpi=300)
 plt.close()
 
 
@@ -150,9 +150,9 @@ labels = [l.get_label() for l in lines]
 ax1.legend(lines, labels, loc='upper left')
 
 # Titlu corectat: descrie exact performanta si scalabilitatea la procesare computationale
-plt.title('Schedule Engine Performance and Compute Scalability Profile')
+# plt.title('Schedule Engine Performance and Compute Scalability Profile')
 plt.tight_layout()
-plt.savefig('plot_6_1_4_ortools.png', dpi=300)
+plt.savefig('plot_ortools.png', dpi=300)
 plt.close()
 
 print("Succes! Toate cele 4 ploturi au fost actualizate conform cerintelor tale.")
