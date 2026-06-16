@@ -803,7 +803,7 @@ class ScheduleEngine:
                 )
 
         home_days = [d for d in full_days if d not in excursion_day_map]
-        k_clusters = len(home_days) if home_days else 1
+        k_clusters = min(len(home_pois), len(home_days)) if home_days else 1
         raw_clusters = self._cluster_pois(home_pois, k_clusters)
         balanced_clusters = self._balance_clusters(raw_clusters)
 
@@ -986,7 +986,7 @@ class ScheduleEngine:
                     continue
 
                 cluster_idx = day_to_cluster.get(day_idx)
-                if cluster_idx is not None:
+                if cluster_idx is not None and cluster_idx in cluster_centroids:
                     c_lat, c_lon = cluster_centroids[cluster_idx]
                 else:
                     c_lat, c_lon = self.hotel_coords

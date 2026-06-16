@@ -1,7 +1,7 @@
 """User schemas for AuthX authentication."""
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 
 class TravelCompanionBase(BaseModel):
     name: str
@@ -16,8 +16,7 @@ class TravelCompanionResponse(TravelCompanionBase):
     id: str
     user_id: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserBase(BaseModel):
     """Base user schema."""
@@ -47,5 +46,4 @@ class User(UserBase):
     user_description: Optional[str] = None
     companions: Optional[List[TravelCompanionResponse]] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
