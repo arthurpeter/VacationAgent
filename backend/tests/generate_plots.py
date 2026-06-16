@@ -83,7 +83,7 @@ plt.close()
 # GRAPH 2: Offers Service (Redis Cache Evaluation)
 # =========================================================================
 df_offers = df[df['Endpoint'].str.contains('offers')].copy()
-df_offers['Cache_Status'] = df_offers['Cache'].apply(lambda x: "Cache HIT (Redis)" if str(x).lower() == 'yes' else "Cache MISS (External API)")
+df_offers['Cache_Status'] = df_offers['Cache'].apply(lambda x: "With Cache" if str(x).lower() == 'yes' else "WithoutCache")
 
 plt.figure(figsize=(8, 5))
 sns.barplot(data=df_offers, x='Concurrency_Label', y='Requests_Per_Second', hue='Cache_Status', palette='Set1')

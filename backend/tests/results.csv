@@ -3,7 +3,11 @@ mockup/refresh,no,10,1,20,4000,189,52ms,59ms,0
 mockup/refresh,no,50,1,20,6000,315,156ms,323ms,0
 mockup/refresh,no,100,2,20,7000,354,553ms,1257ms,0
 mockup/refresh,no,250,2,20,7246,366,1297ms,3687ms,0
-mock/offers/{id},no,10,1,10,1000,112,88ms,51ms,0
+mock/offers/{id},no,10,1,20,50,2,5040ms,5053ms,0
+mock/offers/{id},no,50,1,20,200,7.5,5045ms,5054ms,0
+mock/offers/{id},no,100,2,20,544,17.2,8654ms,10188ms,0
+mock/offers/{id},no,250,2,20,1000,37.5,8549ms,10469ms,0
+mock/offers/{id},yes,10,1,20,5000,225,44ms,48ms,0
 mock/offers/{id},yes,50,1,20,20000,1016,48ms,56ms,0
 mock/offers/{id},yes,100,2,20,22000,1093,182ms,335ms,0
 mock/offers/{id},yes,250,2,20,22000,1085,455ms,574ms,0
