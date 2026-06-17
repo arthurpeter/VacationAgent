@@ -192,8 +192,65 @@ def assert_schedule_integrity(result: dict, input_pois: list):
         )
 
 
+def assert_recalculation_integrity(result: dict, input_pois: list):
+    """Functie master de validare DINAMICA pentru modulul de Recalculare Manuala."""
+    assert result["status"] == "success"
+    schedule = result["schedule"]
+    
+    # Cream un dictionar de mapare rapida a atractiilor de input
+    poi_map = {p["id"]: p for p in input_pois}
+
+    for day in schedule:
+        day_idx = day["day_index"]
+        date_str = day["date"]
+        
+        # Identificam dinamic ziua saptamanii corespunzatoare datei calendaristice
+        date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+        day_of_week = date_obj.strftime("%A").lower()
+        
+        events = day["events"]
+        time_cursor = 0  # Cursor absolut in minute pentru a urmari progresia liniara a timpului
+        prev = None  # Evenimentul anterior pentru verificarea suprapunerii
+        
+        for curr in events:
+            c_start = _to_mins(curr["start_time"])
+            c_end = _to_mins(curr["end_time"])
+
+            # Daca am trecut de miezul noptii, convertim timpul intr-o axa liniara continua (> 24h)
+            while c_start < time_cursor:
+                c_start += 1440
+            
+            while c_end < c_start:
+                c_end += 1440
+
+            # Constrangere cronologica de baza
+            assert c_end >= c_start, f"Eroare: Evenimentul {curr['name']} are durata negativa!"
+
+            # VALIDARE ALERTE DINAMICE (Warning Engine Verification)
+            if curr["type"] == "attraction" and isinstance(curr.get("id"), int):
+                poi_id = curr["id"]
+                raw_poi_data = poi_map[poi_id]
+                opening_hours_str = raw_poi_data.get("opening_hours", "")
+
+                # Daca in metadatele brute obiectivul e marcat explicit ca inchis ("Closed")
+                if opening_hours_str and "closed" in opening_hours_str.lower() and day_of_week in opening_hours_str.lower():
+                    assert curr["unknown_hours_warning"] is True, (
+                        f"Defect de avertizare! Atracția '{curr['name']}' a fost programata manual martea, "
+                        f"dar sistemul nu a generat avertismentul 'unknown_hours_warning: True'."
+                    )
+                else:
+                    if opening_hours_str and "closed" in opening_hours_str.lower() and "holiday" not in opening_hours_str.lower():
+                        if day_of_week not in opening_hours_str.lower():
+                            assert curr["unknown_hours_warning"] is False, f"Avertisment fals-pozitiv generat pentru {curr['name']}!"
+
+            # CONSTRANGERE DURA DE NON-SUPRAPUNERE (pe axa liniara de timp)
+            assert c_start >= time_cursor, f"Suprapunere fizica detectata la recalculare intre {prev['name']} si {curr['name']} in ziua {day_idx}!"
+            prev = curr
+            # Avansam cursorul la ora de final a activitatii curente
+            time_cursor = c_end
+
+
 def test_schedule_engine_small_group_load():
-    """Grupul 1: Test de incarcare mica (5 atractii repartizate pe 8 zile)"""
     input_pois = ALL_PARIS_POIS[:5]
     engine = ScheduleEngine(
         pace="moderate",
@@ -207,7 +264,6 @@ def test_schedule_engine_small_group_load():
 
 
 def test_schedule_engine_medium_group_load():
-    """Grupul 2: Test de incarcare medie (~12 atractii repartizate pe 8 zile)"""
     input_pois = ALL_PARIS_POIS[:12]
     engine = ScheduleEngine(
         pace="moderate",
@@ -220,8 +276,7 @@ def test_schedule_engine_medium_group_load():
     assert_schedule_integrity(result, input_pois)
 
 
-def test_schedule_engine_full_stress_load():
-    """Grupul 3: Test de stres maxim (Toate cele 20 de atractii pe 8 zile)"""
+def test_schedule_engine_large_group_load():
     input_pois = ALL_PARIS_POIS
     engine = ScheduleEngine(
         pace="moderate",
@@ -232,3 +287,32 @@ def test_schedule_engine_full_stress_load():
     )
     result = engine.generate_schedule(input_pois)
     assert_schedule_integrity(result, input_pois)
+
+
+def test_schedule_engine_manual_recalculation():
+    engine = ScheduleEngine(
+        pace="moderate",
+        arrival_dt=datetime.fromisoformat("2027-01-03T19:45:00"), # Duminica (Ziua 0)
+        departure_dt=datetime.fromisoformat("2027-01-10T13:05:00"), # Duminica (Ziua 7)
+        hotel_coords=(48.8794868643492, 2.33417227864265),
+        airport_coords=(49.0128, 2.55)
+    )
+
+    # Distribuim complet toate cele 20 de ID-uri de atractii in mod arbitrar/manual pe zile
+    # Ziua 2 (Marti - 5 Ianuarie) contine ID-ul 18 (Louvre) si ID-ul 27 (Pompidou), ambele INCHISE martea!
+    user_days_poi_ids = [
+        [],                          # Ziua 0 (Duminica - Sosire)
+        [10, 13, 15, 17],            # Ziua 1 (Luni)
+        [18, 27, 19, 22],            # Ziua 2 (Marti - Ziua cu restrictii de inchidere)
+        [24, 31, 21, 23],            # Ziua 3 (Miercuri)
+        [20, 28, 29],                # Ziua 4 (Joi)
+        [30, 33, 32],                # Ziua 5 (Vineri)
+        [25, 26],                    # Ziua 6 (Sambata)
+        []                           # Ziua 7 (Duminica - Plecare)
+    ]
+
+    # Executam recalcularea
+    result = engine.recalculate_user_timeline(user_days_poi_ids, ALL_PARIS_POIS)
+    
+    # Validam dinamica intregului program reconstituit manual prin functia master
+    assert_recalculation_integrity(result, ALL_PARIS_POIS)
