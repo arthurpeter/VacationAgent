@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     DEBUG: bool
 
+    FRONTEND_URL: str
+
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str

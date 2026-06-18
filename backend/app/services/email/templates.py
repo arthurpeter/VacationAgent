@@ -1,4 +1,4 @@
-
+from app.core.config import settings
 
 def get_verification_email_html(verification_link: str) -> str:
     """Template for the email verification."""
@@ -99,7 +99,7 @@ def get_vacation_blueprint_html(session_data: dict) -> str:
                 <p style="font-size: 14px;">This blueprint has been saved securely. You can look back at this plan or review any of your past trips at any time by visiting your travel history page.</p>
 
                 <div style="margin: 32px 0 16px; text-align: center;">
-                    <a href="http://localhost:5173/history" style="display: inline-block; background-color: #0f172a; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: bold; tracking-wide: 0.05em; text-transform: uppercase; transition: background-color 0.2s;">View in Travel History</a>
+                    <a href="{settings.FRONTEND_URL.rstrip('/')}/history" style="display: inline-block; background-color: #0f172a; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: bold; tracking-wide: 0.05em; text-transform: uppercase; transition: background-color 0.2s;">View in Travel History</a>
                 </div>
             </div>
 

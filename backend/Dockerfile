@@ -36,6 +36,8 @@ COPY . .
 
 ENV PATH=/root/.local/bin:$PATH
 
+RUN chmod +x /app/entrypoint.sh
+
 EXPOSE 5000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5000", "--workers", "1"]
+ENTRYPOINT ["/app/entrypoint.sh"]

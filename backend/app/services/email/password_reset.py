@@ -51,7 +51,7 @@ def send_password_reset_email(to_email: str) -> bool:
 
     token = create_password_reset_token(to_email)
 
-    frontend_url = "http://localhost:5173"
+    frontend_url = settings.FRONTEND_URL.rstrip("/")
     reset_link = f"{frontend_url}/reset-password?token={token}"
     log.info(f"Generated password reset link for {to_email}: {reset_link}")
 

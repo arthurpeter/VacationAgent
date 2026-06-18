@@ -39,7 +39,7 @@ def send_verification_email(to_email: str) -> bool:
 
     token = create_verification_token(to_email)
 
-    frontend_url = "http://localhost:5173"
+    frontend_url = settings.FRONTEND_URL.rstrip("/")
     verification_link = f"{frontend_url}/verify-email?token={token}"
     log.info(f"Generated verification link for {to_email}: {verification_link}")
 

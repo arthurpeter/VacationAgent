@@ -36,7 +36,7 @@ export default function Profile() {
   const currencyRef = useRef(null);
   const airportRef = useRef(null);
 
-  const API_URL = API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const API_URL = API_BASE_URL;
 
   useEffect(() => {
     const fetchProfile = async () => {
