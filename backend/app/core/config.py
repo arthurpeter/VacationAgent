@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: list = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     GOOGLE_API_KEY: str
+    GEMINI_API_KEY: str
     SERPAPI_API_KEY: str
     RAPIDAPI_KEY: str
     OPENTRIPMAP_API_KEY: str
@@ -69,7 +70,7 @@ class Settings(BaseSettings):
             model=self.LLM_MODEL,
             max_retries=2,
             temperature=self.LLM_TEMPERATURE,
-            api_key=self.GOOGLE_API_KEY,
+            api_key=self.GEMINI_API_KEY,
         )
 
     @classmethod
