@@ -6,20 +6,22 @@ from app.models.vacation import Vacation
 from app.services.agents.memory import DiscoveryState, ItineraryState
 from app.utils.generic import calculate_age
 import httpx
-from typing import Optional
 
 from app.services.agents.mobility_strategies import MobilityConfig
 
 
 async def get_formatted_travel_history(db: AsyncSession, user_id: str) -> str:
     """
-    Fetches the user's past 5 trips and formats them into a lightweight string 
+    Fetches the user's past 5 trips and formats them into a lightweight string
     for the LLM context window.
     """
-    stmt = select(Vacation).where(
-        Vacation.user_id == user_id
-    ).order_by(Vacation.created_at.desc()).limit(5)
-    
+    stmt = (
+        select(Vacation)
+        .where(Vacation.user_id == user_id)
+        .order_by(Vacation.created_at.desc())
+        .limit(5)
+    )
+
     result = await db.execute(stmt)
     vacations = result.scalars().all()
 
@@ -31,11 +33,12 @@ async def get_formatted_travel_history(db: AsyncSession, user_id: str) -> str:
         line = f"- {v.destination}"
         if v.from_date and v.to_date:
             line += f" ({v.from_date} to {v.to_date})"
-        if getattr(v, 'people_count', None):
+        if getattr(v, "people_count", None):
             line += f" with {v.people_count} travelers"
         history_lines.append(line)
 
     return "\n".join(history_lines)
+
 
 def format_extracted_data(session: VacationSession) -> dict:
     """Formats the session DB model into the standard extracted_data dictionary."""
@@ -51,8 +54,9 @@ def format_extracted_data(session: VacationSession) -> dict:
         "children_ages": session.children_ages,
         "room_qty": session.room_qty,
         "currency": session.currency,
-        "budget": session.budget
+        "budget": session.budget,
     }
+
 
 async def get_resumed_state(db: AsyncSession, session_id: int) -> dict:
     """
@@ -61,22 +65,22 @@ async def get_resumed_state(db: AsyncSession, session_id: int) -> dict:
     """
     result = await db.execute(select(VacationSession).filter_by(id=session_id))
     session = result.scalars().first()
-    
+
     if not session:
         raise ValueError(f"Session {session_id} not found")
-        
+
     return format_extracted_data(session)
+
 
 async def get_initial_state(db: AsyncSession, session_id: int) -> DiscoveryState:
     """
-    Fetches session data and returns a DiscoveryState object 
+    Fetches session data and returns a DiscoveryState object
     ready for LangGraph execution.
     """
     stmt = (
         select(VacationSession)
         .options(
-            selectinload(VacationSession.user),
-            selectinload(VacationSession.companions)
+            selectinload(VacationSession.user), selectinload(VacationSession.companions)
         )
         .filter(VacationSession.id == session_id)
     )
@@ -88,7 +92,7 @@ async def get_initial_state(db: AsyncSession, session_id: int) -> DiscoveryState
 
     user_bio = session.user.user_description or "No preferences provided."
     persona = f"MAIN TRAVELER ({calculate_age(session.user.date_of_birth)}) BIO: {user_bio}\n\n"
-    
+
     if session.companions:
         persona += "COMPANIONS:\n"
         for comp in session.companions:
@@ -97,7 +101,7 @@ async def get_initial_state(db: AsyncSession, session_id: int) -> DiscoveryState
     user_history_str = await get_formatted_travel_history(db, str(session.user_id))
 
     return {
-        "messages": [], 
+        "messages": [],
         "user_id": str(session.user_id),
         "session_id": session.id,
         "persona_context": persona,
@@ -114,21 +118,22 @@ async def get_initial_state(db: AsyncSession, session_id: int) -> DiscoveryState
             "children_ages": session.children_ages,
             "room_qty": session.room_qty,
             "currency": session.currency,
-            "budget": session.budget
+            "budget": session.budget,
         },
         "newly_extracted_data": None,
-        "is_complete": False
+        "is_complete": False,
     }
+
 
 async def resolve_location(query: str) -> str:
     """
-    Calls Nominatim (OSM) to turn messy user input into a 
+    Calls Nominatim (OSM) to turn messy user input into a
     standardized 'City, CC' string.
     """
     url = f"https://nominatim.openstreetmap.org/search?format=json&q={query}&addressdetails=1&limit=1"
     headers = {
         "User-Agent": "TuRAG/1.0 (contact.turag@gmail.com)",
-        "Accept-Language": "en"
+        "Accept-Language": "en",
     }
 
     try:
@@ -139,23 +144,24 @@ async def resolve_location(query: str) -> str:
                 if data:
                     result = data[0]
                     address = result.get("address", {})
-                    
-                    city = (address.get("city") or 
-                            address.get("town") or 
-                            address.get("village") or 
-                            address.get("municipality") or
-                            address.get("state"))
-                    
+
+                    city = (
+                        address.get("city")
+                        or address.get("town")
+                        or address.get("village")
+                        or address.get("municipality")
+                        or address.get("state")
+                    )
+
                     country_code = address.get("country_code")
-                    
+
                     if city and country_code:
                         print(f"Resolved '{query}' to '{city}, {country_code.upper()}'")
                         return f"{city}, {country_code.upper()}"
-                    
+
                     return result.get("display_name", query)
     except Exception as e:
         print(f"Location resolution error: {e}")
-
 
     return query.upper()
 
@@ -167,24 +173,26 @@ def is_llm_null(value) -> bool:
     """
     if value is None:
         return True
-        
+
     if isinstance(value, str):
         cleaned_val = value.strip().lower()
         if cleaned_val in {"null", "none", "undefined"}:
             return True
-            
+
     return False
 
-async def get_initial_itinerary_state(db: AsyncSession, session_id: int) -> ItineraryState:
+
+async def get_initial_itinerary_state(
+    db: AsyncSession, session_id: int
+) -> ItineraryState:
     """
-    Fetches session data and returns an ItineraryState object 
+    Fetches session data and returns an ItineraryState object
     ready for LangGraph execution in the Itinerary phase.
     """
     stmt = (
         select(VacationSession)
         .options(
-            selectinload(VacationSession.user),
-            selectinload(VacationSession.companions)
+            selectinload(VacationSession.user), selectinload(VacationSession.companions)
         )
         .filter(VacationSession.id == session_id)
     )
@@ -196,7 +204,7 @@ async def get_initial_itinerary_state(db: AsyncSession, session_id: int) -> Itin
 
     user_bio = session.user.user_description or "No preferences provided."
     persona = f"MAIN TRAVELER ({calculate_age(session.user.date_of_birth)}) BIO: {user_bio}\n\n"
-    
+
     if session.companions:
         persona += "COMPANIONS:\n"
         for comp in session.companions:
@@ -207,8 +215,12 @@ async def get_initial_itinerary_state(db: AsyncSession, session_id: int) -> Itin
         "destination": session.destination,
         "from_date": session.from_date.isoformat() if session.from_date else None,
         "to_date": session.to_date.isoformat() if session.to_date else None,
-        "destination_arrival": session.destination_arrival.isoformat() if session.destination_arrival else None,
-        "destination_departure": session.destination_departure.isoformat() if session.destination_departure else None,
+        "destination_arrival": session.destination_arrival.isoformat()
+        if session.destination_arrival
+        else None,
+        "destination_departure": session.destination_departure.isoformat()
+        if session.destination_departure
+        else None,
         "adults": session.adults,
         "children": session.children,
         "infants_in_seat": session.infants_in_seat,
@@ -222,20 +234,32 @@ async def get_initial_itinerary_state(db: AsyncSession, session_id: int) -> Itin
         "hotel_address": session.accommodation_address,
     }
 
-    hotel_coords = (float(session.accommodation_latitude), float(session.accommodation_longitude)) if session.accommodation_latitude else (0.0, 0.0)
-    airport_coords = (float(session.airport_latitude), float(session.airport_longitude)) if session.airport_latitude else (0.0, 0.0)
+    hotel_coords = (
+        (float(session.accommodation_latitude), float(session.accommodation_longitude))
+        if session.accommodation_latitude
+        else (0.0, 0.0)
+    )
+    airport_coords = (
+        (float(session.airport_latitude), float(session.airport_longitude))
+        if session.airport_latitude
+        else (0.0, 0.0)
+    )
 
     trip_details = {
-        "arrival_dt": session.destination_arrival.isoformat() if session.destination_arrival else None,
-        "departure_dt": session.destination_departure.isoformat() if session.destination_departure else None,
+        "arrival_dt": session.destination_arrival.isoformat()
+        if session.destination_arrival
+        else None,
+        "departure_dt": session.destination_departure.isoformat()
+        if session.destination_departure
+        else None,
         "hotel_coords": hotel_coords,
         "airport_coords": airport_coords,
         "wakeup_time": "08:00",
-        "lunch_duration_mins": 90
+        "lunch_duration_mins": 90,
     }
 
     return {
-        "messages": [], 
+        "messages": [],
         "user_id": str(session.user_id),
         "session_id": session.id,
         "stage": 0,
@@ -244,11 +268,11 @@ async def get_initial_itinerary_state(db: AsyncSession, session_id: int) -> Itin
         "persona_context": persona,
         "data": itinerary_db_context,
         "pois": [],
-        "mobility_config": MobilityConfig.create_default().model_dump(mode='json'),
+        "mobility_config": MobilityConfig.create_default().model_dump(mode="json"),
         "mobility_recommendation": None,
         "pace_recommendation": None,
         "pace": "Moderate",
         "trip_details": trip_details,
         "schedule": None,
-        "excluded_pois": None
+        "excluded_pois": None,
     }

@@ -13,8 +13,8 @@ autocannon -c 50 -p 1 -d 60 --timeout 15 http://localhost:5000/mock/discovery/st
 autocannon -c 100 -p 1 -d 60 --timeout 15 http://localhost:5000/mock/discovery/stream/999
 autocannon -c 250 -p 1 -d 60 --timeout 15 http://localhost:5000/mock/discovery/stream/999
 
-autocannon -c 1 -p 1 -d 120 --timeout 120 -m POST \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ZTA0NTljNC05OTEzLTQzNzMtOWI4YS1kYTcxOTQ0MWU1YmMiLCJqdGkiOiIzYzcxYmMwZC0zN2QxLTRlNjEtYTQwOC0yNDg5ODUwMzI3ZmQiLCJ0eXBlIjoiYWNjZXNzIiwiZnJlc2giOmZhbHNlLCJjc3JmIjoiNGRjN2FhNjUtN2Y4NS00NWFiLTlhODctZjZlM2EwNWU0MmZiIiwiaWF0IjoxNzgxNTk5MDExLCJleHAiOjE3ODE1OTk5MTEuMjM2MjU5fQ.IOnY1vSDVJ6NhIhCVi1A9hrBwxOBVlN2j8mYzgII0DU" \
+autocannon -c 20 -p 1 -d 30 --timeout 120 -m POST \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ZTA0NTljNC05OTEzLTQzNzMtOWI4YS1kYTcxOTQ0MWU1YmMiLCJqdGkiOiIyZTBlYjIwZS1iOWQwLTQxMTYtYWUyZC0wMzdlZjdhMjk4MjUiLCJ0eXBlIjoiYWNjZXNzIiwiZnJlc2giOmZhbHNlLCJjc3JmIjoiYWUwMjUxMjAtZmE4Yy00YWE1LTkxZDgtMDIzMzFiY2YyN2FlIiwiaWF0IjoxNzgxNzAyMjE2LCJleHAiOjE3ODE3MDMxMTYuODQ4Mzk0fQ.fHg6gYMcYr4Gw7PnHSzo2k6EeJ-qdT7JiM4RLkyD4Qo" \
   -H "Content-Type: application/json" \
   -b '{"session_id": 1, "action": "generate_schedule"}' \
   http://localhost:5000/itinerary/schedule/action

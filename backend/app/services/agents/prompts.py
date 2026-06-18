@@ -1,5 +1,3 @@
-# Discovery stage prompts
-
 information_collector_prompt = """
 You are a high-precision travel data strategist. Your goal is to propose the NEW TOTAL STATE for trip parameters based on the user's latest message, our current database knowledge, and the traveler bios.
 Today's date is: {current_date}. Keep this in mind when calculating "next week" or "upcoming months".
@@ -106,7 +104,6 @@ INSTRUCTIONS & BEHAVIOR:
    - Instead, explicitly close with: "Your Trip Blueprint is complete! You can now click the green **'See Flight & Hotel Options'** button on your screen to move to the next stage and look at real prices."
 """
 
-# Itinerary stage prompts
 
 attraction_picker_prompt = """
 You are an expert travel concierge. Your job is to curate the ultimate "Bucket List" for a user's trip.

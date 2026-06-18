@@ -2,4 +2,3 @@
 
 from .user import *
 from .vacation import *
-

@@ -9,18 +9,13 @@ from alembic import context
 
 import os
 import sys
+
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from app.core.config import settings
 from app.core.database import Base
+
 # Import ALL your models here so Alembic sees them
-from app.models.user import User
-from app.models.vacation import Vacation
-from app.models.vacation_session import VacationSession
-from app.models.blacklist_token import BlacklistToken
-from app.models.companion import TravelCompanion
-from app.models.notifications import Notification
-from app.models.global_attraction import GlobalAttraction
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -68,11 +63,13 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
+
 def do_run_migrations(connection):
     context.configure(connection=connection, target_metadata=target_metadata)
 
     with context.begin_transaction():
         context.run_migrations()
+
 
 async def run_async_migrations() -> None:
     """In this scenario we need to create an AsyncEngine
@@ -88,6 +85,7 @@ async def run_async_migrations() -> None:
         await connection.run_sync(do_run_migrations)
 
     await connectable.dispose()
+
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode.

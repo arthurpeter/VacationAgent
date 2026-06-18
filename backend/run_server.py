@@ -8,13 +8,10 @@ import uvicorn
 import multiprocessing
 from app.core.config import settings
 
-# Change to the directory containing this script
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-# Add app to Python path
 app_path = os.path.join(os.path.dirname(__file__), 'app')
 sys.path.insert(0, app_path)
-
 
 
 if __name__ == "__main__":

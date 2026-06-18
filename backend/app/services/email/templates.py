@@ -1,4 +1,4 @@
-import markdown2
+
 
 def get_verification_email_html(verification_link: str) -> str:
     """Template for the email verification."""
@@ -22,6 +22,7 @@ def get_verification_email_html(verification_link: str) -> str:
         </body>
     </html>
     """
+
 
 def get_password_reset_email_html(reset_link: str) -> str:
     """Template for the password reset email."""
@@ -48,18 +49,26 @@ def get_password_reset_email_html(reset_link: str) -> str:
     </html>
     """
 
+
 def get_vacation_blueprint_html(session_data: dict) -> str:
     """
-    Generates a clean, friendly HTML cover letter informing the 
+    Generates a clean, friendly HTML cover letter informing the
     user that their itinerary PDF has been attached.
     """
     from_date = session_data.get("from_date", "TBD")
     to_date = session_data.get("to_date", "TBD")
     destination = session_data.get("destination", "Your Destination")
-    
-    # Simple date display extraction formatting helper
-    clean_from = from_date.split("T")[0] if isinstance(from_date, str) else getattr(from_date, "strftime", lambda x: "TBD")("%b %d, %Y")
-    clean_to = to_date.split("T")[0] if isinstance(to_date, str) else getattr(to_date, "strftime", lambda x: "TBD")("%b %d, %Y")
+
+    clean_from = (
+        from_date.split("T")[0]
+        if isinstance(from_date, str)
+        else getattr(from_date, "strftime", lambda x: "TBD")("%b %d, %Y")
+    )
+    clean_to = (
+        to_date.split("T")[0]
+        if isinstance(to_date, str)
+        else getattr(to_date, "strftime", lambda x: "TBD")("%b %d, %Y")
+    )
 
     return f"""
     <!DOCTYPE html>
@@ -73,7 +82,7 @@ def get_vacation_blueprint_html(session_data: dict) -> str:
             <div style="background-color: #0f172a; padding: 32px 24px; text-align: center;">
                 <span style="font-size: 10px; font-weight: bold; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.15em; display: block; margin-bottom: 4px;">TuRAG Travel Companion</span>
                 <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 900; tracking-tight: -0.02em;">Pack Your Bags! 🌴</h1>
-                <p style="color: #94a3b8; margin: 8px 0 0 0; font-size: 14px; font-weight: 500;">{session_data.get('origin', 'Home Base')} &rarr; {destination}</p>
+                <p style="color: #94a3b8; margin: 8px 0 0 0; font-size: 14px; font-weight: 500;">{session_data.get("origin", "Home Base")} &rarr; {destination}</p>
             </div>
 
             <div style="padding: 32px 24px; color: #334155; line-height: 1.6;">
@@ -84,7 +93,7 @@ def get_vacation_blueprint_html(session_data: dict) -> str:
 
                 <div style="margin: 24px 0; padding: 16px; background-color: #f1f5f9; border-radius: 8px; font-size: 13px; color: #475569; border-left: 3px solid #64748b;">
                     📅 <strong>Trip Dates:</strong> {clean_from} — {clean_to}<br/>
-                    👥 <strong>Travelers:</strong> {session_data.get('adults', 1)} Adult(s) {f"· {session_data.get('children')} Child(ren)" if session_data.get('children', 0) > 0 else ""}
+                    👥 <strong>Travelers:</strong> {session_data.get("adults", 1)} Adult(s) {f"· {session_data.get('children')} Child(ren)" if session_data.get("children", 0) > 0 else ""}
                 </div>
 
                 <p style="font-size: 14px;">This blueprint has been saved securely. You can look back at this plan or review any of your past trips at any time by visiting your travel history page.</p>

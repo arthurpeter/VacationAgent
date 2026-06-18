@@ -1,19 +1,21 @@
 """
 Core application configuration.
 """
+
 from functools import lru_cache
 from pathlib import Path
 from typing import Type, Tuple
 
 from pydantic_settings import (
-    BaseSettings, 
-    SettingsConfigDict, 
-    PydanticBaseSettingsSource
+    BaseSettings,
+    SettingsConfigDict,
+    PydanticBaseSettingsSource,
 )
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 ENV_FILE_PATH = BASE_DIR / ".env"
+
 
 class Settings(BaseSettings):
     """Application settings."""
@@ -36,7 +38,7 @@ class Settings(BaseSettings):
     SMTP_PORT: int
     SMTP_USER: str
     SMTP_PASSWORD: str
-    
+
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
 
@@ -52,14 +54,14 @@ class Settings(BaseSettings):
 
     LLM_MODEL: str = "gemini-2.5-flash"
     LLM_TEMPERATURE: float = 0.0
-    
+
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE_PATH),
         env_file_encoding="utf-8",
         case_sensitive=True,
-        extra="ignore"
+        extra="ignore",
     )
-    
+
     @property
     def llm(self):
         """Get the configured LLM instance."""
@@ -67,9 +69,9 @@ class Settings(BaseSettings):
             model=self.LLM_MODEL,
             max_retries=2,
             temperature=self.LLM_TEMPERATURE,
-            api_key=self.GOOGLE_API_KEY
+            api_key=self.GOOGLE_API_KEY,
         )
-    
+
     @classmethod
     def settings_customise_sources(
         cls,
@@ -85,5 +87,6 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
 
 settings = get_settings()

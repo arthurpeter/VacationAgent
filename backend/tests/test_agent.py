@@ -9,9 +9,12 @@ from app.core.database import get_db, get_checkpointer, Base
 from app.models.user import User
 from app.models.vacation_session import VacationSession
 from app.core.auth import auth
-from app.services.agents.discovery_graph import generate_graph as generate_discovery_graph
+from app.services.agents.discovery_graph import (
+    generate_graph as generate_discovery_graph,
+)
 
 DATABASE_URL = "sqlite:///:memory:"
+
 
 class MockAsyncSession:
     def __init__(self, sync_session):
@@ -29,6 +32,7 @@ class MockAsyncSession:
     async def close(self):
         pass
 
+
 @pytest.fixture(name="db_session")
 def fixture_db_session():
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -38,6 +42,7 @@ def fixture_db_session():
     yield session
     session.close()
     Base.metadata.drop_all(bind=engine)
+
 
 @pytest.mark.anyio
 async def test_agent_context_persistence_and_retrieval(db_session):
@@ -53,16 +58,16 @@ async def test_agent_context_persistence_and_retrieval(db_session):
 
     memory_checkpointer = MemorySaver()
     config = {"configurable": {"thread_id": "discovery_1"}}
-    
+
     graph = generate_discovery_graph(memory_checkpointer)
     await graph.aupdate_state(
         config,
         {
             "messages": [
                 HumanMessage(content="Vreau o vacanta de 5 zile in Roma"),
-                AIMessage(content="Ce buget ai alocat pentru zbor si cazare?")
+                AIMessage(content="Ce buget ai alocat pentru zbor si cazare?"),
             ]
-        }
+        },
     )
 
     async def override_get_db():
@@ -77,15 +82,17 @@ async def test_agent_context_persistence_and_retrieval(db_session):
     with TestClient(app) as client:
         headers = {"Authorization": f"Bearer {token}"}
         response = client.get("/chat/discovery/messages/1", headers=headers)
-        
+
         assert response.status_code == 200
         data = response.json()
-        
+
         assert "messages" in data
         assert len(data["messages"]) == 2
         assert data["messages"][0]["sender"] == "user"
         assert data["messages"][0]["text"] == "Vreau o vacanta de 5 zile in Roma"
         assert data["messages"][1]["sender"] == "ai"
-        assert data["messages"][1]["text"] == "Ce buget ai alocat pentru zbor si cazare?"
+        assert (
+            data["messages"][1]["text"] == "Ce buget ai alocat pentru zbor si cazare?"
+        )
 
     app.dependency_overrides.clear()

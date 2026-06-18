@@ -3,6 +3,7 @@
 from typing import Any, Optional
 from pydantic import BaseModel
 
+
 class SessionDataUpdate(BaseModel):
     currency: Optional[str] = None
     from_date: Optional[str] = None
@@ -19,8 +20,10 @@ class SessionDataUpdate(BaseModel):
     itinerary_data: Optional[list[dict[str, Any]]] = None
     transit_strategy: Optional[dict[str, Any]] = None
 
+
 class Flight(BaseModel):
     """Schema for individual flight details."""
+
     airline: str
     airline_logo: Optional[str]
     departure: str
@@ -32,19 +35,25 @@ class Flight(BaseModel):
     travel_class: Optional[str] = None
     extensions: list[str] = []
 
+
 class FlightsResponse(BaseModel):
     """Schema for flight search response."""
+
     token: str
     price: Optional[float]
     currency: str
     flights: list[Flight]
 
+
 class FlightBookingResponse(BaseModel):
     """Schema for flight booking response."""
+
     booking_url: str
+
 
 class FlightsRequest(BaseModel):
     """Schema for flight search request."""
+
     session_id: int
     token: Optional[str] = None
     departure: str
@@ -61,12 +70,14 @@ class FlightsRequest(BaseModel):
     destination_arrival: Optional[str] = ""
     destination_departure: Optional[str] = ""
 
+
 class accommodationsRequest(BaseModel):
     """Schema for accommodations search request."""
+
     session_id: int
     loc_id: Optional[str] = None
     location: str
-    search_type: str # e.g., "CITY"
+    search_type: str
     arrival_date: str
     departure_date: str
     adults: Optional[int]
@@ -75,8 +86,10 @@ class accommodationsRequest(BaseModel):
     price_min: Optional[int]
     price_max: Optional[int]
 
+
 class accommodationsResponse(BaseModel):
     """Schema for accommodations search response."""
+
     hotel_id: str
     hotel_name: str
     latitude: Optional[float]
@@ -92,6 +105,7 @@ class accommodationsResponse(BaseModel):
     checkin_time_range: Optional[str]
     checkout_time_range: Optional[str]
 
+
 class HotelDetailsResponse(BaseModel):
     hotel_id: str
     url: str
@@ -101,14 +115,16 @@ class HotelDetailsResponse(BaseModel):
     sustainability_info: Optional[dict]
     property_highlights: list[dict]
     languages_spoken: list[str]
-    price_breakdown_details: Optional[dict] 
+    price_breakdown_details: Optional[dict]
     cancellation_policy: Optional[str]
     prepayment_policy: Optional[str]
     bed_details: Optional[str]
     address: Optional[str]
 
+
 class accommodationBookingRequest(BaseModel):
     """Simplified schema for booking an accommodation."""
+
     session_id: int
     booking_url: str
     price: Optional[float] = None
@@ -118,25 +134,9 @@ class accommodationBookingRequest(BaseModel):
     address: Optional[str] = None
     name: Optional[str] = None
 
+
 class accommodationBookingResponse(BaseModel):
     """Schema for accommodation booking response."""
+
     message: str
     booking_url: str
-
-
-# class ExploreResponse(BaseModel):
-#     """Schema for explore flight search response."""
-#     start_date: str
-#     end_date: str
-
-# class ExploreRequest(BaseModel):
-#     """Schema for explore flight search request."""
-#     departure: str
-#     arrival: str
-#     duration_type: int
-#     month: int
-#     adults: int
-#     children: Optional[int] = 0
-#     infants_in_seat: Optional[int] = 0
-#     infants_on_lap: Optional[int] = 0
-#     stops: Optional[int] = 0

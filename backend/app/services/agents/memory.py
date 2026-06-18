@@ -1,23 +1,26 @@
 import operator
 from typing import Any, Optional, Annotated, List, Union
 from typing_extensions import Literal, TypedDict
-from pydantic import BaseModel, Field
 from langgraph.graph.message import add_messages
 
-from app.services.agents.responses import MobilityRecommendationSchema, PaceRecommendationSchema
+from app.services.agents.responses import (
+    MobilityRecommendationSchema,
+    PaceRecommendationSchema,
+)
 
 
 class DiscoveryState(TypedDict):
     user_id: str
     session_id: int
     messages: Annotated[List[Union[dict, str]], add_messages]
-    
+
     persona_context: Optional[str] = None
     newly_extracted_data: Optional[dict] = None
     extracted_data: Optional[dict] = None
     user_history: Optional[str] = None
     is_complete: bool = False
     passengers_confirmed: bool = False
+
 
 class ItineraryState(TypedDict):
     user_id: str
@@ -39,4 +42,3 @@ class ItineraryState(TypedDict):
     schedule: Optional[List[dict[str, Any]]] = None
     excluded_pois: Optional[dict[str, List[str]]] = None
     user_timeline: Optional[List[List[int]]] = None
-

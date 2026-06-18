@@ -19,7 +19,7 @@ engine = create_async_engine(
     pool_size=app_pool_size,
     max_overflow=int(app_pool_size * 0.2),
     pool_pre_ping=True,
-    pool_recycle=3600
+    pool_recycle=3600,
 )
 
 log.info(
@@ -28,11 +28,11 @@ log.info(
 )
 
 SessionLocal = async_sessionmaker(
-    autocommit=False, 
-    autoflush=False, 
-    bind=engine, 
+    autocommit=False,
+    autoflush=False,
+    bind=engine,
     class_=AsyncSession,
-    expire_on_commit=False
+    expire_on_commit=False,
 )
 
 Base = declarative_base()
@@ -40,11 +40,9 @@ Base = declarative_base()
 raw_db_url = settings.DATABASE_URL.replace("+asyncpg", "").replace("+psycopg", "")
 
 langgraph_pool = AsyncConnectionPool(
-    conninfo=raw_db_url,
-    min_size=1,
-    max_size=lg_pool_size,
-    open=False
+    conninfo=raw_db_url, min_size=1, max_size=lg_pool_size, open=False
 )
+
 
 async def get_db():
     async with SessionLocal() as db:
@@ -52,6 +50,7 @@ async def get_db():
             yield db
         finally:
             await db.close()
+
 
 async def get_checkpointer():
     yield AsyncPostgresSaver(langgraph_pool)

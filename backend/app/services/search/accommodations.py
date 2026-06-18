@@ -1,12 +1,12 @@
-from serpapi import GoogleSearch  # Import the official library
+from serpapi import GoogleSearch
 from typing import Dict, Any, Optional
 from app.core.config import settings
 
-# Set your API key globally from the .env file
-# The GoogleSearch class will automatically use this.
+
 GoogleSearch.SERP_API_KEY = settings.SERPAPI_API_KEY
 if not GoogleSearch.SERP_API_KEY:
     raise ValueError("SERPAPI_API_KEY environment variable is required")
+
 
 def call_accommodation_api(
     query: str,
@@ -14,123 +14,98 @@ def call_accommodation_api(
     check_out_date: str,
     adults: Optional[int] = None,
     children: Optional[int] = None,
-    # Localization
     gl: Optional[str] = None,
     hl: Optional[str] = None,
     currency: Optional[str] = None,
-    # Advanced parameters
     children_ages: Optional[str] = None,
-    # Advanced filters
     sort_by: Optional[str] = None,
     min_price: Optional[int] = None,
     max_price: Optional[int] = None,
     property_types: Optional[str] = None,
     amenities: Optional[str] = None,
     rating: Optional[str] = None,
-    # Hotels filters
     brands: Optional[str] = None,
     hotel_class: Optional[str] = None,
     free_cancellation: Optional[bool] = None,
     special_offers: Optional[bool] = None,
     eco_certified: Optional[bool] = None,
-    # Vacation rentals filters
     vacation_rentals: Optional[bool] = None,
     bedrooms: Optional[int] = None,
     bathrooms: Optional[int] = None,
-    # Pagination
     next_page_token: Optional[str] = None,
-    # Property details
     property_token: Optional[str] = None,
-    # SerpApi parameters
     no_cache: Optional[bool] = None,
     async_search: Optional[bool] = None,
     zero_trace: Optional[bool] = None,
     output: Optional[str] = None,
     json_restrictor: Optional[str] = None,
-    # Legacy parameter for backward compatibility
-    min_rating: Optional[float] = None
+    min_rating: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
     Call the Google Hotels API via SerpAPI to search for accommodations.
     Uses the official serpapi-python library.
-    
+
     Args:
         query (str): Search query (Required)
         check_in_date (str): Check-in date in YYYY-MM-DD format (Required)
         check_out_date (str): Check-out date in YYYY-MM-DD format (Required)
         # (All other args are documented in the original function)
-    
+
     Returns:
         Dict[str, Any]: API response containing hotel data
-    
+
     Raises:
         Exception: If API request fails or returns an error
     """
-    
-    # Required parameters
+
     params = {
         "engine": "google_hotels",
         "q": query,
         "check_in_date": check_in_date,
         "check_out_date": check_out_date,
-        # "api_key" is no longer needed here; it's set globally
     }
-    
-    # Add optional parameters only if they are not None
+
     optional_params = {
-        # Basic parameters
         "adults": adults,
         "children": children,
-        # Localization
         "gl": gl,
         "hl": hl,
         "currency": currency,
-        # Advanced parameters
         "children_ages": children_ages,
-        # Advanced filters
         "sort_by": sort_by,
         "min_price": min_price,
         "max_price": max_price,
         "property_types": property_types,
         "amenities": amenities,
         "rating": rating,
-        # Hotels filters
         "brands": brands,
         "hotel_class": hotel_class,
         "free_cancellation": free_cancellation,
         "special_offers": special_offers,
         "eco_certified": eco_certified,
-        # Vacation rentals filters
         "vacation_rentals": vacation_rentals,
         "bedrooms": bedrooms,
         "bathrooms": bathrooms,
-        # Pagination
         "next_page_token": next_page_token,
-        # Property details
         "property_token": property_token,
-        # SerpApi parameters
         "no_cache": no_cache,
-        "async": async_search,  # Note: The library expects 'async'
+        "async": async_search,
         "zero_trace": zero_trace,
         "output": output,
-        "json_restrictor": json_restrictor
+        "json_restrictor": json_restrictor,
     }
-    
-    # Only add parameters that are not None
+
     for key, value in optional_params.items():
         if value is not None:
             params[key] = value
-    
+
     try:
-        # Use the GoogleSearch class to create and execute the search
         search = GoogleSearch(params)
         results = search.get_dict()
-        
-        # Check if the API returned an error in its response
+
         if "error" in results:
             raise Exception(results["error"])
-        
-        # Apply minimum rating filter if specified (legacy logic)
+
         if min_rating is not None and "properties" in results:
             filtered_properties = []
             for hotel in results.get("properties", []):
@@ -138,26 +113,24 @@ def call_accommodation_api(
                 if hotel_rating is not None and hotel_rating >= min_rating:
                     filtered_properties.append(hotel)
             results["properties"] = filtered_properties
-            # Update the count if it exists
+
             if "properties_count" in results:
                 results["properties_count"] = len(filtered_properties)
-        
+
         return results
-        
+
     except Exception as e:
         print(f"Error calling SerpAPI (Google Hotels): {e}")
         raise
 
-# Example of how you might call this function:
+
 if __name__ == "__main__":
     try:
-        # Using dates in the near future
         search_query = "Hotels in Paris, France"
-        # Using a date that is likely to have prices
-        ci_date = "2026-02-10" 
+
+        ci_date = "2026-02-10"
         co_date = "2026-02-17"
-        
-        # --- (SIMPLIFIED) STEP 1: Get all data in one call ---
+
         print("--- STEP 1: Searching for hotels and links... ---")
         hotel_results = call_accommodation_api(
             query=search_query,
@@ -166,12 +139,10 @@ if __name__ == "__main__":
             gl="us",
             hl="en",
             currency="USD",
-            rating="8",  # 4.0+ stars
-            sort_by="3" # 3 = Lowest price
+            rating="8",
+            sort_by="3",
         )
-        
-        # --- OPTION 1: Get link from the first "Sponsored" (Ad) result ---
-        # These are very reliable and almost always have a direct provider link
+
         print("\n--- ✅ Found Sponsored Provider Link ---")
         ads = hotel_results.get("ads")
         if ads:
@@ -183,37 +154,37 @@ if __name__ == "__main__":
         else:
             print("No sponsored (ad) results found.")
 
-        # --- OPTION 2: Get link from the first "Organic" (Property) result ---
-        # This is what we were doing before, but now we get the correct link.
         print("\n--- ✅ Found Top Organic Property Link ---")
         if "properties" in hotel_results and hotel_results["properties"]:
             properties = hotel_results["properties"]
-            
-            # Find the first hotel that ACTUALLY has a price
+
             top_hotel = None
             for hotel in properties:
-                if hotel.get('total_rate') and hotel.get('total_rate').get('lowest'):
+                if hotel.get("total_rate") and hotel.get("total_rate").get("lowest"):
                     top_hotel = hotel
-                    break  # We found a hotel with a price!
-            
+                    break
+
             if top_hotel is None:
-                print("Warning: No hotels in the list had a 'total_rate'. Falling back to first result.")
+                print(
+                    "Warning: No hotels in the list had a 'total_rate'. Falling back to first result."
+                )
                 top_hotel = properties[0]
-                
-            hotel_price = top_hotel.get('total_rate', {}).get('lowest')
+
+            hotel_price = top_hotel.get("total_rate", {}).get("lowest")
             if not hotel_price:
-                 hotel_price = top_hotel.get('price') # Fallback
+                hotel_price = top_hotel.get("price")
 
             print(f"Name: {top_hotel.get('name')}")
             print(f"Total Price: {hotel_price}")
-            
-            # This is the link you saw in the JSON example (e.g., to Tiket.com)
+
             property_link = top_hotel.get("link")
             if property_link:
                 print(f"Link: {property_link}")
             else:
-                print("Link: (This property has no direct provider link, only a 'property_token')")
-                
+                print(
+                    "Link: (This property has no direct provider link, only a 'property_token')"
+                )
+
         else:
             print("No properties found for this search.")
 

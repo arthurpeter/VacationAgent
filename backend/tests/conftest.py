@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import AsyncMock
 from app.core.database import langgraph_pool
 
+
 @pytest.fixture(scope="session", autouse=True)
 def mock_global_langgraph_pool():
     """

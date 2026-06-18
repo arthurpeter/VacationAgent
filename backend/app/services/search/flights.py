@@ -1,21 +1,22 @@
 from serpapi import GoogleSearch
 from typing import Dict, Any, Optional
-from babel import numbers, core
+from babel import numbers
 import sys
 from app.core.config import settings
 from app.core.airport_data import AIRPORTS_DB
 from app.core.cache import redis_cache
 import asyncio
 
+
 def get_location_data(area_input: str, country_filter: str = None):
     """
     Takes an area (City Name OR Airport Code) and returns all necessary
     search parameters in one go.
-    
+
     Args:
         area_input: "Paris", "London", "OTP", or "LON"
         country_filter: Optional "FR", "GB" (useful if searching 'Paris, US' vs 'Paris, FR')
-        
+
     Returns:
         dict: {
             "airport_list": "CDG,ORY,LBG",  # The code(s) for the search
@@ -28,19 +29,19 @@ def get_location_data(area_input: str, country_filter: str = None):
     area_clean = area_input.strip()
 
     found_airports = []
-    
+
     target_city = area_clean.lower()
     target_code = area_clean.upper()
     target_country = country_filter.strip().upper() if country_filter else None
 
     for code, data in airports.items():
-        is_city_match = (data.get('city', '').lower() == target_city)
-        is_code_match = (code == target_code)
-        
+        is_city_match = data.get("city", "").lower() == target_city
+        is_code_match = code == target_code
+
         if is_city_match or is_code_match:
-            if target_country and data.get('country') != target_country:
+            if target_country and data.get("country") != target_country:
                 continue
-                
+
             if len(code) == 3:
                 found_airports.append(data)
 
@@ -48,27 +49,29 @@ def get_location_data(area_input: str, country_filter: str = None):
         return {"error": f"No airports found for '{area_input}'"}
 
     first_match = found_airports[0]
-    country_code = first_match['country']
-    
+    country_code = first_match["country"]
+
     currency_list = numbers.get_territory_currencies(country_code)
     currency_code = currency_list[0] if currency_list else "USD"
-    
-    codes_str = ",".join(list(set([a['iata'] for a in found_airports])))
+
+    codes_str = ",".join(list(set([a["iata"] for a in found_airports])))
 
     return {
         "departure_id": codes_str,
         "gl": country_code.lower(),
         "hl": "en",
-        "currency": currency_code.upper()
+        "currency": currency_code.upper(),
     }
+
 
 GoogleSearch.SERP_API_KEY = settings.SERPAPI_API_KEY
 if not GoogleSearch.SERP_API_KEY:
     raise ValueError("SERPAPI_API_KEY environment variable is required")
 
-# change to 3 - 15 minutes in prod
+
 @redis_cache(expire_time=3600 * 24 * 14)
-async def call_flights_api(departure_id: Optional[str] = None,
+async def call_flights_api(
+    departure_id: Optional[str] = None,
     arrival_id: Optional[str] = None,
     gl: Optional[str] = None,
     hl: Optional[str] = None,
@@ -103,45 +106,48 @@ async def call_flights_api(departure_id: Optional[str] = None,
     zero_trace: Optional[bool] = None,
     output: Optional[str] = None,
     json_restrictor: Optional[str] = None,
-    sort_by_price: Optional[bool] = None
+    sort_by_price: Optional[bool] = None,
 ) -> Dict[str, Any]:
-    return await asyncio.to_thread(_call_flights_api,
-                                    departure_id,
-                                    arrival_id,
-                                    gl,
-                                    hl,
-                                    currency,
-                                    type,
-                                    outbound_date,
-                                    return_date,
-                                    travel_class,
-                                    multi_city_json,
-                                    show_hidden,
-                                    deep_search, 
-                                    adults, 
-                                    children, 
-                                    infants_in_seat, 
-                                    infants_on_lap, 
-                                    sort_by, 
-                                    stops, 
-                                    exclude_airlines, 
-                                    include_airlines, 
-                                    bags, 
-                                    max_price, 
-                                    outbound_times, 
-                                    return_times, 
-                                    emissions, 
-                                    layover_duration, 
-                                    exclude_conns, 
-                                    max_duration, 
-                                    departure_token, 
-                                    booking_token, 
-                                    no_cache, 
-                                    async_search, 
-                                    zero_trace, 
-                                    output, 
-                                    json_restrictor, 
-                                    sort_by_price)
+    return await asyncio.to_thread(
+        _call_flights_api,
+        departure_id,
+        arrival_id,
+        gl,
+        hl,
+        currency,
+        type,
+        outbound_date,
+        return_date,
+        travel_class,
+        multi_city_json,
+        show_hidden,
+        deep_search,
+        adults,
+        children,
+        infants_in_seat,
+        infants_on_lap,
+        sort_by,
+        stops,
+        exclude_airlines,
+        include_airlines,
+        bags,
+        max_price,
+        outbound_times,
+        return_times,
+        emissions,
+        layover_duration,
+        exclude_conns,
+        max_duration,
+        departure_token,
+        booking_token,
+        no_cache,
+        async_search,
+        zero_trace,
+        output,
+        json_restrictor,
+        sort_by_price,
+    )
+
 
 def _call_flights_api(
     departure_id: Optional[str] = None,
@@ -179,27 +185,27 @@ def _call_flights_api(
     zero_trace: Optional[bool] = None,
     output: Optional[str] = None,
     json_restrictor: Optional[str] = None,
-    sort_by_price: Optional[bool] = None
+    sort_by_price: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """
     Call the Google Flights API via SerpAPI to search for flights.
     Uses the official serpapi-python library.
-    
+
     Args:
         All args are documented in the original function
-    
+
     Returns:
         Dict[str, Any]: API response containing flight data
-    
+
     Raises:
         ValueError: If API key is not found
         Exception: If API request fails or returns an error
     """
-    
+
     params = {
         "engine": "google_flights",
     }
-    
+
     optional_params = {
         "departure_id": departure_id,
         "arrival_id": arrival_id,
@@ -235,46 +241,44 @@ def _call_flights_api(
         "async": async_search,
         "zero_trace": zero_trace,
         "output": output,
-        "json_restrictor": json_restrictor
+        "json_restrictor": json_restrictor,
     }
-    
+
     for key, value in optional_params.items():
         if value is not None:
             params[key] = value
-    
+
     if (departure_token is not None or booking_token is not None) and "type" in params:
         del params["type"]
 
     if sort_by_price is True and sort_by is None:
         params["sort_by"] = 2
-    
+
     try:
         search = GoogleSearch(params)
         results = search.get_dict()
-        
+
         if "error" in results:
             raise Exception(results["error"])
-        
+
         if sort_by_price is True and "sort_by" not in params:
             if "best_flights" in results:
                 results["best_flights"] = sorted(
-                    results.get("best_flights", []), 
-                    key=lambda x: float(x.get("price", 0))
+                    results.get("best_flights", []),
+                    key=lambda x: float(x.get("price", 0)),
                 )
             if "other_flights" in results:
                 results["other_flights"] = sorted(
-                    results.get("other_flights", []), 
-                    key=lambda x: float(x.get("price", 0))
+                    results.get("other_flights", []),
+                    key=lambda x: float(x.get("price", 0)),
                 )
 
-        # with open("output.json", "w") as f:
-        #     json.dump(results, f, indent=4)
-        
         return results
-        
+
     except Exception as e:
         print(f"Error calling SerpAPI (Google Flights): {e}")
         raise
+
 
 if __name__ == "__main__":
     print(get_location_data("Rome", "IT"))
@@ -290,30 +294,32 @@ if __name__ == "__main__":
             hl="en",
             currency="USD",
             sort_by=2,
-            stops=1
+            stops=1,
         )
-        
+
         best_flights = flight_results.get("best_flights")
         other_flights = flight_results.get("other_flights")
         all_flights = (best_flights or []) + (other_flights or [])
-        
+
         if all_flights:
-            top_flight = all_flights[0] 
+            top_flight = all_flights[0]
             print(f"Found {len(all_flights)} outbound flights.")
-            
+
             airline = "Unknown Airline"
-            if top_flight.get('flights'):
-                airline = top_flight['flights'][0].get('airline', 'Unknown Airline')
+            if top_flight.get("flights"):
+                airline = top_flight["flights"][0].get("airline", "Unknown Airline")
 
             print(f"Top outbound result: {airline} for ${top_flight.get('price')}")
-            
-            departure_token = top_flight.get('departure_token')
-            
+
+            departure_token = top_flight.get("departure_token")
+
             if not departure_token:
                 print("No 'departure_token' found for the top flight. Cannot proceed.")
                 exit()
-                
-            print(f"\n--- STEP 2: Getting return flights using token: {departure_token[:20]}... ---")
+
+            print(
+                f"\n--- STEP 2: Getting return flights using token: {departure_token[:20]}... ---"
+            )
             return_flight_results = call_flights_api(
                 departure_token=departure_token,
                 departure_id="JFK",
@@ -324,34 +330,47 @@ if __name__ == "__main__":
                 hl="en",
                 currency="USD",
                 sort_by=2,
-                stops=1
+                stops=1,
             )
-            
+
             return_best_flights = return_flight_results.get("best_flights")
             return_other_flights = return_flight_results.get("other_flights")
-            all_return_flights = (return_best_flights or []) + (return_other_flights or [])
+            all_return_flights = (return_best_flights or []) + (
+                return_other_flights or []
+            )
 
             if all_return_flights:
                 top_return_flight = all_return_flights[0]
                 print(f"Found {len(all_return_flights)} return flights.")
-                
+
                 return_airline = "Unknown Airline"
-                if top_return_flight.get('flights'):
-                    return_airline = top_return_flight['flights'][0].get('airline', 'Unknown Airline')
-                
-                print(f"Top return result: {return_airline} for ${top_return_flight.get('price')}")
+                if top_return_flight.get("flights"):
+                    return_airline = top_return_flight["flights"][0].get(
+                        "airline", "Unknown Airline"
+                    )
 
-                booking_token = top_return_flight.get('booking_token')
+                print(
+                    f"Top return result: {return_airline} for ${top_return_flight.get('price')}"
+                )
+
+                booking_token = top_return_flight.get("booking_token")
 
                 if not booking_token:
-                    booking_token = return_flight_results.get("best_flights", [{}])[0].get("booking_token") or \
-                                    return_flight_results.get("other_flights", [{}])[0].get("booking_token")
+                    booking_token = return_flight_results.get("best_flights", [{}])[
+                        0
+                    ].get("booking_token") or return_flight_results.get(
+                        "other_flights", [{}]
+                    )[0].get("booking_token")
 
                 if not booking_token:
-                    print("No 'booking_token' found for the return flight. Cannot proceed.")
+                    print(
+                        "No 'booking_token' found for the return flight. Cannot proceed."
+                    )
                     exit()
 
-                print(f"\n--- STEP 3: Getting booking links using token: {booking_token[:20]}... ---")
+                print(
+                    f"\n--- STEP 3: Getting booking links using token: {booking_token[:20]}... ---"
+                )
                 booking_results = call_flights_api(
                     booking_token=booking_token,
                     departure_id="JFK",
@@ -362,15 +381,22 @@ if __name__ == "__main__":
                     hl="en",
                     currency="USD",
                     sort_by=2,
-                    stops=1
+                    stops=1,
                 )
 
-                if "booking_options" in booking_results and booking_results["booking_options"]:
+                if (
+                    "booking_options" in booking_results
+                    and booking_results["booking_options"]
+                ):
                     print("\n--- SUCCESS! Found Booking Options: ---")
-                    
-                    google_link = booking_results.get("search_metadata", {}).get("google_flights_url")
+
+                    google_link = booking_results.get("search_metadata", {}).get(
+                        "google_flights_url"
+                    )
                     if google_link:
-                        print(f"\nHere is the Google Flights link to see all options:\n{google_link}")
+                        print(
+                            f"\nHere is the Google Flights link to see all options:\n{google_link}"
+                        )
 
                     print("\n--- Booking Options Found: ---")
                     for option in booking_results["booking_options"]:
@@ -378,12 +404,12 @@ if __name__ == "__main__":
                             source = option["together"].get("book_with")
                             price = option["together"].get("price")
                             print(f"- Book with {source} for ${price}")
-                
+
                 else:
-                    print("No booking options found in the final step.") 
+                    print("No booking options found in the final step.")
             else:
                 print("No return flights found for the selected outbound flight.")
-        
+
         else:
             print("No outbound flights found for this search.")
 

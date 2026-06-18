@@ -15,7 +15,6 @@ def configure_logging(level: Optional[int] = None) -> None:
     root = logging.getLogger()
     root.setLevel(lvl)
 
-    # If there are existing handlers, keep them (avoid duplicate handlers on reload).
     if not any(isinstance(h, logging.StreamHandler) for h in root.handlers):
         sh = logging.StreamHandler()
         sh.setLevel(lvl)

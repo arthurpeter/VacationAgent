@@ -1,6 +1,7 @@
 """
 Authentication configuration and setup using AuthX.
 """
+
 from authx import AuthX, AuthXConfig, TokenPayload
 from fastapi import Request
 from app.core.config import settings
@@ -11,8 +12,8 @@ config = AuthXConfig(
     JWT_SECRET_KEY=settings.JWT_SECRET_KEY,
     JWT_TOKEN_LOCATION=["headers", "cookies"],
     JWT_HEADER_TYPE="Bearer",
-    JWT_ACCESS_TOKEN_EXPIRES=60 * 15,  # 15 minutes
-    JWT_REFRESH_TOKEN_EXPIRES=60 * 60 * 24 * 30,  # 30 days
+    JWT_ACCESS_TOKEN_EXPIRES=60 * 15,
+    JWT_REFRESH_TOKEN_EXPIRES=60 * 60 * 24 * 30,
     JWT_REFRESH_COOKIE_NAME="refresh_token_cookie",
     JWT_COOKIE_SECURE=False,
     JWT_COOKIE_CSRF_PROTECT=True,
@@ -24,6 +25,7 @@ config = AuthXConfig(
 
 auth = AuthX(config=config)
 
+
 @auth.set_callback_token_blocklist
 async def token_blocklist_callback(token: str) -> bool:
     return await is_token_revoked(token)
@@ -33,6 +35,9 @@ async def access_token_header(request: Request) -> TokenPayload:
     token_str = await auth.get_access_token_from_request(request, locations=["headers"])
     return auth.verify_token(token_str, verify_csrf=False)
 
+
 async def refresh_token_cookie(request: Request) -> TokenPayload:
-    token_str = await auth.get_refresh_token_from_request(request, locations=["cookies"])
+    token_str = await auth.get_refresh_token_from_request(
+        request, locations=["cookies"]
+    )
     return auth.verify_token(token_str)

@@ -1,18 +1,18 @@
 from app.core.database import get_checkpointer, get_db
-from fastapi import APIRouter, Depends, HTTPException, Query
-from app import schemas, models
+from fastapi import APIRouter, Depends, HTTPException
+from app import models
 from app.core.logger import get_logger
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, text, update
+from sqlalchemy import select, text
 from authx import TokenPayload
 from app.core.auth import access_token_header
-from datetime import datetime
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage, AIMessage
-from app.services.agents.discovery_graph import generate_graph as generate_discovery_graph
-from app.services.agents.itinerary_graph import generate_graph as generate_itinerary_graph
+from app.services.agents.discovery_graph import (
+    generate_graph as generate_discovery_graph,
+)
 from app.services.agents.discovery_graph import stream_discovery_message
 
 
@@ -20,58 +20,63 @@ log = get_logger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
+
 class ChatRequest(BaseModel):
     message: str
+
 
 @router.get("/discovery/messages/{session_id}")
 async def get_discovery_messages(
     session_id: int,
     db: AsyncSession = Depends(get_db),
     checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
-    token: TokenPayload = Depends(access_token_header)
+    token: TokenPayload = Depends(access_token_header),
 ):
     stmt = select(models.VacationSession).where(
         models.VacationSession.id == session_id,
-        models.VacationSession.user_id == token.sub
+        models.VacationSession.user_id == token.sub,
     )
     result = await db.execute(stmt)
     session = result.scalar_one_or_none()
 
     if not session:
-        log.warning(f"Unauthorized access attempt to session {session_id} by user {token.sub}")
+        log.warning(
+            f"Unauthorized access attempt to session {session_id} by user {token.sub}"
+        )
         raise HTTPException(status_code=404, detail="Session not found")
-    
+
     log.info(f"User {token.sub} requested discovery messages for session {session_id}")
 
     graph = generate_discovery_graph(checkpointer)
     config = {"configurable": {"thread_id": f"discovery_{session_id}"}}
-    
+
     current_state = await graph.aget_state(config)
-    
+
     if not current_state.values:
         return {"messages": []}
-        
+
     raw_messages = current_state.values.get("messages", [])
     formatted_messages = []
-    
+
     for msg in raw_messages:
         if isinstance(msg, HumanMessage):
-            formatted_messages.append({
-                "sender": "user", 
-                "text": msg.content
-            })
+            formatted_messages.append({"sender": "user", "text": msg.content})
         elif isinstance(msg, AIMessage):
             if msg.content:
                 text_content = msg.content
                 if isinstance(text_content, list):
-                    text_content = "".join([block.get("text", "") for block in text_content if isinstance(block, dict)])
-                
-                formatted_messages.append({
-                    "sender": "ai", 
-                    "text": text_content
-                })
-                
+                    text_content = "".join(
+                        [
+                            block.get("text", "")
+                            for block in text_content
+                            if isinstance(block, dict)
+                        ]
+                    )
+
+                formatted_messages.append({"sender": "ai", "text": text_content})
+
     return {"messages": formatted_messages}
+
 
 @router.post("/discovery/{session_id}")
 async def chat_discovery(
@@ -79,61 +84,56 @@ async def chat_discovery(
     request: ChatRequest,
     db: AsyncSession = Depends(get_db),
     checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
-    token: TokenPayload = Depends(access_token_header)
+    token: TokenPayload = Depends(access_token_header),
 ):
     stmt = select(models.VacationSession).where(
         models.VacationSession.id == session_id,
-        models.VacationSession.user_id == token.sub
+        models.VacationSession.user_id == token.sub,
     )
     result = await db.execute(stmt)
     session = result.scalar_one_or_none()
 
     if not session:
-        log.warning(f"Unauthorized access attempt to session {session_id} by user {token.sub}")
+        log.warning(
+            f"Unauthorized access attempt to session {session_id} by user {token.sub}"
+        )
         raise HTTPException(status_code=404, detail="Session not found")
-    
+
     log.info(f"User {token.sub} initiated discovery chat for session {session_id}")
-    
+
     return StreamingResponse(
         stream_discovery_message(
             session_id=session_id,
             user_message=request.message,
             db=db,
-            checkpointer=checkpointer
+            checkpointer=checkpointer,
         ),
-        media_type="text/event-stream"
+        media_type="text/event-stream",
     )
 
-# curl --location 'http://127.0.0.1:5000/chat/discovery/1' \
-# --header 'Content-Type: application/json' \
-# --data '{"message": "We will buy a seat for the 1 year old to sit on the plane"}'
 
 @router.delete("/discovery/{session_id}")
 async def reset_discovery_chat(
     session_id: int,
     db: AsyncSession = Depends(get_db),
-):   
+):
     thread_id = f"discovery_{session_id}"
-    
+
     await db.execute(
-        text("DELETE FROM checkpoint_writes WHERE thread_id = :thread_id"), 
-        {"thread_id": thread_id}
+        text("DELETE FROM checkpoint_writes WHERE thread_id = :thread_id"),
+        {"thread_id": thread_id},
     )
     await db.execute(
-        text("DELETE FROM checkpoint_blobs WHERE thread_id = :thread_id"), 
-        {"thread_id": thread_id}
+        text("DELETE FROM checkpoint_blobs WHERE thread_id = :thread_id"),
+        {"thread_id": thread_id},
     )
     await db.execute(
-        text("DELETE FROM checkpoints WHERE thread_id = :thread_id"), 
-        {"thread_id": thread_id}
+        text("DELETE FROM checkpoints WHERE thread_id = :thread_id"),
+        {"thread_id": thread_id},
     )
-    
+
     await db.commit()
-    
+
     log.info(f"Successfully wiped LangGraph memory for session {session_id}")
-    
+
     return {"status": "success", "message": "Conversation memory wiped successfully."}
-
-# curl --location --request DELETE 'http://127.0.0.1:5000/chat/discovery/1' \
-# --header 'Content-Type: application/json'
-

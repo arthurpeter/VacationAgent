@@ -7,6 +7,7 @@ GoogleSearch.SERP_API_KEY = settings.SERPAPI_API_KEY
 if not GoogleSearch.SERP_API_KEY:
     raise ValueError("SERPAPI_API_KEY environment variable is required")
 
+
 def call_explore_api(
     departure_id: str,
     arrival_id: Optional[str] = None,
@@ -25,18 +26,15 @@ def call_explore_api(
     children: Optional[int] = None,
     infants_in_seat: Optional[int] = None,
     infants_on_lap: Optional[int] = None,
-    no_cache: Optional[bool] = None
+    no_cache: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """
     Call the Google Travel Explore API via SerpAPI for "inspiration" searches.
     Uses the official serpapi-python library.
     """
-    
-    params = {
-        "engine": "google_travel_explore",
-        "departure_id": departure_id
-    }
-    
+
+    params = {"engine": "google_travel_explore", "departure_id": departure_id}
+
     optional_params = {
         "arrival_id": arrival_id,
         "arrival_area_id": arrival_area_id,
@@ -54,22 +52,22 @@ def call_explore_api(
         "children": children,
         "infants_in_seat": infants_in_seat,
         "infants_on_lap": infants_on_lap,
-        "no_cache": no_cache
+        "no_cache": no_cache,
     }
-    
+
     for key, value in optional_params.items():
         if value is not None:
             params[key] = value
-            
+
     try:
         search = GoogleSearch(params)
         results = search.get_dict()
-        
+
         if "error" in results:
             raise Exception(results["error"])
-            
+
         return results
-        
+
     except Exception as e:
         print(f"Error calling SerpAPI (Google Travel Explore): {e}")
         raise

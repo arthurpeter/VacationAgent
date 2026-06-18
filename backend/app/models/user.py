@@ -1,4 +1,5 @@
 """User model for AuthX authentication."""
+
 import uuid
 from sqlalchemy import Column, String, DateTime, Boolean, JSON
 from sqlalchemy.sql import func
@@ -8,8 +9,9 @@ from app.core.database import Base
 
 class User(Base):
     """User model for AuthX authentication."""
+
     __tablename__ = "users"
-    
+
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
@@ -25,22 +27,19 @@ class User(Base):
     home_airports = Column(JSON, nullable=True, default=list)
 
     vacations = relationship(
-        "Vacation",
-        back_populates="user",
-        cascade="all, delete-orphan",
-        lazy="selectin"
+        "Vacation", back_populates="user", cascade="all, delete-orphan", lazy="selectin"
     )
 
     sessions = relationship(
         "VacationSession",
         back_populates="user",
         cascade="all, delete-orphan",
-        lazy="selectin"
+        lazy="selectin",
     )
 
     companions = relationship(
         "TravelCompanion",
         back_populates="user",
         cascade="all, delete-orphan",
-        lazy="selectin"
+        lazy="selectin",
     )

@@ -11,16 +11,17 @@ log = get_logger(__name__)
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
+
 @router.get("/me", response_model=schemas.User)
 async def read_current_user(
     db: AsyncSession = Depends(get_db),
-    token: RequestToken = Depends(access_token_header)
+    token: RequestToken = Depends(access_token_header),
 ):
 
     stmt = select(models.User).filter(models.User.id == token.sub)
-    
+
     result = await db.execute(stmt)
-    
+
     user = result.scalars().first()
 
     if not user:
@@ -29,11 +30,12 @@ async def read_current_user(
     log.debug(f"User Response Data: {user_data}")
     return user
 
+
 @router.patch("/me", response_model=schemas.User)
 async def update_current_user(
     update_data: schemas.UserUpdate,
     db: AsyncSession = Depends(get_db),
-    token: RequestToken = Depends(access_token_header)
+    token: RequestToken = Depends(access_token_header),
 ):
     """Update user preferences and account details."""
     stmt = select(models.User).filter(models.User.id == token.sub)
@@ -41,7 +43,7 @@ async def update_current_user(
     user = result.scalars().first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     update_dict = update_data.model_dump(exclude_unset=True)
     has_changes = False
     for key, value in update_dict.items():
@@ -50,8 +52,11 @@ async def update_current_user(
             setattr(user, key, value)
 
     if not has_changes:
-        raise HTTPException(status_code=400, detail="No changes detected. Your profile is already up to date.")
-        
+        raise HTTPException(
+            status_code=400,
+            detail="No changes detected. Your profile is already up to date.",
+        )
+
     await db.commit()
     await db.refresh(user)
     return user
@@ -61,35 +66,35 @@ async def update_current_user(
 async def add_travel_companion(
     companion_data: schemas.TravelCompanionCreate,
     db: AsyncSession = Depends(get_db),
-    token: RequestToken = Depends(access_token_header)
+    token: RequestToken = Depends(access_token_header),
 ):
     """Add a new companion to the user's vault."""
     new_companion = models.TravelCompanion(
-        user_id=token.sub,
-        **companion_data.model_dump()
+        user_id=token.sub, **companion_data.model_dump()
     )
     db.add(new_companion)
     await db.commit()
     await db.refresh(new_companion)
     return new_companion
 
+
 @router.delete("/me/companions/{companion_id}")
 async def remove_travel_companion(
     companion_id: str,
     db: AsyncSession = Depends(get_db),
-    token: RequestToken = Depends(access_token_header)
+    token: RequestToken = Depends(access_token_header),
 ):
     """Remove a companion from the vault."""
     stmt = select(models.TravelCompanion).filter(
         models.TravelCompanion.id == companion_id,
-        models.TravelCompanion.user_id == token.sub
+        models.TravelCompanion.user_id == token.sub,
     )
     result = await db.execute(stmt)
     companion = result.scalars().first()
 
     if not companion:
         raise HTTPException(status_code=404, detail="Companion not found")
-        
+
     await db.delete(companion)
     await db.commit()
     return {"detail": "Companion removed successfully"}

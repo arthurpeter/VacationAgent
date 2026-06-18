@@ -1,6 +1,5 @@
 import asyncio
 import os
-import json
 from datetime import datetime
 import sys
 from typing import Dict, Any
@@ -10,16 +9,17 @@ from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
+
 def format_short_date(date_str: str) -> str:
     if not date_str:
         return "—"
     try:
-        # Handles both ISO strings and plain date formats
         clean_date = date_str.split("T")[0]
         dt = datetime.strptime(clean_date, "%Y-%m-%d")
         return dt.strftime("%b %d, %Y")
     except Exception:
         return date_str
+
 
 def format_day_label(date_str: str) -> str:
     if not date_str:
@@ -31,6 +31,7 @@ def format_day_label(date_str: str) -> str:
     except Exception:
         return ""
 
+
 def generate_itinerary_pdf(vacation_data: Dict[str, Any]) -> bytes:
     """
     Compiles a compiled Vacation dictionary payload into an unmodifiable,
@@ -39,41 +40,65 @@ def generate_itinerary_pdf(vacation_data: Dict[str, Any]) -> bytes:
     itinerary_data = vacation_data.get("itinerary_data", {}) or {}
     mobility = itinerary_data.get("mobility", {})
     timeline = itinerary_data.get("timeline", [])
-    
-    # 1. Base Currency Snapshot Resolutions
-    ccy = itinerary_data.get("meta", {}).get("currency", "EUR")
-    flight_price = f"{vacation_data.get('flight_price'):,.2f} {vacation_data.get('flight_ccy') or ccy}" if vacation_data.get('flight_price') else "—"
-    hotel_price = f"{vacation_data.get('accommodation_price'):,.2f} {vacation_data.get('accommodation_ccy') or ccy}" if vacation_data.get('accommodation_price') else "—"
-    mobility_price = f"{mobility.get('price_est'):,.2f} {mobility.get('currency') or ccy}" if mobility.get('price_est') else "0.00 EUR"
 
-    # 2. Build the Document Top Metadata Headers
+    ccy = itinerary_data.get("meta", {}).get("currency", "EUR")
+    flight_price = (
+        f"{vacation_data.get('flight_price'):,.2f} {vacation_data.get('flight_ccy') or ccy}"
+        if vacation_data.get("flight_price")
+        else "—"
+    )
+    hotel_price = (
+        f"{vacation_data.get('accommodation_price'):,.2f} {vacation_data.get('accommodation_ccy') or ccy}"
+        if vacation_data.get("accommodation_price")
+        else "—"
+    )
+    mobility_price = (
+        f"{mobility.get('price_est'):,.2f} {mobility.get('currency') or ccy}"
+        if mobility.get("price_est")
+        else "0.00 EUR"
+    )
+
     passenger_capacity = f"{vacation_data.get('adults', 1)} Adult(s)"
     if vacation_data.get("children", 0) > 0:
         passenger_capacity += f" · {vacation_data.get('children')} Child(ren)"
 
-    # 3. Dynamic Chronological Step Iterator Loop Assembly
     timeline_html_blocks = []
-    day_labels = ['Arrival Day', 'Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Departure Day']
-    
+    day_labels = [
+        "Arrival Day",
+        "Day 1",
+        "Day 2",
+        "Day 3",
+        "Day 4",
+        "Day 5",
+        "Departure Day",
+    ]
+
     for idx, day in enumerate(timeline):
         day_index = day.get("day_index", idx)
-        label = day_labels[day_index] if day_index < len(day_labels) else f"Day {day_index + 1}"
-        
+        label = (
+            day_labels[day_index]
+            if day_index < len(day_labels)
+            else f"Day {day_index + 1}"
+        )
+
         day_header = f"""
         <div class="ov-day-header">
             <span class="ov-day-num">{label}</span>
             <span class="ov-day-label">—</span>
-            <span class="ov-day-date">{format_day_label(day.get('date'))}</span>
+            <span class="ov-day-date">{format_day_label(day.get("date"))}</span>
         </div>
         """
-        
+
         event_rows = []
         for event in day.get("events", []):
-            event_id = str(event.get("id") or '')
-            is_logistics = event_id in ['arr_airport', 'arr_hotel', 'dep_airport'] or event_id.startswith(('start_hotel', 'return_hotel'))
-            is_meal = event.get("type") == 'meal'
-            
-            # Resolve Event Visual Archetype Tokens
+            event_id = str(event.get("id") or "")
+            is_logistics = event_id in [
+                "arr_airport",
+                "arr_hotel",
+                "dep_airport",
+            ] or event_id.startswith(("start_hotel", "return_hotel"))
+            is_meal = event.get("type") == "meal"
+
             if is_logistics:
                 card_class = "ov-event card-logistics"
                 dot_class = "ov-ev-dot dot-logistics"
@@ -84,17 +109,17 @@ def generate_itinerary_pdf(vacation_data: Dict[str, Any]) -> bytes:
                 card_class = "ov-event card-main"
                 dot_class = "ov-ev-dot dot-filled"
 
-            # Dynamic Subtitle Content Assembly
             content_body = f'<div class="ov-ev-title-text">{event.get("name")}</div>'
             if not is_logistics and not is_meal:
                 if event.get("formatted_address"):
                     content_body += f'<div class="ov-ev-addr">📍 {event.get("formatted_address")}</div>'
                 if event.get("description"):
-                    content_body += f'<div class="ov-ev-desc">{event.get("description")}</div>'
+                    content_body += (
+                        f'<div class="ov-ev-desc">{event.get("description")}</div>'
+                    )
                 if event.get("needs_reservation"):
                     content_body += '<div class="ov-ev-reservation">⚠️ Advance Booking Required</div>'
 
-            # Flatten and Append Transit Connection Steps Natively
             transit_html = ""
             transit_path = event.get("transit_path")
             if transit_path and transit_path.get("steps"):
@@ -105,24 +130,24 @@ def generate_itinerary_pdf(vacation_data: Dict[str, Any]) -> bytes:
                         bg = step["transit_detail"].get("bg_color", "#E2E8F0")
                         txt = step["transit_detail"].get("text_color", "#0F172A")
                         badge = f'<span class="ov-step-badge" style="background: {bg}; color: {txt};">{step["transit_detail"].get("line_name")}</span>'
-                    
+
                     step_items.append(f"""
                         <div class="ov-step-row">
-                            <span class="ov-step-text">{badge}{step.get('instruction')}</span>
-                            <span class="ov-step-dur">{step.get('duration_mins')}m</span>
+                            <span class="ov-step-text">{badge}{step.get("instruction")}</span>
+                            <span class="ov-step-dur">{step.get("duration_mins")}m</span>
                         </div>
                     """)
-                
+
                 transit_html = f"""
                 <div class="ov-transit-container">
-                    <div class="ov-transit-title">⚡ {transit_path.get('duration_mins')}m Transit Link · ({transit_path.get('distance_text', 'Est')})</div>
+                    <div class="ov-transit-title">⚡ {transit_path.get("duration_mins")}m Transit Link · ({transit_path.get("distance_text", "Est")})</div>
                     <div class="ov-transit-steps">{"".join(step_items)}</div>
                 </div>
                 """
             elif event.get("transit_mins", 0) > 0:
                 transit_html = f"""
                 <div class="ov-transit-container">
-                    <div class="ov-transit-title">⚡ {event.get('transit_mins')}m Local Area Transit</div>
+                    <div class="ov-transit-title">⚡ {event.get("transit_mins")}m Local Area Transit</div>
                 </div>
                 """
 
@@ -130,8 +155,8 @@ def generate_itinerary_pdf(vacation_data: Dict[str, Any]) -> bytes:
             {transit_html}
             <div class="{card_class}">
                 <div class="ov-ev-time">
-                    <span class="ov-ev-time-start">{event.get('start_time', '')}</span>
-                    <span class="ov-ev-time-end">{event.get('end_time', '')}</span>
+                    <span class="ov-ev-time-start">{event.get("start_time", "")}</span>
+                    <span class="ov-ev-time-end">{event.get("end_time", "")}</span>
                 </div>
                 <div class="ov-ev-indicator">
                     <div class="{dot_class}"></div>
@@ -151,7 +176,6 @@ def generate_itinerary_pdf(vacation_data: Dict[str, Any]) -> bytes:
         </div>
         """)
 
-    # 4. Inject Dynamic Blocks into the Blueprint Master Template Frame
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -343,8 +367,8 @@ def generate_itinerary_pdf(vacation_data: Dict[str, Any]) -> bytes:
 
         <div class="ov-masthead">
             <div class="ov-eyebrow">Master Blueprinted Itinerary Document</div>
-            <div class="ov-destination">{vacation_data.get('destination', 'Your Itinerary')}</div>
-            <div class="ov-dates">{format_short_date(vacation_data.get('from_date'))} — {format_short_date(vacation_data.get('to_date'))}</div>
+            <div class="ov-destination">{vacation_data.get("destination", "Your Itinerary")}</div>
+            <div class="ov-dates">{format_short_date(vacation_data.get("from_date"))} — {format_short_date(vacation_data.get("to_date"))}</div>
             
             <table class="ov-meta-table">
                 <tr>
@@ -354,11 +378,11 @@ def generate_itinerary_pdf(vacation_data: Dict[str, Any]) -> bytes:
                     </td>
                     <td>
                         <div class="ov-meta-label">Departing From</div>
-                        <div class="ov-meta-value">{vacation_data.get('origin', '—').replace(',', ' / ')}</div>
+                        <div class="ov-meta-value">{vacation_data.get("origin", "—").replace(",", " / ")}</div>
                     </td>
                     <td style="text-align: right;">
                         <div class="ov-meta-label">System Passport Tracking Reference</div>
-                        <div class="ov-meta-value">ID: #{vacation_data.get('id', '—')}</div>
+                        <div class="ov-meta-value">ID: #{vacation_data.get("id", "—")}</div>
                     </td>
                 </tr>
             </table>
@@ -376,20 +400,20 @@ def generate_itinerary_pdf(vacation_data: Dict[str, Any]) -> bytes:
             <tbody>
                 <tr>
                     <td style="font-weight: bold;">✈️ Transit</td>
-                    <td>{vacation_data.get('airport_name') or 'Self-Arranged Base Route'}</td>
+                    <td>{vacation_data.get("airport_name") or "Self-Arranged Base Route"}</td>
                     <td class="price-col">{flight_price}</td>
                 </tr>
                 <tr>
                     <td style="font-weight: bold;">🏨 Lodging</td>
                     <td>
-                        <div style="font-weight: bold;">{vacation_data.get('accommodation_name') or 'Self-Arranged Base Stay'}</div>
-                        <div style="font-size: 8pt; color: #64748B; margin-top: 1pt;">{vacation_data.get('accommodation_address') or ''}</div>
+                        <div style="font-weight: bold;">{vacation_data.get("accommodation_name") or "Self-Arranged Base Stay"}</div>
+                        <div style="font-size: 8pt; color: #64748B; margin-top: 1pt;">{vacation_data.get("accommodation_address") or ""}</div>
                     </td>
                     <td class="price-col">{hotel_price}</td>
                 </tr>
                 <tr>
-                    <td style="font-weight: bold;">{ '🚖' if mobility.get('has_rental_car') else '🚇' } Ground Network</td>
-                    <td>{ 'Private Vehicle Lease' if mobility.get('has_rental_car') else 'Public Network Route Pass' }</td>
+                    <td style="font-weight: bold;">{"🚖" if mobility.get("has_rental_car") else "🚇"} Ground Network</td>
+                    <td>{"Private Vehicle Lease" if mobility.get("has_rental_car") else "Public Network Route Pass"}</td>
                     <td class="price-col">{mobility_price}</td>
                 </tr>
             </tbody>
@@ -402,7 +426,6 @@ def generate_itinerary_pdf(vacation_data: Dict[str, Any]) -> bytes:
     </html>
     """
 
-    # 5. Generate and return the static raw PDF bytes using WeasyPrint
     return weasyprint.HTML(string=html_content).write_pdf()
 
 
@@ -416,38 +439,50 @@ from sqlalchemy.future import select
 from app.core.config import settings
 from app import models
 
+
 async def _run_local_test(target_session_id: int):
     db_url = settings.DATABASE_URL
     if db_url.startswith("postgresql://"):
         db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-        
-    print(f"📡 Booting connection to database engine...")
+
+    print("📡 Booting connection to database engine...")
     engine = create_async_engine(db_url, echo=False)
-    
+
     async with AsyncSession(engine) as session:
         print(f"🔍 Querying record for session_id: {target_session_id}...")
-        stmt = select(models.Vacation).where(models.Vacation.session_id == target_session_id)
+        stmt = select(models.Vacation).where(
+            models.Vacation.session_id == target_session_id
+        )
         vacation = (await session.execute(stmt)).scalar_one_or_none()
-        
+
         if not vacation:
-            print(f"❌ Error: session_id {target_session_id} not found in the vacations table.")
+            print(
+                f"❌ Error: session_id {target_session_id} not found in the vacations table."
+            )
             await engine.dispose()
             return
 
         payload = {
-            "id": vacation.id, "destination": vacation.destination, "origin": vacation.origin,
+            "id": vacation.id,
+            "destination": vacation.destination,
+            "origin": vacation.origin,
             "from_date": vacation.from_date.isoformat() if vacation.from_date else None,
             "to_date": vacation.to_date.isoformat() if vacation.to_date else None,
-            "adults": vacation.adults, "children": vacation.children,
-            "flight_price": vacation.flight_price, "flight_ccy": vacation.flight_ccy, "airport_name": vacation.airport_name,
-            "accommodation_price": vacation.accommodation_price, "accommodation_ccy": vacation.accommodation_ccy,
-            "accommodation_name": vacation.accommodation_name, "accommodation_address": vacation.accommodation_address,
-            "itinerary_data": vacation.itinerary_data
+            "adults": vacation.adults,
+            "children": vacation.children,
+            "flight_price": vacation.flight_price,
+            "flight_ccy": vacation.flight_ccy,
+            "airport_name": vacation.airport_name,
+            "accommodation_price": vacation.accommodation_price,
+            "accommodation_ccy": vacation.accommodation_ccy,
+            "accommodation_name": vacation.accommodation_name,
+            "accommodation_address": vacation.accommodation_address,
+            "itinerary_data": vacation.itinerary_data,
         }
 
         print("🖨️ Spawning WeasyPrint document compilation task layer...")
         pdf_bytes = generate_itinerary_pdf(payload)
-        
+
         output_name = f"itinerary_session_{target_session_id}.pdf"
         with open(output_name, "wb") as f:
             f.write(pdf_bytes)
@@ -455,7 +490,7 @@ async def _run_local_test(target_session_id: int):
 
     await engine.dispose()
 
+
 if __name__ == "__main__":
-    # 💡 Simply update this ID here to test your generation pass
     TARGET_TEST_ID = 2
     asyncio.run(_run_local_test(TARGET_TEST_ID))

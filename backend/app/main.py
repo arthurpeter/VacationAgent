@@ -1,15 +1,17 @@
 """
 Main FastAPI application.
 """
+
 from app.core.logger import configure_logging
+
 configure_logging()
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.core.database import Base, engine, langgraph_pool
+from app.core.database import langgraph_pool
 from app.core.auth import auth
 
 from app.routers.auth import router as auth_router
@@ -29,22 +31,23 @@ log = get_logger(__name__)
 async def lifespan(app: FastAPI):
     await langgraph_pool.open()
     log.info("LangGraph checkpointer pool opened.")
-    
+
     yield
-    
+
     await langgraph_pool.close()
     log.info("LangGraph checkpointer pool closed.")
+
 
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.VERSION,
     debug=settings.DEBUG,
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins= settings.BACKEND_CORS_ORIGINS,
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -66,5 +69,3 @@ auth.handle_errors(app)
 def healthcheck():
     """Health check endpoint."""
     return {"status": "ok", "version": settings.VERSION}
-
-

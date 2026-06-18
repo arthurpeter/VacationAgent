@@ -5,15 +5,15 @@ Revises: e67af2186813
 Create Date: 2026-04-15 15:39:13.896829
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
-import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '3a679a51e891'
-down_revision: Union[str, Sequence[str], None] = 'e67af2186813'
+revision: str = "3a679a51e891"
+down_revision: Union[str, Sequence[str], None] = "e67af2186813"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -47,5 +47,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.execute("DROP TRIGGER IF EXISTS trigger_delete_checkpoints ON vacation_sessions;")
+    op.execute(
+        "DROP TRIGGER IF EXISTS trigger_delete_checkpoints ON vacation_sessions;"
+    )
     op.execute("DROP FUNCTION IF EXISTS delete_session_checkpoints();")

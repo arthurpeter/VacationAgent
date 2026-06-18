@@ -10,31 +10,38 @@ from app.utils.security import is_token_revoked
 
 log = get_logger(__name__)
 
+
 def create_password_reset_token(email: str) -> str:
     """Creates a 1-hour JWT token for password reset with a unique JTI."""
     expire = datetime.now(timezone.utc) + timedelta(hours=1)
     to_encode = {
-        "exp": expire, 
-        "sub": email, 
+        "exp": expire,
+        "sub": email,
         "type": "password_reset",
-        "jti": uuid.uuid4().hex
+        "jti": uuid.uuid4().hex,
     }
-    return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return jwt.encode(
+        to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
+    )
+
 
 async def decode_password_reset_token(token: str) -> dict | None:
     """Decodes token, checks blacklist, and returns the full payload if valid."""
     try:
         if await is_token_revoked(token):
             return None
-            
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-        
+
+        payload = jwt.decode(
+            token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+        )
+
         if payload.get("type") != "password_reset":
             return None
-            
+
         return payload
     except Exception:
         return None
+
 
 def send_password_reset_email(to_email: str) -> bool:
     """Generates token and sends password reset email. Returns True if successful."""
@@ -43,16 +50,16 @@ def send_password_reset_email(to_email: str) -> bool:
         return False
 
     token = create_password_reset_token(to_email)
-    
-    frontend_url = "http://localhost:5173" 
+
+    frontend_url = "http://localhost:5173"
     reset_link = f"{frontend_url}/reset-password?token={token}"
     log.info(f"Generated password reset link for {to_email}: {reset_link}")
 
     msg = EmailMessage()
-    msg['Subject'] = "Reset Your Password - TuRAG"
-    msg['From'] = f"TuRAG <{settings.SMTP_USER}>"
-    msg['To'] = to_email
-    msg.add_alternative(get_password_reset_email_html(reset_link), subtype='html')
+    msg["Subject"] = "Reset Your Password - TuRAG"
+    msg["From"] = f"TuRAG <{settings.SMTP_USER}>"
+    msg["To"] = to_email
+    msg.add_alternative(get_password_reset_email_html(reset_link), subtype="html")
 
     try:
         with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
