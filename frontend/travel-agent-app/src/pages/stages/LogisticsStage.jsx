@@ -17,9 +17,7 @@ import PageTransition from '../../components/PageTransition';
 import { fetchWithAuth } from '../../authService';
 import { API_BASE_URL } from '../../config';
 
-// ----------------------------------------------------------------------
-// SUB-COMPONENTS
-// ----------------------------------------------------------------------
+ 
 
 function SectionHeader({ title, subtitle }) {
     return (
@@ -126,9 +124,7 @@ function PaceSlider({ value, onChange }) {
     );
 }
 
-// ----------------------------------------------------------------------
-// MAIN STAGE COMPONENT
-// ----------------------------------------------------------------------
+ 
 
 export default function LogisticsStage({ gameState, session, refresh, onBack, onNext }) {
   const [selectedTransport, setSelectedTransport] = useState(() => {
@@ -152,7 +148,7 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
   const activeStrategyData = gameState?.mobility_config?.strategies?.[selectedTransport];
   const isDetailsLoaded = activeStrategyData?.details_loaded;
 
-  // 1. Trigger AI and Poll State
+  
   useEffect(() => {
     let pollInterval;
     let isMounted = true;
@@ -197,7 +193,7 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
   }, [hasMobility, hasPace, refresh, session.id]);
 
 
-  // Recommendations formatting
+  
   const recommendedTransport = useMemo(() => {
     if (!mobilityRecommendation) return null;
     return mobilityRecommendation.should_rent_car ? 'rental_car' : 'public_transport';
@@ -214,7 +210,7 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
   const isTransportAgainst = recommendedTransport && selectedTransport !== recommendedTransport;
   const isPaceAgainst = recommendedPace && selectedPace !== recommendedPace;
 
-  // 2. Network Handlers
+  
   const handleTransportSelect = async (type) => {
     setSelectedTransport(type);
     
@@ -292,8 +288,7 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
   return (
     <PageTransition className="flex flex-col w-full h-full bg-gray-50 overflow-hidden relative">
       
-      {/* FLOATING ACTION OVERLAY CONTROLS */}
-      {/* Floating Back Button (Glows Red on Hover) */}
+      
       <div className="absolute top-3 left-8 z-[100] pointer-events-auto">
         <button 
           type="button"
@@ -305,7 +300,7 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
         </button>
       </div>
 
-      {/* Floating Forward Button (Glows Blue on Hover) */}
+      
       <div className="absolute top-3 right-8 z-[100] pointer-events-auto">
         <button 
           type="button"
@@ -318,7 +313,7 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
         </button>
       </div>
 
-      {/* IMMERSIVE MAIN LAYOUT SCROLL CONTAINER */}
+      
       <div className="flex-grow overflow-y-auto p-8 pt-16 z-10">
         <div className="max-w-4xl mx-auto space-y-8">
             
@@ -365,7 +360,7 @@ export default function LogisticsStage({ gameState, session, refresh, onBack, on
                 )}
             </section>
 
-            {/* Custom Warning Banners Section */}
+            
             {!loadingRecommendations && (isTransportAgainst || isPaceAgainst) && (
                 <div className="space-y-4">
                     {isTransportAgainst && (

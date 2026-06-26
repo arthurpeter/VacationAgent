@@ -8,7 +8,7 @@ const getStageFromPath = (pathname) => {
   if (pathname.includes('/discovery')) return 'discovery';
   if (pathname.includes('/options')) return 'options';
   if (pathname.includes('/itinerary')) return 'itinerary';
-  if (pathname.includes('/overview')) return 'booking'; // 1. Map overview sub-route to backend booking state
+  if (pathname.includes('/overview')) return 'booking'; 
   return null; 
 };
 
@@ -81,7 +81,7 @@ export default function VacationLayout() {
       if (response && response.ok) {
         toast.success("Plan finished! ✈️ Generating email... we'll notify you when it's ready.", { duration: 4000 });
         await refreshContext();
-        navigate('/dashboard'); // Take them back to dashboard after a successful finish
+        navigate('/dashboard');
       } else {
         toast.error("Something went wrong. Please try again.");
       }
@@ -112,7 +112,7 @@ export default function VacationLayout() {
           </p>
         </div>
 
-        {/* 2. Added Step 4 Overview directly to the layout navigation */}
+        
         <nav className="flex bg-gray-100 p-1 rounded-lg shrink-0">
           <StageLink to="discovery" label="1. Discovery" />
           <StageLink to="options" label="2. Options" />
@@ -120,14 +120,14 @@ export default function VacationLayout() {
           <StageLink to="overview" label="4. Overview" />
         </nav>
 
-        {/* 3. Completely removed the finalize button from the right header actions */}
+        
         <div className="flex-1 flex justify-end items-center gap-6 pl-4">
         </div>
         
       </header>
 
       <main className="flex-grow overflow-hidden flex">
-        {/* 4. FIXED: Kept sessionData EXACTLY as it was to prevent sibling page crashes, simply adding handlers down the line */}
+        
         <Outlet context={{ sessionData, refreshContext, handleFinalizeTrip, isFinalizing }} />
       </main>
     </div>

@@ -23,9 +23,6 @@ import { fetchWithAuth } from '../authService';
 import { API_BASE_URL } from '../config';
 import PageTransition from '../components/PageTransition';
 
-/* ─────────────────────────────────────────
-   SHARED DESIGN SYSTEM INLINE STYLE BLOCK
-───────────────────────────────────────── */
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;700;900&display=swap');
 
@@ -47,7 +44,7 @@ const css = `
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
   }
 
-  /* ── MASTHEAD ── */
+  
   .ov-masthead {
     background: #0F172A;
     color: #FFFFFF;
@@ -100,7 +97,7 @@ const css = `
   }
   .ov-meta-value { font-size: 13px; font-weight: 500; color: #E2E8F0; }
 
-  /* ── BODY SECTIONS ── */
+  
   .ov-body { padding: 0 3rem 3rem; }
   .ov-section { padding-top: 3rem; }
 
@@ -131,7 +128,7 @@ const css = `
 
   .ov-rule { flex: 1; height: 1px; background: #F1F5F9; }
 
-  /* ── LOGISTICS STRIP ── */
+  
   .ov-logistics-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -199,7 +196,7 @@ const css = `
   }
   .ov-lc-link:hover { text-decoration: underline; }
 
-  /* ── DAY BLOCKS ── */
+  
   .ov-day { margin-bottom: 3rem; }
 
   .ov-day-header {
@@ -234,7 +231,7 @@ const css = `
     margin-left: auto;
   }
 
-  /* ── EVENTS ── */
+  
   .ov-transit-btn {
     display: inline-flex;
     align-items: center;
@@ -282,7 +279,7 @@ const css = `
   .ov-step-text { font-size: 12px; color: #334155; line-height: 1.5; flex: 1; }
   .ov-step-dur { font-family: 'DM Mono', monospace; font-size: 10px; color: #94A3B8; flex-shrink: 0; }
 
-  /* event card */
+  
   .ov-event {
     display: flex;
     padding: 1rem 0;
@@ -346,7 +343,7 @@ const css = `
   }
 `;
 
-/* ─── HELPER PARSERS ─── */
+
 const fmtDate = (d, opts = { day: 'numeric', month: 'short', year: 'numeric' }) => {
   if (!d) return '—';
   try { return new Date(d).toLocaleDateString('en-GB', opts); } catch { return d; }
@@ -369,7 +366,7 @@ const isLogisticsEvent = ev => {
 const DAY_LABELS = ['Arrival Day', 'Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Departure Day'];
 
 
-/* ─── NESTED ATTRACTION BLUEPRINT PARTS ─── */
+
 function TransitSteps({ steps }) {
   return (
     <div className="ov-transit-steps">
@@ -532,7 +529,7 @@ function DayBlock({ day }) {
 }
 
 
-/* ─── PRIMARY HISTORY ENTRY CANVAS ─── */
+
 export default function History() {
   const [vacations, setVacations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -607,7 +604,7 @@ export default function History() {
     );
   }
 
-  // ─── RENDERS FULL ITINERARY BLUEPRINT VIEW (Overview Copy) ───
+  
   if (selectedVacation) {
     const mobility = selectedVacation.itinerary_data?.mobility;
     const timeline = selectedVacation.itinerary_data?.timeline ?? [];
@@ -626,7 +623,7 @@ export default function History() {
           </button>
 
           <div className="ov-sheet animate-fadeIn">
-            {/* ── MASTHEAD ── */}
+            
             <div className="ov-masthead">
               <div className="ov-eyebrow">Archived travel log · {fmtShort(selectedVacation.created_at)}</div>
               <h1 className="ov-destination">{selectedVacation.destination}</h1>
@@ -655,9 +652,9 @@ export default function History() {
               </div>
             </div>
 
-            {/* ── BODY ── */}
+            
             <div className="ov-body">
-              {/* Logistics */}
+              
               <div className="ov-section">
                 <div className="ov-section-rule">
                   <span className="ov-section-num">I.</span>
@@ -667,7 +664,7 @@ export default function History() {
                 <LogisticsGrid vacation={selectedVacation} mobility={mobility} />
               </div>
 
-              {/* Itinerary */}
+              
               <div className="ov-section">
                 <div className="ov-section-rule">
                   <span className="ov-section-num">II.</span>
@@ -690,7 +687,7 @@ export default function History() {
     );
   }
 
-  // ─── RENDERS PASSPORT SELECTION INDEX GRID LIST ───
+  
   return (
     <PageTransition className="min-h-screen bg-slate-50 p-6 md:p-12 font-sans w-full">
       <Toaster position="top-center" />
@@ -721,7 +718,7 @@ export default function History() {
                   onClick={() => handleViewDetails(trip.id)}
                   className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group overflow-hidden flex flex-col relative"
                 >
-                  {/* Delete Trigger Overlay Button */}
+                  
                   <button 
                     onClick={(e) => handleDelete(trip.id, e)}
                     className="absolute top-4 right-4 z-20 p-2 bg-slate-900/40 hover:bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all backdrop-blur-md shadow-md"
@@ -730,7 +727,7 @@ export default function History() {
                     <Trash2 size={14} />
                   </button>
 
-                  {/* Card Title Box */}
+                  
                   <div className="bg-slate-900 p-6 text-white relative overflow-hidden transition-colors group-hover:bg-slate-950">
                     <div className="relative z-10 pr-6">
                       <h2 className="text-xl font-black mb-1 tracking-tight truncate">{trip.destination}</h2>
@@ -741,7 +738,7 @@ export default function History() {
                     <div className="absolute -right-6 -top-6 w-20 h-20 bg-white/5 rounded-full blur-lg group-hover:scale-150 transition-transform duration-500"></div>
                   </div>
 
-                  {/* Body Content Blocks */}
+                  
                   <div className="p-5 flex-1 flex flex-col gap-4">
                     <div className="flex items-center justify-center gap-2 text-xs font-mono font-bold text-slate-600 bg-slate-50 py-2.5 rounded-xl border border-slate-100">
                       <Calendar size={14} className="text-blue-500" />
@@ -760,7 +757,7 @@ export default function History() {
                     </div>
                   </div>
 
-                  {/* Footer Stats Metadata Row */}
+                  
                   <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center group-hover:bg-blue-50/40 transition-colors">
                     <div className="flex flex-col">
                       <span className="text-[9px] font-black text-slate-400 group-hover:text-blue-500 uppercase tracking-widest transition-colors">

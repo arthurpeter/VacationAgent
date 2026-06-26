@@ -1033,7 +1033,6 @@ export default function OptionsStage() {
 
       <div className="bg-white border-b border-gray-200 p-4 shadow-sm shrink-0 flex flex-col gap-4 z-20">
         
-        {/* Main Search Row */}
         <div className="flex flex-wrap gap-4 items-end">
           <LocationAutocomplete 
               label="Origin"
@@ -1103,7 +1102,6 @@ export default function OptionsStage() {
           </div>
         </div>
 
-        {/* Advanced Filters Row (Conditionally Rendered) */}
         {showAdvanced && (
           <div className="flex flex-wrap gap-4 items-end pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="w-full text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">

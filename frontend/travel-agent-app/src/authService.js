@@ -5,14 +5,13 @@ const ACCESS_TOKEN_KEY = "access_token";
 let isRefreshing = false;
 let refreshPromise = null;
 
-// Helper function to get cookie value by name
+ 
 function getCookie(name) {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
   if (parts.length === 2) return parts.pop().split(';').shift();
 }
 
-// Get CSRF token from cookies
 export function getCSRFToken() {
   return getCookie('csrf_refresh_token');
 }
@@ -73,7 +72,6 @@ async function refreshAccessToken() {
   return refreshPromise;
 }
 
-// Main fetch function
 export async function fetchWithAuth(url, body = {}, method = "POST") {
   let accessToken = getAccessToken();
 
@@ -83,7 +81,7 @@ export async function fetchWithAuth(url, body = {}, method = "POST") {
     return null;
   }
 
-  // Try request with access token
+  
   const options = {
     method,
     headers: {
@@ -98,13 +96,13 @@ export async function fetchWithAuth(url, body = {}, method = "POST") {
 
   let res = await fetch(url, options);
 
-  // If unauthorized, try to refresh
+  
   if (res.status === 401 || res.status === 403 || res.status === 422) {
     try {
-      // 3. Wait for the singleton refresh to complete and get the new token
+      
       const newAccessToken = await refreshAccessToken();
       
-      // 4. RETRY ORIGINAL REQUEST with the new token
+      
       const retryOptions = {
         method,
         headers: {
@@ -119,7 +117,7 @@ export async function fetchWithAuth(url, body = {}, method = "POST") {
 
       res = await fetch(url, retryOptions);
 
-      // 5. If it fails again even after refresh, log them out
+      
       if (res.status === 401 || res.status === 403 || res.status === 422) {
         clearTokens();
         window.location.href = "/login";
@@ -130,7 +128,7 @@ export async function fetchWithAuth(url, body = {}, method = "POST") {
     }
   } 
 
-  // If still unauthorized, redirect
+  
   if (res.status === 401) {
     clearTokens();
     window.location.href = "/login";

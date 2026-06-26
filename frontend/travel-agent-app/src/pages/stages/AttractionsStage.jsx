@@ -8,7 +8,7 @@ import { fetchWithAuth } from '../../authService';
 import { API_BASE_URL } from '../../config';
 import PageTransition from '../../components/PageTransition';
 
-// --- SHARED UTILS ---
+ 
 function useDebounce(value, delay) {
   const [debouncedValue, setDebouncedValue] = useState(value);
   useEffect(() => {
@@ -18,7 +18,7 @@ function useDebounce(value, delay) {
   return debouncedValue;
 }
 
-// --- SUB-COMPONENTS ---
+ 
 function LocationAutocomplete({ label, value, onChange, placeholder }) {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -210,7 +210,7 @@ const DiscoveryCard = ({ poi, isAdded, onAdd, onShowDetails, isUpdating }) => {
   );
 };
 
-// --- MAIN STAGE COMPONENT ---
+ 
 
 export default function AttractionsStage({ gameState, session, onFinalize }) {
   const sessionId = session?.id;
@@ -381,10 +381,7 @@ export default function AttractionsStage({ gameState, session, onFinalize }) {
     <PageTransition className="w-full h-full overflow-hidden bg-gray-50 p-6 md:p-8 relative flex flex-col">
       {renderDetailsModal()}
       
-      {/* NEW FLOATING STEP NAVIGATION CONTAINER
-        This sits completely on top of everything without a white structural layout bar.
-        Backdrop-blur-md creates the luxury transparent grey element, turning solid charcoal on hover.
-      */}
+      
       <div className="absolute top-3 left-8 right-8 z-[100] pointer-events-auto flex items-center justify-between">
     
           {/* Left: location controls */}
@@ -414,13 +411,13 @@ export default function AttractionsStage({ gameState, session, onFinalize }) {
           </button>
       </div>
 
-      {/* FULL-HEIGHT SCREEN WRAPPER */}
+      
       <div className="w-full flex-1 flex flex-col gap-6 min-h-0 pt-16">
 
-        {/* COLUMNS LAYOUT CONTAINER */}
+        
         <div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-0 overflow-hidden">
           
-          {/* FEED COLUMN */}
+          
           <div className="flex-1 flex flex-col min-w-0 bg-white rounded-[2.5rem] border border-gray-200 shadow-sm overflow-hidden">
             <div className="p-6 border-b bg-white shrink-0">
               <form onSubmit={handleSearch} className="flex gap-3">
@@ -460,7 +457,7 @@ export default function AttractionsStage({ gameState, session, onFinalize }) {
             </div>
           </div>
 
-          {/* BUCKET COLUMN */}
+          
           <div className="w-full lg:w-96 flex flex-col gap-4 bg-gray-900 rounded-[3rem] p-8 text-white shadow-2xl relative overflow-hidden shrink-0">
             <div className="absolute top-0 right-0 w-48 h-48 bg-blue-600/20 rounded-full -mr-24 -mt-24 blur-3xl" />
             <div className="relative z-10 flex items-center justify-between mb-8">

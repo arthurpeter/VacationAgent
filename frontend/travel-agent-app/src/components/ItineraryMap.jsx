@@ -3,7 +3,6 @@ import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet'
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// --- HELPER: Pure JavaScript Google Encoded Polyline Decoder ---
 function decodePolyline(encoded) {
     if (!encoded) return [];
     let points = [];
@@ -35,7 +34,7 @@ function decodePolyline(encoded) {
     return points;
 }
 
-// --- HELPER: Create a premium looking numbered pin ---
+ 
 const createNumberedPin = (number, color) => {
     return L.divIcon({
         className: 'custom-pin',
@@ -63,17 +62,15 @@ const createNumberedPin = (number, color) => {
     });
 };
 
-// --- HELPER: Dynamic Continuous Dash Pattern Generator ---
-// We use lineCap: 'round' to make all dashes soft and pill-shaped.
-// By avoiding purely isolated dots, every line stays continuous and easy to track.
+ 
 const getVerifiedLegDashPattern = (dayIdx, legIdx) => {
     const patterns = [
-        '4, 6',             // Sleek, rapid short pill-dashes
-        '14, 6',            // Elegant long pill-segments
-        '12, 6, 0, 6',      // Premium long dash + circular dot sequence
-        '8, 5, 2, 5',       // Dynamic long-short alternating sequence
-        '16, 6, 4, 6',      // Broad block + distinct accent dash
-        '6, 5, 6, 5'        // Standard medium-spaced layout tracking
+        '4, 6',
+        '14, 6',
+        '12, 6, 0, 6',
+        '8, 5, 2, 5',
+        '16, 6, 4, 6',
+        '6, 5, 6, 5'
     ];
     const targetPatternIndex = (dayIdx + legIdx * 2) % patterns.length;
     return patterns[targetPatternIndex];
@@ -159,13 +156,13 @@ export default function ItineraryMap({ schedule }) {
                     return (
                         <React.Fragment key={`day-${dIdx}`}>
                             
-                            {/* --- HYBRID PATH RENDERING PIPELINE --- */}
+                            
                             {jitteredLocations.map((loc, idx) => {
                                 if (idx === 0) return null; 
                                 const prevLoc = jitteredLocations[idx - 1];
                                 const leg = loc.transitLeg;
 
-                                // CASE 1: Google Verified Street Path -> Fine, stylized continuous pill-dashes
+                                
                                 if (leg && leg.is_verified && leg.polyline) {
                                     const roadPositions = decodePolyline(leg.polyline);
                                     const dynamicDashPattern = getVerifiedLegDashPattern(dIdx, idx);
@@ -187,14 +184,14 @@ export default function ItineraryMap({ schedule }) {
                                     );
                                 }
 
-                                // CASE 2: Sandbox Fallback/Estimate -> Ultra-fine neutral slate tracking dashes
+                                
                                 return (
                                     <Polyline 
                                         key={`est-leg-${idx}`}
                                         positions={[prevLoc.latLng, loc.latLng]}
                                         pathOptions={{ 
                                             color: ESTIMATED_LINE_COLOR, 
-                                            weight: 1.5,          // Subdued weight for non-synced movements
+                                            weight: 1.5,
                                             opacity: 0.5, 
                                             dashArray: '2, 5' 
                                         }} 
@@ -202,7 +199,7 @@ export default function ItineraryMap({ schedule }) {
                                 );
                             })}
 
-                            {/* --- MARKER OVERLAYS CANVAS --- */}
+                            
                             {jitteredLocations.map((loc, i) => (
                                 <Marker 
                                     key={`${loc.id}-${i}`} 

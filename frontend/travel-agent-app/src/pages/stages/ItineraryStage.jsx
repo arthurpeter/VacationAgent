@@ -56,7 +56,7 @@ export default function ItineraryMaster() {
         );
     }
     
-    // STAGE 1: Logistics & Mobility
+    
     if (gameState.stage === 1) {
         return (
             <LogisticsStage 
@@ -69,7 +69,7 @@ export default function ItineraryMaster() {
         );
     }
 
-    // STAGE 2: The Generated Schedule
+    
     if (gameState.stage === 2) {
         return (
             <ScheduleStage 
@@ -82,7 +82,7 @@ export default function ItineraryMaster() {
         );
     }
 
-    // DEFAULT (STAGE 0): Attractions Picker
+    
     return (
         <AttractionsStage 
             gameState={gameState} 
