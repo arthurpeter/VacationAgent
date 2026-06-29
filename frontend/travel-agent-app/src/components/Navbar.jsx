@@ -10,105 +10,105 @@ export default function Navbar() {
   const navigate = useNavigate();
   const { isAuthenticated, logout } = useAuth();
   
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const notificationRef = useRef(null);
+  // const [showNotifications, setShowNotifications] = useState(false);
+  // const [notifications, setNotifications] = useState([]);
+  // const [unreadCount, setUnreadCount] = useState(0);
+  // const notificationRef = useRef(null);
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
+  // useEffect(() => {
+  //   if (!isAuthenticated) return;
     
-    let isMounted = true;
+  //   let isMounted = true;
 
-    const startNotificationStream = async () => {
-      try {
-        const res = await fetchWithAuth(`${API_BASE_URL}/notifications/stream`, null, "GET");
+  //   const startNotificationStream = async () => {
+  //     try {
+  //       const res = await fetchWithAuth(`${API_BASE_URL}/notifications/stream`, null, "GET");
 
-        if (!res || !res.body) return;
+  //       if (!res || !res.body) return;
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-        let buffer = "";
+  //       const reader = res.body.getReader();
+  //       const decoder = new TextDecoder("utf-8");
+  //       let buffer = "";
 
-        while (isMounted) {
-          const { value, done } = await reader.read();
-          if (done) break;
+  //       while (isMounted) {
+  //         const { value, done } = await reader.read();
+  //         if (done) break;
           
-          buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split('\n\n');
-          buffer = parts.pop();
+  //         buffer += decoder.decode(value, { stream: true });
+  //         const parts = buffer.split('\n\n');
+  //         buffer = parts.pop();
 
-          for (const part of parts) {
-            if (part.startsWith('data: ')) {
-              const dataStr = part.replace('data: ', '');
-              try {
-                const parsedData = JSON.parse(dataStr);
-                setNotifications(parsedData);
-                setUnreadCount(parsedData.filter(n => !n.is_read).length);
-              } catch (e) {
-                console.error("Failed to parse notification JSON:", e);
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Notification stream error:", error);
-      }
-    };
+  //         for (const part of parts) {
+  //           if (part.startsWith('data: ')) {
+  //             const dataStr = part.replace('data: ', '');
+  //             try {
+  //               const parsedData = JSON.parse(dataStr);
+  //               setNotifications(parsedData);
+  //               setUnreadCount(parsedData.filter(n => !n.is_read).length);
+  //             } catch (e) {
+  //               console.error("Failed to parse notification JSON:", e);
+  //             }
+  //           }
+  //         }
+  //       }
+  //     } catch (error) {
+  //       console.error("Notification stream error:", error);
+  //     }
+  //   };
 
-    startNotificationStream();
+  //   startNotificationStream();
 
-    return () => {
-      isMounted = false;
-    };
-  }, [isAuthenticated]);
+  //   return () => {
+  //     isMounted = false;
+  //   };
+  // }, [isAuthenticated]);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(event.target)
-      ) {
-        setShowNotifications(false);
-      }
-    };
+  // useEffect(() => {
+  //   const handleClickOutside = (event) => {
+  //     if (
+  //       notificationRef.current &&
+  //       !notificationRef.current.contains(event.target)
+  //     ) {
+  //       setShowNotifications(false);
+  //     }
+  //   };
 
-    document.addEventListener("mousedown", handleClickOutside);
+  //   document.addEventListener("mousedown", handleClickOutside);
 
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+  //   return () => {
+  //     document.removeEventListener("mousedown", handleClickOutside);
+  //   };
+  // }, []);
 
-  const handleMarkAllRead = async () => {
-    if (unreadCount === 0) return;
+  // const handleMarkAllRead = async () => {
+  //   if (unreadCount === 0) return;
     
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-    setUnreadCount(0);
+  //   setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+  //   setUnreadCount(0);
 
-    await fetchWithAuth(`${API_BASE_URL}/notifications/read`, {}, "PATCH");
-  };
+  //   await fetchWithAuth(`${API_BASE_URL}/notifications/read`, {}, "PATCH");
+  // };
 
-  const handleDelete = async (e, id) => {
-    e.stopPropagation();
+  // const handleDelete = async (e, id) => {
+  //   e.stopPropagation();
     
-    const updatedNotifs = notifications.filter(n => n.id !== id);
-    setNotifications(updatedNotifs);
-    setUnreadCount(updatedNotifs.filter(n => !n.is_read).length);
+  //   const updatedNotifs = notifications.filter(n => n.id !== id);
+  //   setNotifications(updatedNotifs);
+  //   setUnreadCount(updatedNotifs.filter(n => !n.is_read).length);
 
-    await fetchWithAuth(`${API_BASE_URL}/notifications/${id}`, {}, "DELETE");
-  };
+  //   await fetchWithAuth(`${API_BASE_URL}/notifications/${id}`, {}, "DELETE");
+  // };
 
-  const formatTime = (isoString) => {
-    if (!isoString) return "";
-    const date = new Date(isoString);
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  };
+  // const formatTime = (isoString) => {
+  //   if (!isoString) return "";
+  //   const date = new Date(isoString);
+  //   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  // };
 
   return (
     <nav className="flex items-center justify-between px-8 py-4 bg-white shadow-sm border-b border-gray-100">
@@ -132,7 +132,7 @@ export default function Navbar() {
 
             <div className="h-6 w-px bg-gray-200 mx-1"></div>
 
-            <div ref={notificationRef} className="relative flex items-center">
+            {/* <div ref={notificationRef} className="relative flex items-center">
               <button 
                 onClick={() => {
                   const newState = !showNotifications;
@@ -195,7 +195,7 @@ export default function Navbar() {
                   </div>
                 </div>
               )}
-            </div>
+            </div> */}
 
             <Link to="/profile" className="flex items-center hover:opacity-80 transition group ml-2">
               <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs border border-blue-200 group-hover:bg-blue-200 group-hover:border-blue-300 transition">
